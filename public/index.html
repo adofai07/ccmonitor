@@ -1,0 +1,1512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Quota</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23202634' stroke-width='5'/%3E%3Cpath d='M16 4a12 12 0 0 1 10.4 6' fill='none' stroke='%235fe0c2' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   ccquota — dark glass over a living gradient.
+
+   One piece of glass holds all three rings; the detail panel opens
+   inside it, below them, so the rings never move. Motion belongs to
+   the backdrop: the sky drifts on a ~30s loop and warms when the
+   hottest limit heats up. Data elements move only when data moves.
+   ══════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --ink:    rgba(233,239,247,.95);
+  --ink-2:  rgba(233,239,247,.66);
+  --ink-3:  rgba(233,239,247,.44);
+  --ink-4:  rgba(233,239,247,.28);
+  --base:   #07090d;
+
+  --hair:  rgba(255,255,255,.075);
+  --edge:  rgba(255,255,255,.16);
+
+  /* ── Threshold bands ────────────────────────────────────────────
+     Relative luminance descends monotonically with danger
+     (.67 → .43 → .29 → .19 — roughly 1.5× per step), so the ladder
+     survives greyscale and
+     every kind of colour blindness. Because a darker arc would
+     otherwise recede on a dark ground, the bloom behind the arc
+     RISES with danger — a second, hue-independent channel. The
+     pace marker carries a third, in colour, shape and words.
+     These four are the ANCHORS: between them the arc's colour is
+     interpolated continuously (see rampOf), so the 30-point span
+     from the warning floor to the critical cut is not one flat
+     amber.                                                       */
+  --steady:    #72ead0;   --steady-rgb:   114 234 208;
+  --warning:   #e0a52e;   --warning-rgb:  224 165  46;
+  --critical:  #ef6a3a;   --critical-rgb: 239 106  58;
+  --exhausted: #e0304f;   --exhausted-rgb:224  48  79;
+  --unknown:   #7d8ca3;   --unknown-rgb:  125 140 163;
+
+  /* ── the pace channel ───────────────────────────────────────────
+     Pace is a SECOND question about the same ring — "are you burning
+     faster than the clock?" — and it has to be answerable at any
+     percent, including 9%. So it gets its own colour, ramped from a
+     neutral slate at "technically over, and it is noise" to this hot
+     amber-orange at "several times the sustainable burn". It is not
+     one of the threshold stops: it sits between --warning and
+     --critical in lightness, so a hot pace mark never reads as a
+     band the arc is not in, and the two channels can be told apart
+     even in greyscale by WHERE they are — arc versus tick, ring
+     versus caption.                                              */
+  --pace-hot: #ff8f5a;    --pace-hot-rgb: 255 143  90;
+
+  /* the cost strip's own family — deliberately in no band above */
+  --coin:  #9aa4dc;
+  --coin-2:#7d87c2;
+
+  --ease: cubic-bezier(.32,.72,.28,1);
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--base);
+  color: var(--ink);
+  font: 400 14px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; }
+
+/* ── the sky ─────────────────────────────────────────────────────
+   Four cool blobs drift on a long loop. A warm set cross-fades in
+   over them, its opacity driven by the hottest limit, so the room
+   is felt before a digit is read.                                */
+.sky {
+  position: fixed; inset: -18vmax; z-index: 0; pointer-events: none; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% -8%, #141824 0%, #0a0d14 46%, #06070b 100%);
+}
+.blob { position: absolute; border-radius: 50%; filter: blur(74px); opacity: .5; will-change: transform; }
+.warm { opacity: 0; transition: opacity 2400ms var(--ease); }
+.warm .blob { opacity: .58; }
+
+.b1 { width:50vmax; height:50vmax; left:5%;  top:0%;     background: radial-gradient(circle at 38% 38%, #2c4ad6, #13277e 55%, transparent 72%); animation: d1 34s ease-in-out infinite; }
+.b2 { width:44vmax; height:44vmax; right:2%; top:11%;    background: radial-gradient(circle at 45% 45%, #128f92, #0a5566 55%, transparent 72%); animation: d2 41s ease-in-out infinite; }
+.b3 { width:54vmax; height:54vmax; left:19%; bottom:-9%; background: radial-gradient(circle at 50% 50%, #622fc0, #2f1268 55%, transparent 72%); animation: d3 30s ease-in-out infinite; }
+.b4 { width:32vmax; height:32vmax; right:17%;bottom:3%;  background: radial-gradient(circle at 50% 50%, #1c6ad2, #0a3070 55%, transparent 72%); animation: d4 47s ease-in-out infinite; }
+
+.w1 { width:48vmax; height:48vmax; left:9%;  top:-1%;    background: radial-gradient(circle at 40% 40%, #d8701c, #852d0b 55%, transparent 72%); animation: d1 34s ease-in-out infinite; }
+.w2 { width:42vmax; height:42vmax; right:4%; top:15%;    background: radial-gradient(circle at 45% 45%, #d43048, #740f29 55%, transparent 72%); animation: d2 41s ease-in-out infinite; }
+.w3 { width:50vmax; height:50vmax; left:21%; bottom:-7%; background: radial-gradient(circle at 50% 50%, #ba3d0b, #581908 55%, transparent 72%); animation: d3 30s ease-in-out infinite; }
+
+@keyframes d1 { 0%,100%{transform:translate3d(0,0,0) scale(1)}      33%{transform:translate3d(7vmax,5vmax,0) scale(1.12)} 66%{transform:translate3d(-4vmax,8vmax,0) scale(.94)} }
+@keyframes d2 { 0%,100%{transform:translate3d(0,0,0) scale(1.05)}   40%{transform:translate3d(-8vmax,6vmax,0) scale(.9)}  70%{transform:translate3d(3vmax,-5vmax,0) scale(1.15)} }
+@keyframes d3 { 0%,100%{transform:translate3d(0,0,0) scale(.96)}    50%{transform:translate3d(6vmax,-7vmax,0) scale(1.16)} }
+@keyframes d4 { 0%,100%{transform:translate3d(0,0,0) scale(1)}      45%{transform:translate3d(-6vmax,-4vmax,0) scale(1.2)} }
+
+/* grain kills the banding across those big blurs and gives the glass a surface */
+.grain {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.vig {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(140% 100% at 50% 0%, transparent 44%, rgba(0,0,0,.44) 100%);
+}
+
+/* ── shell ─────────────────────────────────────────────────────── */
+main {
+  position: relative; z-index: 2;
+  max-width: 1020px; min-height: 100vh; margin: 0 auto;
+  padding: clamp(18px, 3.4vh, 34px) clamp(14px, 3vw, 28px) clamp(22px, 4vh, 40px);
+  display: flex; flex-direction: column; justify-content: center;
+  gap: clamp(14px, 2.2vh, 22px);
+}
+
+/* ── header: one slot, and it is allowed to say why ──────────────
+   Freshness and the reason for a degraded reading share a single
+   row, so there is never a banner competing for the layout.     */
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 0 4px; min-height: 26px; }
+.mark { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.mark h1 { margin: 0; font-size: 13px; font-weight: 620; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-2); }
+.plan {
+  font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3);
+  padding: 3px 8px; border-radius: 5px; border: 1px solid var(--hair);
+  background: rgba(255,255,255,.035); white-space: nowrap;
+}
+.plan:empty { display: none; }
+.grow { flex: 1 1 24px; }
+
+.fresh {
+  display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%;
+  font-size: 12.5px; color: var(--ink-2);
+  padding: 4px 12px 4px 10px; border-radius: 999px;
+  border: 1px solid var(--hair); background: rgba(255,255,255,.045);
+  transition: color .4s var(--ease), border-color .4s var(--ease), background .4s var(--ease);
+}
+.fresh .dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: var(--unknown); box-shadow: 0 0 0 3px rgb(var(--unknown-rgb)/.15);
+  transition: background .4s var(--ease), box-shadow .4s var(--ease);
+}
+.fresh span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fresh[data-tone="live"] .dot { background: var(--steady);   box-shadow: 0 0 0 3px rgb(var(--steady-rgb)/.16); }
+.fresh[data-tone="hold"] .dot { background: var(--warning);  box-shadow: 0 0 0 3px rgb(var(--warning-rgb)/.16); }
+.fresh[data-tone="down"] .dot { background: var(--exhausted);box-shadow: 0 0 0 3px rgb(var(--exhausted-rgb)/.18); }
+.fresh[data-tone="hold"] { color: #f4dfb2; border-color: rgb(var(--warning-rgb)/.26);  background: rgb(var(--warning-rgb)/.075); }
+.fresh[data-tone="down"] { color: #f7c6cf; border-color: rgb(var(--exhausted-rgb)/.3); background: rgb(var(--exhausted-rgb)/.09); }
+.fresh[data-tone="wait"] .dot { animation: breathe 2.2s var(--ease) infinite; }
+@keyframes breathe { 0%,100% { opacity:.3 } 50% { opacity:1 } }
+
+/* ── the one piece of glass ──────────────────────────────────── */
+.glass {
+  position: relative; border-radius: 22px;
+  background: linear-gradient(168deg, rgba(255,255,255,.085) 0%, rgba(255,255,255,.045) 52%, rgba(255,255,255,.032) 100%);
+  backdrop-filter: blur(24px) saturate(155%);
+  -webkit-backdrop-filter: blur(24px) saturate(155%);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow:
+    inset 0 1px 0 var(--edge),
+    inset 0 -1px 0 rgba(0,0,0,.22),
+    0 26px 58px -22px rgba(0,0,0,.78),
+    0 3px 12px -6px rgba(0,0,0,.5);
+  overflow: hidden;
+}
+.glass::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(120% 88% at 10% -14%, rgba(255,255,255,.085), rgba(255,255,255,0) 56%);
+}
+
+/* ── rings ───────────────────────────────────────────────────── */
+.rings {
+  position: relative;
+  display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: clamp(2px, 1.4vw, 14px);
+  padding: clamp(20px, 3vw, 32px) clamp(8px, 2vw, 20px) clamp(20px, 3vw, 30px);
+}
+
+.ring {
+  appearance: none; -webkit-appearance: none;
+  background: none; border: 0; margin: 0;
+  padding: 10px clamp(2px, 1vw, 10px) 8px;
+  border-radius: 16px; text-align: center; cursor: pointer; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 1.5vw, 15px);
+  transition: background .22s var(--ease), opacity .5s var(--ease);
+  --band: var(--unknown); --band-rgb: var(--unknown-rgb); --bloom: .3;
+  /* pace severity 0–1 and the two colours it drives; JS overwrites all three */
+  --psev: 0; --pace-ink: var(--ink-3); --pace-mark: #fff;
+}
+.ring:hover { background: rgba(255,255,255,.03); }
+.ring[aria-expanded="true"] { background: rgba(255,255,255,.045); }
+.ring:focus { outline: none; }
+.ring:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+
+.art { position: relative; width: 100%; max-width: 186px; aspect-ratio: 1; container-type: inline-size; }
+.art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.well  { fill: rgba(255,255,255,.018); transition: fill .5s ease; }
+/* At 100% the arc closes into a complete circle, which is geometrically identical to an
+   untouched track — the one reading where the arc alone tells you nothing. Flooding the
+   well turns the ring from a line into a full vessel, so "at the cap" is a different
+   SHAPE and not only a different colour. Reserved for exhausted: nothing else fills. */
+.ring[data-band="exhausted"] .well { fill: rgb(var(--band-rgb)/.20); }
+.ring[data-band="exhausted"] .rim  { stroke: rgb(var(--band-rgb)/.55); stroke-width: 1.6; }
+.track { fill: none; stroke: rgba(255,255,255,.088); stroke-width: 9; }
+.rim   { fill: none; stroke: rgba(255,255,255,.075); stroke-width: 1; }
+.arc   { fill: none; stroke: var(--band); stroke-width: 9; stroke-linecap: round;
+         transition: stroke-dasharray .85s var(--ease), stroke-dashoffset .85s var(--ease),
+                     stroke .55s var(--ease); }
+/* the bloom rises with danger, so a darker band does not recede on a dark ground */
+.arc.bloom { filter: blur(7px); stroke-width: 11; opacity: var(--bloom); }
+
+/* threshold cut points, printed on the track: you can see where 70
+   is before you get there. Re-read from the snapshot every render. */
+.thmark { stroke-width: 1.6; stroke-linecap: butt; opacity: .5; }
+
+/* the span between the value and the pace marker, drawn as a length:
+   dotted and neutral when it is headroom, solid and PACE-coloured when
+   the arc has overrun the clock. */
+.gap { fill: none; stroke-linecap: butt; stroke: rgba(233,239,247,.26); stroke-width: 1.3; stroke-dasharray: 1 5;
+       transition: stroke .45s var(--ease), stroke-width .45s var(--ease), opacity .45s var(--ease); }
+/* Overrun is drawn in the PACE colour, never the band's: at 9% the band
+   is calm green and the overrun is the whole story. Weight and opacity
+   ride --psev, so a two-point overrun stays a hairline and a 3× burn is
+   a solid lit bar. */
+.ring[data-pace="over"] .gap {
+  stroke: var(--pace-mark); stroke-dasharray: none;
+  stroke-width: calc(1.5px + 3.6px * var(--psev));
+  opacity: calc(.45 + .55 * var(--psev));
+}
+
+/* the pace notch. Authored at 12 o'clock and rotated by elapsed×360
+   only — the −90° belongs to the arcs' dash origin, not to this. */
+.notch line { stroke-linecap: round; }
+.nb   { stroke: rgba(3,5,10,.85); stroke-width: 7.2; }
+.nl   { stroke: #fff; stroke-width: 2.4; }
+.ncap { fill: #fff; opacity: 0; }
+/* The tick's white line is a statement of FACT — where the clock is —
+   so it stays white and only thickens. The cap at its tip is the
+   verdict, and that is what heats: white when the overrun is noise,
+   --pace-hot with a widening halo as it stops being noise. */
+.ring[data-pace="over"] .nl { stroke-width: calc(2.4px + 1.6px * var(--psev)); }
+.ring[data-pace="over"] .ncap {
+  opacity: 1; fill: var(--pace-mark); stroke: var(--pace-mark);
+  stroke-opacity: calc(.12 + .34 * var(--psev));
+  stroke-width: calc(0.8px + 5.4px * var(--psev));
+  transition: fill .45s var(--ease), stroke .45s var(--ease), stroke-width .45s var(--ease);
+}
+
+.readout {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.numrow { display: inline-flex; align-items: baseline; gap: .03em; }
+.num {
+  font-size: 27cqi; font-weight: 300; letter-spacing: -.035em; line-height: 1;
+  font-variant-numeric: tabular-nums; color: #fff;
+  text-shadow: 0 2px 20px rgb(var(--band-rgb)/.35);
+}
+.pctsign { font-size: 10cqi; font-weight: 400; color: var(--ink-3); line-height: 1; }
+/* The numeral is where the eye lands first, so the pace channel is given a
+   halo behind it — invisible at severity 0, a clear warm bloom by the time
+   the burn is several times the clock. It is layered OVER the band's own
+   shadow rather than replacing it: the two are answering different
+   questions and both answers stay on screen. */
+.ring[data-pace="over"] .num {
+  text-shadow: 0 2px 20px rgb(var(--band-rgb)/.35),
+               0 0 calc(8px + 26px * var(--psev)) rgb(var(--pace-hot-rgb) / calc(var(--psev) * .6));
+}
+.ring[data-state="unknown"] .num { font-size: 19cqi; color: var(--ink-4); text-shadow: none; }
+.ring[data-state="unknown"] .pctsign { display: none; }
+
+.meta { min-width: 0; width: 100%; display: flex; flex-direction: column; gap: 5px; }
+.mlabel {
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* The line box is pinned in px, not left to line-height × font-size:
+   .word is 13px and the countdown is 15px, and the swap from "waiting…"
+   to a live clock must not change the height of the row. */
+.mclock {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 15px; line-height: 23px; letter-spacing: -.01em; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mclock.word { font-size: 13px; letter-spacing: .1em; color: var(--ink-2); }
+.mpace {
+  font-size: 11.5px; letter-spacing: .015em; color: var(--ink-4);
+  line-height: 17px; min-height: 17px;   /* empty and filled occupy the same box */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* THE headline defect: this used to be var(--band), so "6 pts over pace"
+   was announced in calm green whenever the percent happened to be under
+   70 — exactly the case the pace marker exists to catch. It is now the
+   pace channel's own colour, which knows nothing about the percentage. */
+.ring[data-pace="over"] .mpace { color: var(--pace-ink); }
+.ring[data-pace="over"][data-hot="1"] .mpace { font-weight: 600; letter-spacing: .005em; }
+/* line-height:1 keeps the 8px marker's inline box inside the 17px line
+   box the row reserves — otherwise a pace line with a marker is 1px
+   taller than one without, and the row moves when a verdict appears. */
+.mpace .tri { font-size: 8px; margin-right: 4px; line-height: 1; }
+
+/* dormant AND empty: full size in its slot, just quiet. Waking up is the
+   signal. Dormancy is a statement about the reset window and none at all
+   about the percent, so a dormant limit carrying a real reading keeps its
+   band and its full strength — dimming it would say "ignore this" about a
+   number the page can back. */
+.ring[data-quiet="1"] { opacity: .5; }
+.ring[data-quiet="1"]:hover,
+.ring[data-quiet="1"][aria-expanded="true"],
+.ring[data-quiet="1"]:focus-visible { opacity: .78; }
+/* unknown: a broken track and a dash. Never a zero. */
+.ring[data-state="unknown"] .track { stroke-width: 2.5; stroke-dasharray: .5 7; stroke-linecap: round; stroke: rgba(255,255,255,.17); }
+
+/* ── held: two different questions, two different channels ───────
+   FRESHNESS is "is this current?". SEVERITY is "are you in trouble?".
+   A held reading is a reading the page fully believes — it simply
+   cannot refresh it — so the honesty rule (never show a confident
+   number you cannot verify) is about CURRENCY, and it must not be
+   paid for out of danger. This used to drain arc saturation, bloom
+   and ambient warmth together, so a held snapshot reporting the user
+   AT THE CAP rendered as a calm dashboard.
+
+   So: the arc, its band colour, the bloom, the pace channel and the
+   room's warmth all stay at full strength. What goes provisional is
+   the chrome that implies currency — the ring's outer rim breaks
+   into a dash, the labels and the panel's scaffolding step back, and
+   the pace tick dashes because the comparison behind it stopped when
+   the reading did. Every pace caption also says "· held" outright. */
+body[data-hold="1"] .rim { stroke-dasharray: 3.4 5; stroke: rgba(255,255,255,.2); }
+body[data-hold="1"] .well { fill: rgba(255,255,255,.009); }
+body[data-hold="1"] .track { stroke: rgba(255,255,255,.062); }
+body[data-hold="1"] .mlabel,
+body[data-hold="1"] .mclock,
+body[data-hold="1"] .dtitle,
+body[data-hold="1"] .chartcap,
+body[data-hold="1"] .ro dt { opacity: .58; }
+body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
+
+/* ── detail, expanding inside the same glass ─────────────────── */
+.detailWrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .36s var(--ease); }
+.detailWrap.open { grid-template-rows: 1fr; }
+.detailOuter { overflow: hidden; min-height: 0; }
+.detailInner { position: relative; border-top: 1px solid var(--hair); background: rgba(6,8,12,.3);
+  padding: 17px clamp(14px, 2.6vw, 26px) clamp(15px, 2vw, 20px); }
+/* the tie back to the ring you picked: a lit segment of the seam.
+   A diamond would be clipped by the overflow the expansion needs. */
+.seam {
+  position: absolute; top: -1px; left: 0; width: 56px; height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.62) 22%, rgba(255,255,255,.62) 78%, transparent);
+  transition: left .3s var(--ease);
+}
+
+.dhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
+.dtitle { font-size: 12px; letter-spacing: .05em; color: var(--ink-2); }
+.dband {
+  font-size: 9px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
+  padding: 2.5px 7px; border-radius: 4px; border: 1px solid currentColor; opacity: .9; white-space: nowrap;
+}
+.dclose {
+  margin-left: auto; border: 1px solid var(--hair); background: rgba(255,255,255,.04); color: var(--ink-3);
+  font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px;
+  border-radius: 6px; cursor: pointer;
+}
+.dclose:hover { color: var(--ink); border-color: var(--edge); }
+.dclose:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+
+.readouts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(146px,1fr)); gap: 1px;
+  background: var(--hair); border: 1px solid var(--hair); border-radius: 10px; overflow: hidden;
+}
+.ro { background: rgba(7,9,13,.42); padding: 9px 13px 10px; min-width: 0; }
+.ro dt { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-4); font-weight: 600; }
+.ro dd {
+  margin: 4px 0 0; font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 15px; letter-spacing: -.01em; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ro dd small { font-family: var(--sans); font-size: 10px; color: var(--ink-4); letter-spacing: .07em; margin-left: 5px; }
+/* "measuring" is a real answer, not a missing value — it reads as prose, not as a number */
+.ro dd.est { font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); font-style: italic; letter-spacing: .01em; }
+
+.chartwrap { margin-top: 12px; }
+.chartcap {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 7px;
+}
+.chartcap .note { text-transform: none; letter-spacing: .02em; font-size: 11px; }
+.chart { display: block; width: 100%; height: 116px; overflow: visible; }
+.chart .grid  { stroke: rgba(233,239,247,.075); stroke-width: 1; }
+.chart .warnln{ stroke: rgb(var(--warning-rgb)/.4); stroke-width: 1; stroke-dasharray: 3 4; }
+.chart .full  { fill: none; stroke: rgba(233,239,247,.34); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.chart .run   { fill: none; stroke: var(--band); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area  { fill: rgb(var(--band-rgb)/.13); stroke: none; }
+.chart .since { stroke: rgba(233,239,247,.22); stroke-width: 1; stroke-dasharray: 2 3; }
+.chart .proj  { fill: none; stroke: var(--band); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .8; }
+.chart .head  { fill: var(--band); }
+.chart .ax    { fill: var(--ink-4); font-family: var(--mono); font-size: 10px; letter-spacing: .04em; }
+/* the two labels that sit on top of the drawing — the projection's
+   arrival time and the head's value — are knocked out of whatever
+   passes under them, so the dashed ramp cannot strike through a glyph */
+.chart .lbl   { paint-order: stroke; stroke: rgba(6,8,12,.9); stroke-width: 3.4; stroke-linejoin: round; }
+.chartempty {
+  height: 116px; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--ink-4); font-style: italic;
+  border: 1px solid var(--hair); border-radius: 10px; background: rgba(7,9,13,.28);
+}
+.dfoot { margin: 8px 0 0; font-size: 11px; line-height: 1.55; color: var(--ink-4); max-width: 92ch; }
+
+/* ── cost: a different instrument, kept at arm's length ────────
+   Rings are radial, money is linear. Nothing circular appears
+   below this rule, and its colour family appears in no band.   */
+.rule { display: flex; align-items: center; gap: 14px; padding: 0 6px; }
+.rule .ln { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--hair)); }
+.rule .ln.r { background: linear-gradient(90deg, var(--hair), transparent); }
+.rule .tag { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-4); white-space: nowrap; }
+
+.cost {
+  border-radius: 12px; padding: 16px 20px 15px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.022));
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,.055); border-top-color: rgba(255,255,255,.13);
+  border-left: 2px solid rgb(154 164 220 / .55);
+  box-shadow: 0 18px 44px -24px rgba(0,0,0,.75);
+  display: grid; grid-template-columns: 1fr; gap: 14px;
+}
+@media (min-width: 760px) { .cost { grid-template-columns: minmax(210px,.78fr) minmax(0,1.5fr); gap: 4px 34px; align-items: start; } }
+.chead h2 { margin: 0; font-size: 10.5px; letter-spacing: .17em; text-transform: uppercase; font-weight: 600; color: #c3c9ea; }
+.chead h2 .sl { opacity: .45; }
+/* The strip's message is "this is NOT your quota", and the typography
+   has to argue the same thing the words do. The disclaimer leads: it is
+   the largest, brightest text down here. The total is legible — you can
+   read it at a glance — but it is deliberately subordinate to the
+   sentence that says what it is not, and it is set in the coin family
+   rather than pure white so it never outranks a ring's numeral. */
+.cwarn { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: var(--ink-2); max-width: 46ch; }
+.cwarn b { color: #f0f3fd; font-weight: 650; }
+.ctot { margin-top: 15px; }
+.ctot .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 17px; letter-spacing: -.01em; line-height: 1.15; color: #b6bee0; }
+.ctot .k { font-size: 9px; letter-spacing: .17em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
+.cbar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; margin: 2px 0 11px; background: rgba(255,255,255,.05); }
+.cbar span { display: block; height: 100%; }
+.ctab { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+.ctab th { text-align: left; font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-4); font-weight: 600; padding: 0 8px 5px 0; border-bottom: 1px solid var(--hair); }
+.ctab th.r, .ctab td.r { text-align: right; }
+.ctab td { padding: 4.5px 8px 4.5px 0; border-bottom: 1px solid rgba(233,239,247,.04); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctab tr:last-child td { border-bottom: 0; }
+.ctab td.mn { color: var(--ink-2); }
+.ctab td.r { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.ctab col.c1 { width: auto; } .ctab col.c2 { width: 96px; } .ctab col.c3 { width: 58px; }
+.sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 8px; vertical-align: 0; }
+.cnote { margin: 9px 0 0; font-size: 10px; line-height: 1.55; letter-spacing: .03em; color: var(--ink-4); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* ── narrow ──────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  main { justify-content: flex-start; gap: 12px; }
+  .rings { grid-template-columns: minmax(0,1fr); gap: 4px; padding: 12px 10px 14px; }
+  .ring { flex-direction: row; gap: 16px; text-align: left; padding: 12px; align-items: center; }
+  .art { width: 104px; flex: none; }
+  .meta { flex: 1 1 auto; }
+  .mclock { font-size: 16px; }
+  .seam { display: none; }
+  .dhead { margin-bottom: 11px; }
+  .chart, .chartempty { height: 100px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob { animation: none !important; }
+  .warm { transition: none !important; }
+  .fresh .dot { animation: none !important; }
+  *, *::before, *::after { transition-duration: .001ms !important; }
+}
+</style>
+</head>
+<body data-hold="0">
+
+<div class="sky" aria-hidden="true">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+  <div class="warm" id="warm"><div class="blob w1"></div><div class="blob w2"></div><div class="blob w3"></div></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+<div class="vig" aria-hidden="true"></div>
+
+<main>
+  <header class="top">
+    <div class="mark">
+      <h1>Quota</h1>
+      <span class="plan" id="plan"></span>
+    </div>
+    <span class="grow"></span>
+    <span class="fresh" id="fresh" data-tone="wait">
+      <span class="dot" aria-hidden="true"></span><span id="freshText">connecting…</span>
+    </span>
+  </header>
+
+  <section class="glass" aria-label="Subscription quota">
+    <div class="rings" id="rings"></div>
+    <div class="detailWrap" id="detailWrap">
+      <div class="detailOuter" id="detailOuter">
+        <div class="detailInner">
+          <div class="seam" id="seam" aria-hidden="true"></div>
+          <div id="detail" role="region" aria-label="Limit detail"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule" aria-hidden="true">
+    <span class="ln"></span><span class="tag">different source · different meaning</span><span class="ln r"></span>
+  </div>
+
+  <footer class="cost" aria-labelledby="costh">
+    <div class="chead">
+      <h2 id="costh">Local token accounting <span class="sl">/ ccusage</span></h2>
+      <p class="cwarn"><b>Not your quota.</b> Tokens counted from local transcripts and priced at public
+        API list rates. The subscription does not meter against these dollars — the rings above are the
+        only thing that does, and the two can never be added together.</p>
+      <div class="ctot">
+        <div class="v" id="costTotal">—</div>
+        <div class="k" id="costKey">7-day total · usd · estimate</div>
+      </div>
+    </div>
+    <div class="cright">
+      <div class="cbar" id="costBar" aria-hidden="true"></div>
+      <table class="ctab">
+        <caption class="sr-only">Estimated local cost by model over the last seven days</caption>
+        <colgroup><col class="c1"><col class="c2"><col class="c3"></colgroup>
+        <thead><tr><th scope="col">Model</th><th scope="col" class="r">Cost</th><th scope="col" class="r">Share</th></tr></thead>
+        <tbody id="costRows"><tr><td class="mn" colspan="3" style="color:var(--ink-4)">loading…</td></tr></tbody>
+      </table>
+      <p class="cnote" id="costNote">&nbsp;</p>
+    </div>
+  </footer>
+</main>
+
+<p class="sr-only" role="status" aria-live="polite" id="live"></p>
+
+<script>
+"use strict";
+(() => {
+
+/* ═════════════════════════════════════════════════════════════════
+   The three limits, in the one order they are ever drawn.
+   Never reordered, never dropped — the layout cannot reflow.
+   ═════════════════════════════════════════════════════════════════ */
+const ORDER = ["session", "weekly", "fable"];
+const SHORT = { session: "Session", weekly: "Week", fable: "Fable" };
+const FALLBACK_WINDOW = { session: 18000, weekly: 604800, fable: 604800 };
+
+const S = {
+  snap: null,          // last quota snapshot (cold | warm | held | no-data)
+  hist: null,          // /api/history
+  cost: null,          // /api/cost
+  open: null,          // key of the expanded limit
+  link: "connecting",  // connecting | live | down
+  lastFrame: 0,        // when the last SSE frame landed
+  announced: "",
+  chartW: 0
+};
+
+const $ = (id) => document.getElementById(id);
+const ringsEl = $("rings"), detailEl = $("detail"), detailWrap = $("detailWrap"), seamEl = $("seam");
+
+/* ═════════════════════════ helpers ═════════════════════════ */
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const num = (v, d) => (typeof v === "number" && isFinite(v) ? v : d);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const limitOf = (k) => (S.snap && Array.isArray(S.snap.limits) ? S.snap.limits.find((l) => l && l.key === k) || null : null);
+
+/* Floor, never round. criticalPercent is 99.75 for this account, so a
+   99.9 that printed as "100" would claim a cap event that has not
+   happened. Only a true 100 prints 100. */
+const showPct = (p) => (p >= 100 ? "100" : String(Math.floor(p)));
+
+/* Bands are read from the thresholds in THIS snapshot on every render.
+   Cold serves criticalPercent 95, warm 99.75 — caching the first one
+   seen would put the redline in the wrong place for the rest of the day. */
+function bandOf(pct, th) {
+  if (typeof pct !== "number") return "unknown";
+  const warn = num(th && th.warningFloorPercent, 70);
+  const crit = num(th && th.criticalPercent, 95);
+  const exh  = num(th && th.exhaustedPercent, 100);
+  if (pct >= exh) return "exhausted";
+  if (pct >= crit) return "critical";
+  if (pct >= warn) return "warning";
+  return "steady";
+}
+const BAND_WORD = { steady: "nominal", warning: "warning", critical: "critical", exhausted: "at the cap", unknown: "no signal" };
+
+/* ── the arc's colour, as a ramp rather than three flat plateaus ──
+   bandOf still NAMES the band — the word, the aria text, the panel's
+   pill all want a name — but naming is not colouring. The middle band
+   spans warningFloorPercent to criticalPercent, which on this account
+   is 70 to 99.75: thirty points, the entire range in which a user
+   would actually do something about it, rendered as one flat amber, so
+   71% and 99% looked identical while 69% and 71% differed maximally.
+
+   The colour now travels continuously between the stops, and the
+   SERVED cut points stay the anchors: at exactly 70 the arc is exactly
+   --warning, at exactly 99.75 exactly --critical, at 100 exactly
+   --exhausted, so the dashboard still agrees with /usage about where
+   the lines are and the printed thmark ticks still land on the hue
+   they name. Below the warning floor nothing ramps — calm is flat on
+   purpose. Interpolation is monotone in the green channel, which
+   dominates relative luminance, so the .67 → .43 → .29 → .19 ladder
+   that survives greyscale and colour blindness survives the ramp too.
+   The bloom rides the same parameter, for the same reason it exists:
+   a darker arc must not recede. */
+const STOP = {
+  steady:    [114, 234, 208], warning:  [224, 165, 46], critical: [239, 106, 58],
+  exhausted: [224,  48,  79], unknown:  [125, 140, 163],
+};
+const BLOOM_STOP = { steady: .3, warning: .45, critical: .62, exhausted: .78, unknown: 0 };
+const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
+const rgbCss = (c) => "rgb(" + c[0] + " " + c[1] + " " + c[2] + ")";
+
+function rampOf(pct, th, band) {
+  if (band === "unknown" || typeof pct !== "number") return { rgb: STOP.unknown, bloom: BLOOM_STOP.unknown };
+  const warn = num(th && th.warningFloorPercent, 70);
+  const crit = num(th && th.criticalPercent, 95);
+  const exh  = num(th && th.exhaustedPercent, 100);
+  /* a hi <= lo can only come from a malformed threshold table; land on
+     the darker stop rather than dividing by zero */
+  const seg = (a, b, lo, hi) => {
+    const t = hi > lo ? clamp((pct - lo) / (hi - lo), 0, 1) : 1;
+    return { rgb: mix(STOP[a], STOP[b], t), bloom: BLOOM_STOP[a] + (BLOOM_STOP[b] - BLOOM_STOP[a]) * t };
+  };
+  if (pct >= exh)  return { rgb: STOP.exhausted, bloom: BLOOM_STOP.exhausted };
+  if (pct >= crit) return seg("critical", "exhausted", crit, exh);
+  if (pct >= warn) return seg("warning", "critical", warn, crit);
+  return { rgb: STOP.steady, bloom: BLOOM_STOP.steady };
+}
+
+/* Recomputed from the absolute instant, so it stays true between polls
+   and through an outage. resetsAt is a Python-style ISO string with
+   microseconds and a +00:00 offset; Date.parse handles it, slicing
+   would not. */
+function remainSec(lim, at = Date.now()) {
+  if (!lim || !lim.resetsAt) return null;
+  const t = Date.parse(lim.resetsAt);
+  return isFinite(t) ? (t - at) / 1000 : null;
+}
+/* elapsed = (window − remaining) / window — where the pace notch sits */
+function elapsedFrac(lim, at = Date.now()) {
+  const w = num(lim && lim.windowSeconds, 0);
+  const r = remainSec(lim, at);
+  if (!w || r === null) return null;
+  return clamp((w - r) / w, 0, 1);
+}
+/* ── how badly over pace, on a 0–1 scale ─────────────────────────
+   Being over pace at all is not news. Percentages arrive quantised to
+   whole points, so a point either way is noise, and one point over on
+   a seven-day window means nothing whatever. But three times the
+   sustainable burn has to be obvious at 9% just as much as at 90% —
+   that is the whole reason the pace marker was chosen over a plain
+   traffic light. So severity is a number, and two independent things
+   have to be true before the page raises its voice.
+
+   ABSOLUTE overrun, in points past the tick. Below PACE_DEAD (1.5 —
+   the quantisation step and a half, the same dead zone the verdict
+   words already use) there is nothing to report; PACE_FULL (8 points)
+   is a gap nobody can call noise on any window.
+
+   RATE overrun: pct / elapsed is where an unchanged burn LANDS at the
+   end of the window, as a multiple of the cap. 1.0× is exactly
+   sustainable — the arc sitting on the tick. The ramp starts at 1.15×,
+   which is inside the noise of a barely-started window, and saturates
+   at 2.5×, by which point the window is spent at two-fifths elapsed.
+
+   Severity is the SMALLER of the two, which is what stops both kinds
+   of false alarm: a huge ratio on a trivial overrun (2% used at 1%
+   elapsed is 2.0× — and one single point) scores 0, and so does a
+   large absolute gap at a sane rate (90% at 60% elapsed is 30 points
+   — and only 1.5×). The spec's headline case, 9% used at 3% elapsed,
+   scores 0.69: six points over AND three times the sustainable burn.
+   A one-point weekly overrun scores 0 on both counts. */
+const PACE_DEAD = 1.5, PACE_FULL = 8, RATE_DEAD = 1.15, RATE_FULL = 2.5;
+/* above this the page changes its voice: hot colour, heavier caption,
+   and the multiple stated in words */
+const PACE_LOUD = 0.3;
+
+function paceSeverity(pct, el) {
+  if (typeof pct !== "number" || el === null || !isFinite(el)) return 0;
+  const byPoints = clamp((pct - el * 100 - PACE_DEAD) / (PACE_FULL - PACE_DEAD), 0, 1);
+  if (byPoints <= 0) return 0;
+  const rate = el > 0 ? pct / (el * 100) : Infinity;   // a fresh window with usage already on it
+  const byRate = clamp((rate - RATE_DEAD) / (RATE_FULL - RATE_DEAD), 0, 1);
+  return Math.min(byPoints, byRate);
+}
+/* the burn as a multiple of the clock, for the words */
+function paceMultiple(pct, el) {
+  const r = el > 0 ? pct / (el * 100) : Infinity;
+  return !isFinite(r) || r >= 10 ? "10×+" : r.toFixed(1) + "×";
+}
+/* neutral slate → the pace colour. Deliberately NOT interpolating from
+   --ink-4: an over-pace verdict is a verdict even when it is mild, and
+   it should read at least as clearly as the label above it. */
+const PACE_INK_COLD = [141, 151, 166], PACE_MARK_COLD = [255, 255, 255], PACE_HOT = [255, 143, 90];
+
+/* The instant a pace judgement is made against. A countdown is a real
+   clock and keeps running through a hold, but anything that COMPARES the
+   percent to elapsed time has to use the instant the percent was read.
+   Mixing a frozen reading with a live clock makes the elapsed fraction
+   creep past a percent that cannot move, so a ring that correctly said
+   "over pace" reverses into reassurance purely because the dashboard was
+   blind for a while. While the snapshot is held, every such comparison is
+   pinned to fetchedAt — and says so. */
+function paceAt(f) {
+  if (!f || !f.hold || !S.snap || !S.snap.fetchedAt) return Date.now();
+  const t = Date.parse(S.snap.fetchedAt);
+  return isFinite(t) ? t : Date.now();
+}
+
+function fmtClock(sec) {
+  if (sec === null || !isFinite(sec)) return "—";
+  if (sec <= 0) return "resetting…";
+  const s = Math.floor(sec), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600),
+        m = Math.floor((s % 3600) / 60), ss = s % 60;
+  const p = (n) => String(n).padStart(2, "0");
+  if (d) return d + "d " + h + "h " + p(m) + "m";
+  if (h) return h + "h " + p(m) + "m " + p(ss) + "s";
+  return m + "m " + p(ss) + "s";
+}
+function fmtSpoken(sec) {
+  if (sec === null || !isFinite(sec) || sec <= 0) return "an unknown time";
+  let t = Math.floor(sec);
+  const d = Math.floor(t / 86400); t -= d * 86400;
+  const h = Math.floor(t / 3600);  t -= h * 3600;
+  const m = Math.floor(t / 60);
+  const out = [];
+  if (d) out.push(d + (d === 1 ? " day" : " days"));
+  if (h) out.push(h + (h === 1 ? " hour" : " hours"));
+  if (m || !out.length) out.push(m + (m === 1 ? " minute" : " minutes"));
+  return out.join(" ");
+}
+function fmtAge(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 10) return "just now";
+  if (s < 60) return s + "s ago";
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + "m ago";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + "h " + (m % 60) + "m ago";
+  return Math.floor(h / 24) + "d ago";
+}
+function fmtSpan(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  if (s < 3600) return Math.max(1, Math.round(s / 60)) + "m";
+  if (s < 86400) return (s / 3600).toFixed(s < 36000 ? 1 : 0) + "h";
+  return Math.round(s / 86400) + "d";
+}
+function fmtWindow(sec) {
+  if (!sec) return "—";
+  if (sec % 86400 === 0) return (sec / 86400) + (sec === 86400 ? " day" : " days");
+  if (sec % 3600 === 0) return (sec / 3600) + (sec === 3600 ? " hour" : " hours");
+  return Math.round(sec / 60) + " min";
+}
+function stamp(ms) {
+  const d = new Date(ms);
+  const hhmm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toDateString() === new Date().toDateString()
+    ? hhmm : d.toLocaleDateString([], { weekday: "short" }) + " " + hhmm;
+}
+const money = (n) => "$" + Number(num(n, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const shortModel = (n) => String(n).replace(/^claude-/, "").replace(/-\d{8}$/, "");
+
+/* ═════════════════════════ ring geometry ═════════════════════════ */
+const R = 50, CIRC = 2 * Math.PI * R;
+/* fraction 0 is 12 o'clock, sweeping clockwise */
+const ptAt = (r, f) => {
+  const a = (f * 360 - 90) * Math.PI / 180;
+  return { x: 60 + r * Math.cos(a), y: 60 + r * Math.sin(a) };
+};
+/* A round cap paints half a stroke width past each end of the dash: 4.5
+   user units at either end of a 314.16 circumference, so an arc drawn at
+   the exact fraction reads 2.9 points longer than the number says — and
+   the overshoot lands precisely where the eye compares the arc against the
+   pace notch. The dash is shortened by one whole stroke width and started
+   half a one in, so the PAINTED span, caps included, is the fraction.
+   Under one stroke width there is no room for that, and the arc is drawn
+   butt-capped at its true length instead. */
+const CAP = 9 / 2;
+/* the cap style each ring was last painted with — see the flip note below */
+const capMode = new Map();
+function paintArc(key, frac) {
+  const paint = CIRC * frac;
+  /* A COMPLETE ring is drawn complete. The shorten-and-round trick is a
+     compensation for two caps that do not meet; at exactly 100% they do
+     meet, and two semicircular caps meeting bite a wedge-shaped notch out
+     of the outer edge at 12 o'clock — visible at 1×, unmistakable at 8×.
+     At 100% the closed ring is the entire alarm (the number and the colour
+     are all that otherwise separate full from empty), so it has to close.
+     Drawn butt-capped at the full circumference, a <circle> has no seam. */
+  const complete = frac >= 1;
+  const capped = !complete && paint >= CAP * 2;
+  const len = complete ? CIRC : capped ? paint - CAP * 2 : paint;
+  const off = capped ? -CAP : 0;
+  const cap = capped ? "" : "butt";
+  /* The PAINTED span, caps included, is continuous across both
+     changeovers — so snapping there is invisible, while animating across
+     them is not: stroke-linecap cannot transition, and the dash length
+     steps by a whole stroke width at the same instant. Previously only
+     stroke-dasharray transitioned, so offset and cap snapped while the
+     length eased and the arc visibly jumped near 2.87%. Now dasharray and
+     dashoffset ease together, and the single render that changes cap
+     style is applied with the transition suppressed. */
+  const flip = capMode.get(key) !== cap;
+  capMode.set(key, cap);
+  for (const a of [q(key, "arc"), q(key, "bloom")]) {
+    if (flip) a.style.transition = "none";
+    a.setAttribute("stroke-dasharray", len.toFixed(2) + " " + CIRC.toFixed(2));
+    a.setAttribute("stroke-dashoffset", off.toFixed(2));
+    a.style.strokeLinecap = cap;
+    a.style.opacity = paint <= 0 ? "0" : "";
+    if (flip) { void a.getBoundingClientRect(); a.style.transition = ""; }
+  }
+}
+
+function arcPath(r, f0, f1) {
+  const span = f1 - f0;
+  if (span <= 0.0004) return "";
+  if (span >= 0.9995) return "";
+  const a = ptAt(r, f0), b = ptAt(r, f1);
+  return "M" + a.x.toFixed(2) + " " + a.y.toFixed(2) +
+         "A" + r + " " + r + " 0 " + (span > .5 ? 1 : 0) + " 1 " + b.x.toFixed(2) + " " + b.y.toFixed(2);
+}
+
+function buildRings() {
+  ringsEl.innerHTML = ORDER.map((key) => `
+    <button class="ring" type="button" id="ring-${key}" data-key="${key}"
+            aria-expanded="false" aria-controls="detail" data-state="unknown" data-pace="none">
+      <span class="art">
+        <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <circle class="well" cx="60" cy="60" r="44.5"></circle>
+          <circle class="rim" cx="60" cy="60" r="55.2"></circle>
+          <circle class="track" cx="60" cy="60" r="${R}"></circle>
+          <g class="thmarks" data-r="thmarks"></g>
+          <g transform="rotate(-90 60 60)">
+            <circle class="arc bloom" data-r="bloom" cx="60" cy="60" r="${R}"
+                    stroke-dasharray="${CIRC.toFixed(2)}" stroke-dashoffset="${CIRC.toFixed(2)}"></circle>
+            <circle class="arc main" data-r="arc" cx="60" cy="60" r="${R}"
+                    stroke-dasharray="${CIRC.toFixed(2)}" stroke-dashoffset="${CIRC.toFixed(2)}"></circle>
+          </g>
+          <path class="gap" data-r="gap" d=""></path>
+          <g class="notch" data-r="notch" transform="rotate(0 60 60)" style="display:none">
+            <line class="nb" x1="60" y1="2.4" x2="60" y2="17.6"></line>
+            <line class="nl" x1="60" y1="2.4" x2="60" y2="17.6"></line>
+            <circle class="ncap" cx="60" cy="1" r="2.3"></circle>
+          </g>
+        </svg>
+        <span class="readout" aria-hidden="true">
+          <span class="numrow"><span class="num" data-r="num">—</span><span class="pctsign" data-r="sign">%</span></span>
+        </span>
+      </span>
+      <span class="meta" aria-hidden="true">
+        <span class="mlabel" data-r="label">${SHORT[key]}</span>
+        <span class="mclock" data-r="clock">—</span>
+        <span class="mpace" data-r="pace"></span>
+      </span>
+      <span class="sr-only" data-r="sr"></span>
+    </button>`).join("");
+
+  ringsEl.querySelectorAll(".ring").forEach((b) => {
+    b.addEventListener("click", () => toggle(b.dataset.key));
+  });
+}
+
+const q = (key, name) => $("ring-" + key).querySelector('[data-r="' + name + '"]');
+
+/* ═════════════════════════ freshness ═════════════════════════
+   Read hasData and stale, never the truthiness of anything else.
+   fetchedAt is only a data age once hasData is true — in the cold
+   and never-polled states it is simply the moment you asked.     */
+function freshness() {
+  const s = S.snap;
+  const silent = S.lastFrame > 0 && Date.now() - S.lastFrame > 150000;
+  const linkBad = S.link === "down" || silent;
+
+  /* link first: a cold page whose backend is unreachable would otherwise
+     claim to be connecting forever, because S.snap never arrives to let
+     the check below run. */
+  if (!s) return linkBad
+    ? { tone: "down", text: "cannot reach the local quota service", blank: true }
+    : { tone: "wait", text: "connecting to the local quota service", blank: true };
+
+  if (!s.hasData) {
+    if (s.lastError) return { tone: "down", blank: true,
+      text: "no reading — " + s.lastError.message };
+    return { tone: "wait", text: "waiting for the first reading", blank: true };
+  }
+  const age = fmtAge(Date.now() - Date.parse(s.fetchedAt));
+  if (s.stale) return { tone: "hold", hold: true,
+    text: "holding the reading from " + age + (s.lastError ? " — " + s.lastError.message : "") };
+  if (linkBad) return { tone: "hold", hold: true,
+    text: "lost the live feed — holding the reading from " + age };
+  return { tone: "live", text: "live · updated " + age };
+}
+
+/* ═════════════════════════ render ═════════════════════════ */
+function render() {
+  const s = S.snap, f = freshness();
+  const th = s ? s.thresholds : null;
+
+  $("fresh").dataset.tone = f.tone;
+  $("freshText").textContent = f.text;
+
+  const plan = s && s.plan ? s.plan : null;
+  $("plan").textContent = plan && plan.subscriptionType
+    ? plan.subscriptionType.toUpperCase() +
+      (/max_20x/.test(plan.rateLimitTier || "") ? " · 20×" : /max_5x/.test(plan.rateLimitTier || "") ? " · 5×" : "")
+    : "";
+
+  document.body.dataset.hold = f.hold ? "1" : "0";
+
+  let heat = 0;
+  for (const key of ORDER) heat = Math.max(heat, paintRing(key, th, f));
+  /* The room warms with the hottest limit — at full strength even while
+     the snapshot is held. A held reading is a VERIFIED reading the page
+     simply cannot refresh; damping this by 0.3 meant an outage could turn
+     a measured emergency into a calm room. The hold is stated instead:
+     amber pill, dashed rim, "· held" on every pace line. */
+  $("warm").style.opacity = String(heat);
+
+  const sig = f.tone + "|" + (s && s.lastError ? s.lastError.code : "") + "|" +
+    ORDER.map((k) => { const l = limitOf(k); return l && l.percent !== null ? showPct(l.percent) : "?"; }).join(",");
+  if (sig !== S.announced) { S.announced = sig; $("live").textContent = spokenSummary(f); }
+
+  if (S.open) renderDetail(S.open);
+  placeSeam();
+}
+
+function paintRing(key, th, f) {
+  const btn = $("ring-" + key);
+  const lim = limitOf(key);
+  const known = !f.blank && lim && typeof lim.percent === "number";
+  const dormant = !!(known && lim.dormant);
+  const pct = known ? lim.percent : null;
+  /* dormant means "no reset window is running" and says nothing whatever
+     about the percent. Only a dormant limit with nothing on it goes quiet;
+     one carrying a real reading keeps its band, because the reading is
+     just as backed as any other. */
+  const quiet = dormant && !(pct > 0);
+  const band = !known || quiet ? "unknown" : bandOf(pct, th);
+
+  btn.dataset.state = !known ? "unknown" : dormant ? "dormant" : "live";
+  btn.dataset.quiet = quiet ? "1" : "0";
+  btn.dataset.band = band; // data-state is liveness; the band needs its own hook for CSS
+
+  const ramp = rampOf(pct, th, band);
+  btn.style.setProperty("--band", rgbCss(ramp.rgb));
+  btn.style.setProperty("--band-rgb", ramp.rgb.join(" "));
+  btn.style.setProperty("--bloom", ramp.bloom.toFixed(3));
+
+  const frac = known ? clamp(pct / 100, 0, 1) : 0;
+  paintArc(key, frac);
+
+  q(key, "num").textContent = known ? showPct(pct) : "—";
+  q(key, "sign").style.display = known ? "" : "none";
+  q(key, "label").textContent = (lim && lim.label) || SHORT[key];
+
+  /* the served cut points, printed on the track */
+  paintThresholds(key, th, known && !quiet);
+
+  const el = known && !dormant ? elapsedFrac(lim, paceAt(f)) : null;
+  const notch = q(key, "notch"), gap = q(key, "gap");
+  let delta = null, sev = 0;
+
+  if (el === null) {
+    notch.style.display = "none";
+    gap.setAttribute("d", "");
+    btn.dataset.pace = "none";
+    btn.dataset.hot = "0";
+    btn.style.setProperty("--psev", "0");
+  } else {
+    notch.style.display = "";
+    notch.setAttribute("transform", "rotate(" + (el * 360).toFixed(3) + " 60 60)");
+    delta = pct - el * 100;
+    sev = paceSeverity(pct, el);
+    btn.dataset.pace = delta > PACE_DEAD ? "over" : delta < -PACE_DEAD ? "under" : "even";
+    /* the pace channel's own strength, in its own colours — nothing here
+       reads the band, so an over-pace verdict is just as loud at 9% as
+       it is at 90% */
+    btn.dataset.hot = sev >= PACE_LOUD ? "1" : "0";
+    btn.style.setProperty("--psev", sev.toFixed(3));
+    btn.style.setProperty("--pace-ink", rgbCss(mix(PACE_INK_COLD, PACE_HOT, sev)));
+    btn.style.setProperty("--pace-mark", rgbCss(mix(PACE_MARK_COLD, PACE_HOT, sev)));
+    /* the headroom / overshoot span, drawn as a length rather than
+       left to arithmetic */
+    gap.setAttribute("d", arcPath(41.5, Math.min(frac, el), Math.max(frac, el)));
+  }
+
+  const rem = known && !dormant ? remainSec(lim) : null;
+  const clockEl = q(key, "clock");
+  /* the word comes from THIS limit's state, not from the connection tone:
+     a limit the API reported no value for is not one that is still loading */
+  if (!known)      { clockEl.textContent = !f.blank ? "not reported"
+                       : f.tone === "down" ? "no reading" : "waiting…"; clockEl.classList.add("word"); }
+  else if (dormant){ clockEl.textContent = "dormant"; clockEl.classList.add("word"); }
+  else             { clockEl.textContent = fmtClock(rem); clockEl.classList.remove("word"); }
+
+  const paceEl = q(key, "pace");
+  if (dormant)          paceEl.textContent = "no reset window running" + (f.hold ? " · held" : "");
+  else if (delta === null) paceEl.textContent = known ? "no reset time to pace against" + (f.hold ? " · held" : "") : "";
+  else {
+    const g = Math.abs(Math.round(delta));
+    /* the multiple is the part that is legible at any percent: "6 pts over
+       pace" is arithmetic, "3.0× clock" is the verdict. It appears only
+       once the overrun is loud, so a mild one stays a single quiet phrase. */
+    const mult = sev >= PACE_LOUD ? " · " + paceMultiple(pct, el) + " clock" : "";
+    /* " · held" is the frozen-ness made visible: this verdict was struck at
+       the instant of the reading and has not been re-judged since */
+    paceEl.innerHTML = (delta > PACE_DEAD ? '<span class="tri">▲</span>' + g + " pts over pace" + mult
+      : delta < -PACE_DEAD ? '<span class="tri">▼</span>' + g + " pts under pace"
+      : '<span class="tri">◆</span>on pace') + (f.hold ? " · held" : "");
+  }
+
+  q(key, "sr").textContent = srText(key, lim, known, dormant, pct, el, rem, band, f);
+  return heatOf(pct, el, band, known, dormant);
+}
+
+function paintThresholds(key, th, on) {
+  const host = q(key, "thmarks");
+  const cuts = [];
+  if (on && th) {
+    const warn = num(th.warningFloorPercent, NaN);
+    const crit = num(th.criticalPercent, NaN);
+    if (isFinite(warn) && warn > 0 && warn < 100) cuts.push([warn, "var(--warning)"]);
+    /* 99.75 sits a quarter-point from the cap; drawing it would just
+       thicken the 100 mark, so it is only shown when it is far enough
+       away to be a distinct place on the ring */
+    if (isFinite(crit) && crit > 0 && crit < 98) cuts.push([crit, "var(--critical)"]);
+  }
+  const key2 = cuts.map((c) => c[0]).join(",");
+  if (host.dataset.k === key2) return;
+  host.dataset.k = key2;
+  host.innerHTML = cuts.map(([v, col]) => {
+    const a = ptAt(R - 5.4, v / 100), b = ptAt(R + 5.4, v / 100);
+    return `<line class="thmark" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${col}"></line>`;
+  }).join("");
+}
+
+/* How much this limit should warm the room: the worse of raw consumption
+   and pace overrun. The pace term used to be a raw (pct − elapsed) ramp,
+   which put the spec's headline case — 9% at 3% elapsed, three times the
+   sustainable burn — at 0.137, barely above idle, so the room stayed cold
+   for precisely the case the marker exists to catch. It is the severity
+   measure now, which reads that case at 0.69 and a one-point weekly
+   overrun at 0. */
+function heatOf(pct, el, band, known, dormant) {
+  if (!known || pct === null) return 0;
+  const byBand = band === "exhausted" ? 1 : band === "critical" ? .88 : band === "warning" ? .6 : clamp(pct / 100, 0, 1) * .45;
+  const byPace = dormant ? 0 : paceSeverity(pct, el) * .85;
+  return clamp(Math.max(byBand, byPace), 0, 1);
+}
+
+function srText(key, lim, known, dormant, pct, el, rem, band, f) {
+  const name = (lim && lim.label) || SHORT[key];
+  if (!known) return name + (f.blank ? ": no reading yet." : ": the API returned no value for this limit.") +
+    " Activate for detail.";
+  if (dormant) return name + ": " + showPct(pct) + " percent used, and no reset window is running, " +
+    "so there is no clock to pace it against. Activate for detail.";
+  const d = el === null ? null : pct - el * 100;
+  const sev = paceSeverity(pct, el);
+  const pace = d === null ? "" : d > PACE_DEAD
+      ? ", " + Math.abs(Math.round(d)) + " points ahead of an even burn" +
+        (sev >= PACE_LOUD ? ", burning at " + paceMultiple(pct, el).replace("×", " times") + " the sustainable rate" : "")
+    : d < -PACE_DEAD ? ", " + Math.abs(Math.round(d)) + " points behind an even burn" : ", on pace";
+  return name + ": " + showPct(pct) + " percent used" + pace +
+    (el === null ? "" : ", " + Math.round(el * 100) + " percent of the window elapsed" +
+      (f.hold ? " when the reading was taken" : "")) +
+    ", band " + BAND_WORD[band] +
+    (rem === null ? "" : ", resets in " + fmtSpoken(rem)) +
+    (f.hold ? ". Held: this is the last verified reading, and the pace comparison is frozen at that instant, not live" : "") +
+    ". Activate for burn rate, projection and history.";
+}
+
+function spokenSummary(f) {
+  if (!S.snap) return f.text;
+  const parts = ORDER.map((k) => {
+    const l = limitOf(k);
+    if (f.blank || !l || l.percent === null) return SHORT[k] + " unknown";
+    if (l.dormant) return SHORT[k] + " " + showPct(l.percent) + " percent, dormant";
+    return SHORT[k] + " " + showPct(l.percent) + " percent";
+  });
+  return f.text + ". " + parts.join(". ") + ".";
+}
+
+/* ═════════════════════════ detail ═════════════════════════ */
+function toggle(key) {
+  S.open = S.open === key ? null : key;
+  ORDER.forEach((k) => $("ring-" + k).setAttribute("aria-expanded", String(S.open === k)));
+  detailWrap.classList.toggle("open", !!S.open);
+  $("detailOuter").inert = !S.open;
+  if (S.open) { S.chartW = 0; renderDetail(S.open); placeSeam(); }
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && S.open) { const k = S.open; toggle(k); $("ring-" + k).focus(); }
+});
+
+function placeSeam() {
+  if (!S.open) return;
+  const btn = $("ring-" + S.open), host = detailWrap.querySelector(".detailInner");
+  if (!btn || !host) return;
+  const b = btn.getBoundingClientRect(), r = host.getBoundingClientRect();
+  seamEl.style.left = (b.left + b.width / 2 - r.left) + "px";
+}
+
+function fitFor(key) {
+  const h = S.hist;
+  if (!h || !Array.isArray(h.limits)) return null;
+  return h.limits.find((l) => l && l.key === key) || null;
+}
+
+function renderDetail(key) {
+  const lim = limitOf(key), fit = fitFor(key), th = S.snap ? S.snap.thresholds : null;
+  const f = freshness();
+  const known = !f.blank && lim && typeof lim.percent === "number";
+  const dormant = !!(known && lim.dormant);
+  /* the SAME flag paintRing bands on. This gated on `dormant` while the
+     ring gated on `quiet`, so a dormant limit carrying a real reading had
+     its ring and its own detail panel disagree about which band it is in. */
+  const quiet = dormant && !(lim.percent > 0);
+  const band = !known || quiet ? "unknown" : bandOf(lim.percent, th);
+  const ramp = rampOf(known && !quiet ? lim.percent : null, th, band);
+  const bandWord = quiet ? "dormant" : dormant ? BAND_WORD[band] + " · dormant" : BAND_WORD[band];
+
+  const burn = fit && typeof fit.burnPercentPerHour === "number" && isFinite(fit.burnPercentPerHour) ? fit.burnPercentPerHour : null;
+  const proj = fit && typeof fit.projectedAt === "number" && isFinite(fit.projectedAt) ? fit.projectedAt : null;
+  const sc   = fit && typeof fit.sampleCount === "number" ? fit.sampleCount : 0;
+  const since= fit && typeof fit.sinceT === "number" && isFinite(fit.sinceT) ? fit.sinceT : null;
+
+  /* three samples make a rate; below that the server declines and so do we */
+  const burnHtml = burn === null
+    ? `<dd class="est">measuring</dd>`
+    : `<dd>${burn > 0 ? "+" : ""}${Math.abs(burn) >= 10 ? burn.toFixed(1) : burn.toFixed(2)}<small>%/hr</small></dd>`;
+  /* never draw a projection the API returned as null */
+  const projHtml = proj === null
+    ? `<dd class="est">measuring</dd>`
+    : `<dd>~${esc(stamp(proj))}<small>hits the cap</small></dd>`;
+
+  const el = known && !dormant ? elapsedFrac(lim, paceAt(f)) : null;
+  let paceHtml;
+  if (dormant) paceHtml = `<dd class="est">no reset window</dd>`;
+  else if (el === null || !known) paceHtml = `<dd class="est">nothing to pace against</dd>`;
+  else {
+    const d = lim.percent - el * 100, g = Math.abs(Math.round(d));
+    /* the same severity channel the ring caption uses, and for the same
+       reason: a raw point delta in neutral ink is exactly what made "over
+       pace" invisible on the ring, and this tile sits directly under that
+       caption — flattening it here would contradict the ring by omission. */
+    const sev = d > PACE_DEAD ? paceSeverity(lim.percent, el) : 0;
+    const mult = sev >= PACE_LOUD ? " · " + paceMultiple(lim.percent, el) + " clock" : "";
+    const ink = sev > 0
+      ? ` style="color:${rgbCss(mix(PACE_INK_COLD, PACE_HOT, sev))}${sev >= PACE_LOUD ? ";font-weight:600" : ""}"`
+      : "";
+    paceHtml = `<dd${ink}>${d > PACE_DEAD ? "▲ " + g : d < -PACE_DEAD ? "▼ " + g : "◆ 0"}<small${ink}>${
+      d > PACE_DEAD ? "over pace" + mult : d < -PACE_DEAD ? "under pace" : "on pace"}${f.hold ? " · held" : ""}</small></dd>`;
+  }
+  const runHtml = sc > 0
+    ? `<dd>${sc}<small>sample${sc === 1 ? "" : "s"}${since ? " since " + esc(stamp(since)) : ""}</small></dd>`
+    : `<dd class="est">no fitted run yet</dd>`;
+
+  /* the notch, said in words — the tick teaches itself on first click */
+  let marker;
+  if (dormant) marker = "No reset window is running, so there is no clock to pace this " + showPct(lim.percent) +
+    "% against. The ring picks up a pace marker on its own once a window starts.";
+  else if (el === null || !known) marker = "No reset instant, so the pace marker cannot be placed.";
+  else {
+    const d = lim.percent - el * 100, g = Math.abs(Math.round(d));
+    /* The prose narrates whichever state the panel is actually in. It was
+       switched to past-perfect unconditionally when the hold prefix was
+       added, so a live panel described itself in the past tense. */
+    const had = f.hold ? "had" : "has", reaches = f.hold ? "reached" : "reaches";
+    /* A published projection outranks the pace comparison. The server only
+       publishes one when the fitted rate reaches the cap before this window
+       resets, so "coasting" cannot be said next to it — the panel would be
+       reassuring the reader out of its own strongest evidence. */
+    marker = (f.hold ? "Frozen at the reading taken " + stamp(Date.parse(S.snap.fetchedAt)) + ": the white tick sits at "
+                     : "The white tick sits at ") +
+      Math.round(el * 100) + "% of the way round — the share of the window " +
+      "the clock " + had + " already burned. The arc " + reaches + " " + showPct(lim.percent) + "%, " +
+      (d > PACE_DEAD ? g + " points past it" +
+           (paceSeverity(lim.percent, el) >= PACE_LOUD ? ", " + paceMultiple(lim.percent, el) + " the clock's own rate" : "") +
+           /* attributed, because the very next sentence may be the OTHER
+              model saying the opposite */
+           ": on the even-burn clock alone, the cap arrives before the window resets."
+       : d < -PACE_DEAD ? (proj !== null
+           ? g + " points behind it — but the clock is not what binds here: the fitted burn rate reaches the cap at " +
+             stamp(proj) + ", before this window resets."
+           : g + " points behind it: coasting.")
+       : (proj !== null
+           ? "level with it — and the fitted burn rate still reaches the cap at " + stamp(proj) +
+             ", before this window resets."
+           : "level with it: burning exactly as fast as the clock."));
+  }
+
+  /* ── the two marks the ring never explained ──────────────────────
+     Four things are drawn on a ring and only two of them taught
+     themselves: the arc is the number in the middle and the notch is
+     the sentence above. The overshoot span and the printed cut points
+     were explained nowhere on the page. They are explained here, in
+     the panel whose job is to teach the ring, so the resting page
+     stays three rings and nothing else. */
+  let legend = "";
+  if (known && !dormant && el !== null) {
+    legend = " The thin line inside the track spans the arc's head to the tick — that difference as a " +
+      "length: dotted grey while it is headroom, solid and lit in the pace colour once the arc has " +
+      "overrun the clock, thickening with the size of the overrun.";
+  }
+  /* paintThresholds(key, th, known && !quiet) — the `on` flag is half its
+     contract, so the prose has to carry it too. Mirroring only the value
+     conditions described marks that were never drawn. */
+  if (known && !quiet) {
+    const w = num(th && th.warningFloorPercent, NaN), c = num(th && th.criticalPercent, NaN);
+    const cuts = [];
+    if (isFinite(w) && w > 0 && w < 100) cuts.push("warning at " + w + "%");
+    if (isFinite(c) && c > 0 && c < 98) cuts.push("critical at " + c + "%");
+    if (cuts.length) {
+      legend += " The short marks across the track are the cut points the API serves — " +
+        cuts.join(" and ") + " — so you can see a threshold before you reach it.";
+    } else if (isFinite(c)) {
+      legend += " The short mark crossing the track is the served warning floor; the critical cut at " + c +
+        "% sits too close to the cap to draw as a place of its own.";
+    }
+  }
+
+  const winSec = num(lim && lim.windowSeconds, FALLBACK_WINDOW[key]);
+  const boxW = Math.max(260, Math.round(detailEl.clientWidth || 640));
+  S.chartW = boxW;
+
+  const html =
+    `<div class="dhead">
+       <span class="dtitle">${esc((lim && lim.label) || SHORT[key])} · ${esc(fmtWindow(winSec))} window</span>
+       <span class="dband" style="color:${rgbCss(ramp.rgb)}">${esc(bandWord)}</span>
+       <button class="dclose" type="button" id="dclose">close</button>
+     </div>
+     <dl class="readouts">
+       <div class="ro"><dt>burn rate</dt>${burnHtml}</div>
+       <div class="ro"><dt>projection</dt>${projHtml}</div>
+       <div class="ro"><dt>pace</dt>${paceHtml}</div>
+       <div class="ro"><dt>fitted run</dt>${runHtml}</div>
+     </dl>
+     <div class="chartwrap">${chartHTML(key, fit, band, proj, th, boxW, !known)}</div>
+     <p class="dfoot">${esc(marker)}${esc(legend)}${
+       burn === null ? " The fitted burn rate is a second, separate model, and it needs three readings in an unbroken run before it can say anything at all." :
+       proj === null ? " The fitted burn rate is a second, separate model: it publishes no projection while that fitted rate is flat or falling, the run is too short to extrapolate from, or the window resets before the cap." : ""}</p>`;
+
+  /* render() runs at 1 Hz and almost every tick produces identical
+     markup; only touch the DOM when something actually changed */
+  if (html !== S.lastDetail) {
+    S.lastDetail = html;
+    detailEl.innerHTML = html;
+    detailEl.style.setProperty("--band", rgbCss(ramp.rgb));
+    detailEl.style.setProperty("--band-rgb", ramp.rgb.join(" "));
+    const close = $("dclose");
+    if (close) close.addEventListener("click", () => { toggle(key); $("ring-" + key).focus(); });
+  }
+}
+
+/* ── the chart ────────────────────────────────────────────────
+   Every retained sample as a dim trace; the contiguous run the
+   fit was actually taken over, lit. Nulls break the line rather
+   than being drawn as zero. A projection ramp only when the API
+   returned one.                                                */
+function chartHTML(key, fit, band, proj, th, W, presentUnknown) {
+  const h = S.hist, idx = ORDER.indexOf(key);
+  const raw = h && Array.isArray(h.samples) ? h.samples : [];
+  const pts = raw.filter((s) => s && Array.isArray(s.p) && isFinite(s.t))
+                 .map((s) => ({ t: s.t, v: typeof s.p[idx] === "number" ? s.p[idx] : null }));
+  const usable = pts.filter((p) => p.v !== null);
+  if (usable.length < 2) {
+    return `<div class="chartcap"><span>history${presentUnknown ? " · current reading unknown" : ""}</span></div>
+            <div class="chartempty">not enough readings retained yet to draw a line</div>`;
+  }
+
+  const H = 116, PL = 34, PR = 46, PT = 10, PB = 19;
+  const now = Date.now();
+  let t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, now);
+  if (t1 - t0 < 60000) t1 = t0 + 60000;
+
+  const vmax = usable.reduce((m, p) => Math.max(m, p.v), 0);
+  let ymax = 100;
+  for (const c of [4, 10, 20, 30, 40, 50, 60, 80, 100]) { if (vmax * 1.3 <= c) { ymax = c; break; } }
+
+  /* only stretch the x-axis to reach a projection that is actually
+     close enough to be worth showing */
+  let projX = null;
+  if (proj !== null && proj > t1 && proj - t1 <= (t1 - t0) * 2.2) { t1 = proj; ymax = 100; projX = proj; }
+
+  const X = (t) => PL + ((t - t0) / (t1 - t0)) * (W - PL - PR);
+  const Y = (v) => PT + (1 - clamp(v, 0, ymax) / ymax) * (H - PT - PB);
+
+  const gapMs = num(h && h.intervalMs, 60000) * 6;   // the server restarts a run across a gap this long
+  const seg = (filt) => {
+    const out = []; let cur = [];
+    for (const p of pts) {
+      if (p.v === null || !filt(p)) { if (cur.length > 1) out.push(cur); cur = []; continue; }
+      if (cur.length && p.t - cur[cur.length - 1].t > gapMs) { if (cur.length > 1) out.push(cur); cur = []; }
+      cur.push(p);
+    }
+    if (cur.length > 1) out.push(cur);
+    return out.map((a) => "M" + a.map((p) => X(p.t).toFixed(1) + " " + Y(p.v).toFixed(1)).join("L")).join(" ");
+  };
+
+  const since = fit && typeof fit.sinceT === "number" && isFinite(fit.sinceT) ? fit.sinceT : null;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${
+    esc(SHORT[key])} usage history, ${usable.length} readings, latest ${usable[usable.length-1].v} percent">`;
+
+  for (const fr of [0, .5, 1]) {
+    const y = Y(ymax * fr);
+    s += `<line class="grid" x1="${PL}" y1="${y.toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
+    s += `<text class="ax" x="${PL - 7}" y="${(y + 3.4).toFixed(1)}" text-anchor="end">${Math.round(ymax * fr)}</text>`;
+  }
+  const warn = num(th && th.warningFloorPercent, NaN);
+  if (isFinite(warn) && warn <= ymax) {
+    s += `<line class="warnln" x1="${PL}" y1="${Y(warn).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(warn).toFixed(1)}"></line>`;
+    s += `<text class="ax" x="${(W - PR + 5).toFixed(1)}" y="${(Y(warn) + 3.4).toFixed(1)}" fill="rgb(var(--warning-rgb)/.65)">warn</text>`;
+  }
+
+  s += `<path class="full" d="${seg(() => true)}"></path>`;
+  if (since !== null) {
+    const runD = seg((p) => p.t >= since);
+    if (runD) {
+      const run = usable.filter((p) => p.t >= since);
+      /* a two-sample run is a sliver; shading it would read as an
+         artefact, so only a run wide enough to be a shape is filled */
+      if (run.length > 1 && X(run[run.length - 1].t) - X(run[0].t) > (W - PL - PR) * 0.08) {
+        s += `<path class="area" d="${runD} L${X(run[run.length-1].t).toFixed(1)} ${(H-PB).toFixed(1)} L${X(run[0].t).toFixed(1)} ${(H-PB).toFixed(1)} Z"></path>`;
+      }
+      s += `<path class="run" d="${runD}"></path>`;
+    }
+    if (since > t0 && since < t1) {
+      s += `<line class="since" x1="${X(since).toFixed(1)}" y1="${PT}" x2="${X(since).toFixed(1)}" y2="${(H - PB).toFixed(1)}"></line>`;
+      s += `<text class="ax" x="${(X(since) - 4).toFixed(1)}" y="${(H - PB - 4).toFixed(1)}" text-anchor="end">fit</text>`;
+    }
+  }
+
+  const last = usable[usable.length - 1];
+  /* Both floating labels want the top-right corner, and a projection is
+     drawn exactly when the head is high — so at high percent the "cap
+     HH:MM" and the "N%" used to sit on the same line with the dashed ramp
+     running through both. Two rules keep them apart: the cap label owns
+     the top-right row unconditionally, and the head label — which stays
+     exactly where it always was in every other case — steps down out of
+     that row when, and only when, it would actually reach into it. Both
+     are knocked out of whatever passes under them by .lbl, so the ramp
+     cannot strike a glyph either way. */
+  let capLeft = Infinity;
+  if (projX !== null) {
+    const capText = "cap " + stamp(projX);
+    capLeft = X(projX) - 5 - capText.length * 5.9;   // 10px mono ≈ 5.9px/char
+    s += `<path class="proj" d="M${X(last.t).toFixed(1)} ${Y(last.v).toFixed(1)}L${X(projX).toFixed(1)} ${Y(100).toFixed(1)}"></path>`;
+    s += `<text class="ax lbl" x="${(X(projX) - 5).toFixed(1)}" y="${PT + 9}" text-anchor="end" fill="var(--band)">${esc(capText)}</text>`;
+  }
+  const headX = X(last.t), headY = Y(last.v);
+  const label = last.v + "%";
+  const lw = label.length * 5.9;
+  const capRow = PT + 9;
+  let lx = headX + 7, la = "start";
+  if (lx + lw > W - 2) { lx = headX - 7; la = "end"; }          // never off the right edge
+  /* clamp BEFORE testing for a clash: a head at 100% wants a row above
+     the plot, gets pushed down into exactly the row the cap label owns,
+     and the clash has to be judged on where the label really lands */
+  let ly = clamp(headY - 7, PT + 8, H - PB - 3);
+  if (projX !== null) {
+    const l = la === "end" ? lx - lw : lx, r = la === "end" ? lx : lx + lw;
+    /* they only fight when the label reaches into the cap label's span
+       AND sits in its row — which is exactly the high-percent case,
+       because a projection is drawn precisely when the head is high */
+    if (r > capLeft && l < X(projX) && Math.abs(ly - capRow) < 12) {
+      ly = clamp(Math.max(headY + 15, capRow + 15), PT + 8, H - PB - 3);
+    }
+  }
+  s += `<circle class="head" cx="${headX.toFixed(1)}" cy="${headY.toFixed(1)}" r="2.6"></circle>`;
+  s += `<text class="ax lbl" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${la}" fill="var(--band)">${label}</text>`;
+  s += `<text class="ax" x="${PL}" y="${H - 5}">${esc(stamp(t0))}</text>`;
+  s += `<text class="ax" x="${(W - PR).toFixed(1)}" y="${H - 5}" text-anchor="end">${projX !== null ? esc(stamp(t1)) : "now"}</text>`;
+  s += `</svg>`;
+
+  return `<div class="chartcap">
+      <span>last ${esc(fmtSpan((Math.max(...usable.map(p=>p.t)) - t0) / 1000))} of history${
+        presentUnknown ? " · current reading unknown" : ""}</span>
+      <span class="note">bright where the burn rate was fitted${since !== null && since > t0 ? " · dashed line marks where that run starts" : ""}</span>
+    </div>${s}`;
+}
+
+/* ═════════════════════════ cost ═════════════════════════
+   A different data source with a different meaning, in a colour
+   family that appears in no band, with no circular form anywhere. */
+const CRAMP = ["#9aa4dc", "#828cc4", "#6c75a8", "#585f8b", "#464b6d"];
+function renderCost() {
+  const c = S.cost;
+  if (!c) { $("costNote").textContent = "waiting for ccusage…"; return; }
+  const total = num(c.sevenDayTotal, 0);
+  const models = Array.isArray(c.models) ? c.models : [];
+  /* "ccusage reports zero" and "we could not ask ccusage" are different
+     claims, and only the first one is a fact about usage. */
+  const dead = !!(c.error && !models.length);
+
+  $("costTotal").textContent = dead ? "—" : money(total);
+  $("costTotal").style.color = dead ? "var(--ink-4)" : "";
+  $("costKey").textContent = "7-day total · usd · estimate" + (c.stale && !c.error ? " · cached copy" : "");
+
+  $("costBar").innerHTML = models.map((m, i) => {
+    const p = total > 0 ? (num(m.cost, 0) / total) * 100 : 0;
+    return `<span style="width:${p.toFixed(3)}%;background:${CRAMP[Math.min(i, 4)]}"></span>`;
+  }).join("");
+
+  $("costRows").innerHTML = dead
+    ? `<tr><td class="mn" colspan="3" style="color:var(--ink-4)">ccusage could not be read — no accounting to show</td></tr>`
+    : models.length
+      ? models.map((m, i) => {
+          const p = total > 0 ? (num(m.cost, 0) / total) * 100 : 0;
+          return `<tr><td class="mn"><span class="sw" style="background:${CRAMP[Math.min(i,4)]}"></span>${esc(shortModel(m.name))}</td>` +
+                 `<td class="r">${money(m.cost)}</td><td class="r" style="color:var(--ink-4)">${p.toFixed(1)}%</td></tr>`;
+        }).join("")
+      : `<tr><td class="mn" colspan="3" style="color:var(--ink-4)">ccusage reports no local usage in the last seven days</td></tr>`;
+
+  if (c.error) {
+    $("costNote").innerHTML = `<span style="color:#f0b9c4">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota rings above are unaffected.`;
+  } else if (c.stale) {
+    $("costNote").textContent = "Cached copy while a refresh runs. Recomputed at most every 5 minutes.";
+  } else {
+    $("costNote").textContent = "Recomputed at most every 5 minutes · last read " +
+      (c.fetchedAt ? stamp(Date.parse(c.fetchedAt)) : "—") + " · list-rate estimates, not charges.";
+  }
+}
+
+/* ═════════════════════════ wiring ═════════════════════════ */
+buildRings();
+$("detailOuter").inert = true;
+render();
+
+function apply(next) {
+  if (!next || !Array.isArray(next.limits)) return;
+  S.snap = next;
+  render();
+}
+
+/* /api/quota is always a full-shaped 200, so it can beat the stream to
+   the screen; the stream then owns every frame after it. */
+fetch("/api/quota", { cache: "no-store" })
+  .then((r) => r.json())
+  .then((j) => { if (!S.lastFrame) apply(j); })
+  .catch(() => {});
+
+let es = null;
+function connect() {
+  try { es = new EventSource("/api/stream"); }
+  catch (_) { S.link = "down"; render(); return; }
+  es.onopen = () => { S.link = "live"; render(); };
+  es.onmessage = (e) => {
+    if (!e.data) return;                       // ': ping' keep-alives never reach here, but be safe
+    let parsed = null;
+    try { parsed = JSON.parse(e.data); } catch (_) { return; }
+    S.link = "live"; S.lastFrame = Date.now();
+    apply(parsed);
+    if (!S.histAt || Date.now() - S.histAt > 45000) loadHistory();
+  };
+  es.onerror = () => {
+    S.link = es && es.readyState === 1 ? "live" : "down";
+    render();
+    if (es && es.readyState === 2) setTimeout(connect, 4000);
+  };
+}
+connect();
+
+function loadHistory() {
+  S.histAt = Date.now();
+  fetch("/api/history", { cache: "no-store" }).then((r) => r.json()).then((j) => {
+    if (j && Array.isArray(j.samples)) { S.hist = j; if (S.open) renderDetail(S.open); }
+  }).catch(() => {});
+}
+/* the first /api/cost blocks on a ccusage subprocess for seconds —
+   it stays off the critical path of first paint */
+function loadCost() {
+  fetch("/api/cost", { cache: "no-store" }).then((r) => r.json()).then((j) => { S.cost = j; renderCost(); })
+    .catch(() => { S.cost = { sevenDayTotal: 0, models: [], stale: true,
+      error: { code: "EFETCH", message: "The cost endpoint could not be reached." } }; renderCost(); });
+}
+setTimeout(loadHistory, 150);
+setTimeout(loadCost, 700);
+setInterval(loadHistory, 60000);
+setInterval(loadCost, 300000);
+
+/* 1 Hz: countdowns, the drifting notch and the freshness age. Derived
+   from resetsAt on the client — nothing here re-polls anything. */
+setInterval(render, 1000);
+
+addEventListener("resize", () => {
+  if (S.open && Math.abs((detailEl.clientWidth || 0) - S.chartW) > 8) { S.lastDetail = ""; renderDetail(S.open); }
+  placeSeam();
+});
+
+})();
+</script>
+</body>
+</html>

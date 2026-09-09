@@ -1,0 +1,24 @@
+{
+  "name": "ccusageviz",
+  "version": "0.1.0",
+  "description": "Live Claude Code subscription quota \u2014 session, weekly and Fable limits from the OAuth usage endpoint.",
+  "type": "module",
+  "bin": {
+    "ccquota": "./bin/ccquota.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "README.md",
+    "SPEC-ui.md"
+  ],
+  "scripts": {
+    "start": "node bin/ccquota.js serve",
+    "check": "node --check bin/ccquota.js && node --check src/cost.js && node --check src/credentials.js && node --check src/poller.js && node --check src/server.js && node --check src/usage.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
