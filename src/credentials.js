@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
@@ -22,14 +23,6 @@ export function credentialsPath() {
   return join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), '.credentials.json');
 }
 
-/**
- * Read Claude Code's OAuth credentials fresh from disk.
- *
- * Deliberately re-reads on every call and never caches the token in memory.
- * Claude Code refreshes this file on demand and writes it atomically (temp + rename),
- * so an unlocked reader always sees a whole file, and re-reading is how we pick up
- * a refresh for free. See README for why we never refresh the token ourselves.
- */
 /**
  * macOS keeps these in the login Keychain rather than on disk, so a Mac with a perfectly
  * healthy Claude Code login has no `.credentials.json` at all.
@@ -67,6 +60,14 @@ function safeUsername() {
   }
 }
 
+/**
+ * Read Claude Code's OAuth credentials fresh from disk.
+ *
+ * Deliberately re-reads on every call and never caches the token in memory.
+ * Claude Code refreshes this file on demand and writes it atomically (temp + rename),
+ * so an unlocked reader always sees a whole file, and re-reading is how we pick up
+ * a refresh for free. See README for why we never refresh the token ourselves.
+ */
 export function readCredentials() {
   const path = credentialsPath();
   let source = path;
@@ -109,4 +110,27 @@ export function readCredentials() {
     subscriptionType: oauth.subscriptionType ?? null,
     rateLimitTier: oauth.rateLimitTier ?? null,
   };
+}
+
+/**
+ * A short, stable, non-identifying handle for the logged-in account.
+ *
+ * Cached data is per-account, not per-machine: percentages from two accounts fitted as one
+ * series produce a burn rate that describes neither. A drop at the switch would break the
+ * series by accident, but only when the new account happens to be *less* used — the reverse
+ * blends silently, which is the dangerous half.
+ *
+ * The uuid is hashed rather than used directly so nothing account-identifying lands in a
+ * filename. Returns 'default' when there is no account to read, which keeps a single shared
+ * cache for setups that never switch.
+ */
+export function accountKey() {
+  try {
+    const dir = process.env.CLAUDE_CONFIG_DIR ? join(process.env.CLAUDE_CONFIG_DIR, '..') : homedir();
+    const uuid = JSON.parse(readFileSync(join(dir, '.claude.json'), 'utf8'))?.oauthAccount?.accountUuid;
+    if (typeof uuid !== 'string' || !uuid) return 'default';
+    return createHash('sha256').update(uuid).digest('hex').slice(0, 12);
+  } catch {
+    return 'default'; // unreadable config is not worth failing a poll over
+  }
 }

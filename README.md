@@ -121,11 +121,19 @@ server's SSE feed instead of starting a second poller.
 
 ### History cache
 
-Successful polls are appended to `${XDG_CACHE_HOME:-~/.cache}/ccusageviz/history.jsonl`, one
-JSON object per line, and reloaded at startup so a restart does not blank the sparkline. The
+Successful polls are appended to `${XDG_CACHE_HOME:-~/.cache}/ccusageviz/history-<account>.jsonl`,
+one JSON object per line, and reloaded at startup so a restart does not blank the sparkline. The
 last 360 (12 h at the base interval) are kept, and the file is compacted to that on load,
 which is what bounds it. Failed polls are never recorded — a failure must not flatten the
 trace. An unwritable or half-written cache is ignored, never an error.
+
+`<account>` is a hash of the logged-in `accountUuid`, so each account keeps its own trace and
+switching between them does not blend two histories into one meaningless burn rate. The account
+is re-checked before *and after* every fetch, because the account that owns a reading is the one
+that answered it: checking only beforehand files the first sample after a switch under the
+account you just left. Switch back and the old trace returns. The rate-limit penalty is scoped
+the same way; the request floor deliberately is not, since switching accounts does not make a
+burst acceptable to the endpoint.
 
 ## API
 
@@ -234,12 +242,51 @@ also at any gap longer than six poll intervals — a reset inside a gap is invis
 window's first reading is already above the old window's last, and fitting across it reports a
 trend that never happened.
 
-The honesty gates are three, and both `burnPercentPerHour` and `projectedAt` are held to all
-three: at least 3 samples, a run at least `windowSeconds / 48` long (6m15s for the session
-window, 3h30m for the weekly ones), and movement of at least 2 percentage points. Percentages
-arrive as integers, so a single step is indistinguishable from quantization noise; without
-these, six samples over 17 minutes in which weekly stepped 11% → 12% produced both a confident
-"+12.06 %/hr" on a 7-day window and, from the same one step, "hits 100% tomorrow morning".
+### Finding the current run
+
+A burn rate has to answer "at the rate I am going *now*", so the fit must not span a change of
+behaviour. Fitting the whole retained trace does exactly that: 4.6 idle overnight hours inside a
+12-hour buffer pulled a measured 2.7 %/hr down to 1.93 and pushed the projected cap 2.9 hours
+late — optimistic, which is the wrong direction for this number to be wrong in.
+
+Boundaries are found by recursive change-point detection. For every candidate split, a two-line
+fit is compared against one line; the best split is kept only if it beats one line by 20%, and
+the search then recurses into the tail, because a day holds more than one break — start work,
+lunch, resume. What survives is the last segment.
+
+Two representations are used, because the series is a **staircase**: an integer percent on a
+7-day window sits flat between steps, median tread ~20 minutes.
+
+- **Boundaries are found among the steps.** A tread is flat while the trend is sloped, so a split
+  at any tread boundary improves the fit — RSS-based detection on quantized data will otherwise
+  find the quantization, carving "regimes" out of single stairs and reporting 0.00 %/hr mid-climb.
+  Each segment must contain at least 4 real integer steps.
+- **The rate is fitted over the raw samples** inside the chosen stretch, because a growing plateau
+  is how a stop becomes visible. Fitted on steps alone the rate would never fall: no new step
+  arrives to say you have finished, so it would report the old burn indefinitely.
+
+A stop produces no steps at all, so the step search structurally cannot find one — the boundary
+is the event that never came. It is detected directly instead: a trailing silence longer than
+three median treads means the run starts at the last step, and the fit then sees the plateau.
+
+### Honesty gates
+
+`burnPercentPerHour` and `projectedAt` are held to the same evidence, so the API never publishes
+a precise-looking rate it has just refused to extrapolate from. Both need at least 3 samples, a
+run at least `windowSeconds / 48` long (6m15s session, 3h30m weekly), **and** at least 6 integer
+steps — time and steps, whichever binds harder. Time alone confirms a slow burn on too few
+observations; steps alone confirm a brief flurry. Percentages arrive as integers, so a single
+step is indistinguishable from quantization noise; without these, six samples over 17 minutes in
+which weekly stepped 11% → 12% produced both a confident "+12.06 %/hr" on a 7-day window and,
+from the same one step, "hits 100% tomorrow morning".
+
+The basis never widens to meet the gates. Reaching back for a longer run means reaching into
+different behaviour, and a wider fit can flatly contradict what you are doing now: after you stop
+it keeps reporting the burn you have just ended, and during an acceleration it reports the slow
+stretch that preceded it — the original defect, reintroduced through the back door. Instead the
+numbers are published from the current run either way, with `provisional: true` until the gates
+clear, and the UI marks those with a trailing `?`. A thin reading of what you are actually doing
+beats a solid reading of something else.
 
 Zero movement is the one exemption to the delta gate: a percent only ever drops on a reset and
 the run is cut there, so `deltaPercent === 0` means every sample across a long, well-populated

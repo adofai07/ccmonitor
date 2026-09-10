@@ -769,6 +769,13 @@ function fmtWindow(sec) {
   if (sec % 3600 === 0) return (sec / 3600) + (sec === 3600 ? " hour" : " hours");
   return Math.round(sec / 60) + " min";
 }
+/* Coarse gap, for "N more at this pace" — minutes below an hour, then rounded hours. */
+function dur(ms) {
+  const m = Math.max(1, Math.round(ms / 60000));
+  if (m < 60) return m + " min";
+  const h = ms / 3600000;
+  return (h < 10 ? h.toFixed(1) : Math.round(h)) + "h";
+}
 function stamp(ms) {
   const d = new Date(ms);
   const hhmm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -1143,14 +1150,45 @@ function renderDetail(key) {
   const sc   = fit && typeof fit.sampleCount === "number" ? fit.sampleCount : 0;
   const since= fit && typeof fit.sinceT === "number" && isFinite(fit.sinceT) ? fit.sinceT : null;
 
-  /* three samples make a rate; below that the server declines and so do we */
+  /* Which gate is holding the number back. Since the fit is now cut to the CURRENT regime
+     rather than the whole trace, a short one is the everyday case rather than a rarity, so
+     "measuring" has to say what it is still waiting for instead of looking like a stall. */
+  const need = (() => {
+    // No fit yet is not a short run — /api/history simply has not answered. Saying anything
+    // about the evidence before seeing it is the same class of lie as rendering null as 0.
+    if (!fit) return "history not loaded yet";
+    const span = fit.spanMs, min = fit.minSpanMs;
+    if (typeof span === "number" && typeof min === "number" && span < min) {
+      return `${dur(min - span)} more at this pace`;
+    }
+    /* The gate takes time AND steps, whichever binds harder, so name the one still short. */
+    if (typeof fit.stepCount === "number" && typeof fit.minStepCount === "number"
+        && fit.stepCount > 0 && fit.stepCount < fit.minStepCount) {
+      const n = fit.minStepCount - fit.stepCount;
+      return `${n} more ${n === 1 ? "step" : "steps"} to confirm`;
+    }
+    if (typeof fit.deltaPercent === "number" && typeof fit.minDeltaPercent === "number"
+        && fit.deltaPercent !== 0 && fit.deltaPercent < fit.minDeltaPercent) return "too little movement yet";
+    if (sc < (fit.minSampleCount ?? 3)) return "too few readings yet";
+    return "";
+  })();
   const burnHtml = burn === null
-    ? `<dd class="est">measuring</dd>`
-    : `<dd>${burn > 0 ? "+" : ""}${Math.abs(burn) >= 10 ? burn.toFixed(1) : burn.toFixed(2)}<small>%/hr</small></dd>`;
-  /* never draw a projection the API returned as null */
+    ? `<dd class="est">measuring<small>${need ? esc(need) : "not enough of a run yet"}</small></dd>`
+    : `<dd>${burn > 0 ? "+" : ""}${Math.abs(burn) >= 10 ? burn.toFixed(1) : burn.toFixed(2)}${fit && fit.provisional ? "?" : ""}<small>%/hr</small></dd>`;
+  /* Never draw a projection the API returned as null. A provisional one is drawn, but wears
+     its doubt: the trailing "?" says the number comes from a longer stretch than the pace
+     you are on right now, because the current one is not yet long enough to carry it. */
+  const prov = !!(fit && fit.provisional);
+  /* A null projection has three different causes and they are not interchangeable. If the
+     rate itself is published, the evidence gates passed, so the silence is about the shape
+     of the burn rather than a shortage of it — saying "not enough of a run" there would be
+     plainly false, since the number beside it came from that same run. */
+  const projWhy = burn === null ? (need || "not enough of a run yet")
+    : burn > 0 ? "the window resets first"
+    : "not rising";
   const projHtml = proj === null
-    ? `<dd class="est">measuring</dd>`
-    : `<dd>~${esc(stamp(proj))}<small>hits the cap</small></dd>`;
+    ? `<dd class="est">${burn === null ? "measuring" : "none"}<small>${esc(projWhy)}</small></dd>`
+    : `<dd>~${esc(stamp(proj))}${prov ? "?" : ""}<small>${prov ? "at your longer-run pace" : "hits the cap"}</small></dd>`;
 
   const el = known && !dormant ? elapsedFrac(lim, paceAt(f)) : null;
   let paceHtml;
@@ -1257,7 +1295,8 @@ function renderDetail(key) {
      <div class="chartwrap">${chartHTML(key, fit, band, proj, th, boxW, !known)}</div>
      <p class="dfoot">${esc(marker)}${esc(legend)}${
        burn === null ? " The fitted burn rate is a second, separate model, and it needs three readings in an unbroken run before it can say anything at all." :
-       proj === null ? " The fitted burn rate is a second, separate model: it publishes no projection while that fitted rate is flat or falling, the run is too short to extrapolate from, or the window resets before the cap." : ""}</p>`;
+       proj === null ? " The fitted burn rate is a second, separate model: it publishes no projection while that fitted rate is flat or falling, the run is too short to extrapolate from, or the window resets before the cap." : ""}${
+       proj !== null && fit && fit.provisional ? " The ? on that time means it is fitted over a longer stretch than the pace you are on right now — your current run is too short to carry a projection on its own, so this is your broader recent average rather than this minute's." : ""}</p>`;
 
   /* render() runs at 1 Hz and almost every tick produces identical
      markup; only touch the DOM when something actually changed */

@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { appendFileSync, closeSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { accountKey } from './credentials.js';
 import { getQuota, emptyQuota, secondsUntil, THRESHOLDS } from './usage.js';
 
 // MEASURED, not guessed. At 60s this endpoint answered exactly 5 polls and refused the
@@ -29,7 +30,7 @@ const RATE_LIMIT_BACKOFF_MS = 300_000;
 // a stale badge and one wasted request.
 const RATE_LIMIT_MAX_MS = 900_000;
 
-// 6 hours at the base interval — the span the sparkline draws.
+// 12 hours at the base interval — the span the sparkline draws.
 export const HISTORY_CAPACITY = 360;
 const HISTORY_KEYS = ['session', 'weekly', 'fable'];
 const HOUR_MS = 3_600_000;
@@ -52,6 +53,34 @@ const GAP_INTERVALS = 6;
 const MIN_SAMPLES = 3;
 const MIN_SPAN_FRACTION = 1 / 48;
 const MIN_DELTA_PERCENT = 2;
+// The evidence gate takes time AND steps, whichever binds harder. Time alone confirms a
+// slow burn on too few observations; steps alone confirm a brief flurry. For a series that
+// only rises this equals a stricter delta gate, but it is counted as transitions so it
+// stays meaningful if the data ever stops being monotonic.
+const MIN_GATE_STEPS = 6;
+
+// How much better two lines must fit than one before the split counts as a change of pace
+// rather than noise. Two lines can never fit worse, so without a bar every series would
+// "change regime" somewhere. 0.20 is deliberately eager: the point of the fit is the rate
+// you are burning at NOW, so it should follow a spree rather than average it away. The
+// evidence gates are what stop an eager split from being published as fact.
+const REGIME_GAIN = 0.20;
+// Segments are measured in integer STEPS, not samples. The series is a staircase — an
+// integer percent on a slow window sits flat between steps — and a tread is flat while the
+// trend is sloped, so splitting at any tread boundary improves the fit. With a 16-minute
+// minimum against a 20-minute median tread, the detector carved "regimes" out of single
+// stairs and reported 0.00 %/hr mid-climb. Requiring real steps on both sides makes the
+// answer stop depending on the knob: 2, 3, 4 steps all land within 0.05 %/hr of each other.
+const MIN_REGIME_STEPS = 4;
+// A working day realistically holds a handful of breaks; the cap is a runaway guard, not a
+// limit anyone should reach.
+const MAX_REGIME_DEPTH = 6;
+// How many typical treads of silence mean you have stopped rather than slowed. A stop
+// produces no steps at all, so the step-space search structurally cannot find it — the
+// boundary is the event that never came. Detected directly instead; without this the fit
+// keeps reporting the burn that has just ended, which is the failure mode this whole
+// projection exists to avoid.
+const STALL_TREADS = 3;
 
 // `lastError` is served verbatim to the browser by /api/quota and /api/stream, and the
 // internal messages name the credentials file — which leaks the OS username and home
@@ -85,10 +114,13 @@ export class QuotaPoller extends EventEmitter {
     this.running = false;
     this.inFlight = false;
     this.lastRequestAt = 0;
-    this.historyPath = historyPath();
+    // Cached data is per-account. The request floor deliberately is not: it protects the
+    // endpoint from this machine, and a switch does not make a burst acceptable.
+    this.account = accountKey();
+    this.historyPath = historyPath(this.account);
     this.slotPath = join(dirname(this.historyPath), 'last-request');
     this.slotLock = `${this.slotPath}.lock`;
-    this.penaltyPath = join(dirname(this.historyPath), 'backoff.json');
+    this.penaltyPath = join(dirname(this.historyPath), `backoff-${this.account}.json`);
     // The slot lock needs its directory to exist before the first claim, or every claim
     // fails open and the cross-process floor silently never engages.
     try { mkdirSync(dirname(this.slotPath), { recursive: true }); } catch { /* fall back to the in-process floor */ }
@@ -174,23 +206,38 @@ export class QuotaPoller extends EventEmitter {
    * nullable numbers, so a UI can say WHICH gate it is still waiting on instead of only
    * saying "measuring".
    */
+  /**
+   * One rate and one ETA, always from the CURRENT regime, with doubt shown rather than hidden.
+   *
+   * The obvious alternative — when the regime is too short, widen the basis until the gates
+   * pass — is worse than it looks. A wider basis is a different behaviour, so it can flatly
+   * contradict what you are doing now: after you stop, it keeps reporting the burn you have
+   * just ended, and during an acceleration it reports the slow stretch that preceded it. That
+   * second case is the original defect, reintroduced through the back door.
+   *
+   * So the basis never changes. Below MIN_SAMPLES there is nothing to fit and the answer is
+   * "measuring". Above it, the numbers are published — but `provisional` is set until the
+   * regime clears the span and delta gates, and the UI marks those with a trailing "?".
+   * A thin reading of what you are actually doing beats a solid reading of something else.
+   */
   fit(key) {
     const points = this.series(key);
     const ev = evidenceOf(points, key);
+    const enough = points.length >= MIN_SAMPLES;
     return {
       key,
-      // Gated identically to the projection: a rate the code will not extrapolate from is
-      // not a rate to publish as fact. A well-sampled flat run is not that case — it clears
-      // the gates and reports a real 0.
-      burnPercentPerHour: ev.supported ? burnRateOf(points) : null,
-      projectedAt: this.projectionFrom(points, key),
+      burnPercentPerHour: enough ? burnRateOf(points) : null,
+      projectedAt: enough ? this.projectionFrom(points, key, Date.now(), false) : null,
+      provisional: enough && !ev.supported,
       sinceT: points.length ? points[0].t : null,
       sampleCount: points.length,
       spanMs: ev.spanMs,
       deltaPercent: ev.deltaPercent,
+      stepCount: ev.stepCount,
       minSampleCount: MIN_SAMPLES,
       minSpanMs: ev.minSpanMs,
       minDeltaPercent: MIN_DELTA_PERCENT,
+      minStepCount: ev.minStepCount,
     };
   }
 
@@ -206,13 +253,16 @@ export class QuotaPoller extends EventEmitter {
 
   /** Epoch ms at which `key` reaches 100% at the current rate, or null if it never does. */
   projection(key) {
-    return this.projectionFrom(this.series(key), key);
+    return this.fit(key).projectedAt;
   }
 
-  projectionFrom(points, key, now = Date.now()) {
+  projectionFrom(points, key, now = Date.now(), requireSupport = true) {
     const win = THRESHOLDS.windows[key]; // not `window`: shadowing a global reads as a typo
     if (!win) return null;
-    if (!evidenceOf(points, key).supported) return null;
+    if (points.length < MIN_SAMPLES) return null;
+    // fit() publishes under-evidenced projections deliberately, flagged provisional; every
+    // other caller still wants the gated answer.
+    if (requireSupport && !evidenceOf(points, key).supported) return null;
     const rate = burnRateOf(points);
     if (!Number.isFinite(rate) || rate <= 0) return null; // NaN <= 0 is false — check finite first
 
@@ -272,14 +322,44 @@ export class QuotaPoller extends EventEmitter {
     }
   }
 
+  /**
+   * Re-point the caches if the logged-in account changed under us.
+   *
+   * Credentials are re-read every poll, so a switch is picked up without a restart — but the
+   * cache paths were resolved once at construction, which would have quietly appended the new
+   * account's samples to the old account's trace. Two accounts fitted as one series give a
+   * burn rate that describes neither.
+   */
+  followAccount({ keepLast = false } = {}) {
+    const key = accountKey();
+    if (key === this.account) return false;
+    this.account = key;
+    this.historyPath = historyPath(key);
+    this.penaltyPath = join(dirname(this.historyPath), `backoff-${key}.json`);
+    this.samples = loadHistory(this.historyPath, this.capacity); // the other account's trace, or empty
+    if (!keepLast) {
+      this.last = null; // the held numbers belong to the account we just left
+      this.staleSince = null;
+      this.lastError = null;
+    }
+    return true;
+  }
+
   async tick() {
     if (this.inFlight) return; // single-flight; the running tick owns the reschedule
     this.inFlight = true;
     let delay;
     let event;
     try {
+      this.followAccount();
       for (let wait = this.claimSlot(); wait > 0; wait = this.claimSlot()) await sleep(wait);
-      this.last = await this.fetchOnce();
+      const fetched = await this.fetchOnce();
+      // Checked again AFTER the fetch, because the account that owns a reading is the one
+      // that answered it. A switch landing between the pre-fetch check and the response
+      // filed the new account's first sample into the old account's trace — observed live.
+      // `keepLast` because this reading belongs to the account we just moved to.
+      this.followAccount({ keepLast: true });
+      this.last = fetched;
       this.staleSince = null;
       this.lastError = null;
       this.failures = 0;
@@ -349,7 +429,8 @@ export class QuotaPoller extends EventEmitter {
    * when the new window's first reading is already above the old window's last, and fitting
    * across it reports a trend that never happened.
    */
-  series(key) {
+  /** The contiguous run, cut only at a window reset and at a poller-off gap. */
+  rawSeries(key) {
     const i = HISTORY_KEYS.indexOf(key);
     if (i < 0) return [];
     let points = [];
@@ -362,6 +443,140 @@ export class QuotaPoller extends EventEmitter {
     }
     return points;
   }
+
+  /** The stretch the user is currently in — what "at the rate I am going now" means. */
+  series(key) {
+    return regimeChain(this.rawSeries(key), this.minSegment)[0];
+  }
+
+  /**
+   * Fewest samples a regime may be made of. At the base interval this is ~16 minutes —
+   * short enough to catch a real change of pace, long enough that a single quantisation
+   * step cannot masquerade as one.
+   */
+  get minSegment() {
+    return Math.max(MIN_SAMPLES, Math.round((16 * 60_000) / this.intervalMs));
+  }
+}
+
+/**
+ * The stretch the user is *currently* in, found by recursive change-point detection.
+ *
+ * A burn rate has to answer "at the rate I am going NOW", so the fit must not span a change
+ * of behaviour. series() already cuts at a window reset and at a gap where the poller was
+ * off; neither catches the two cases that actually distort the number — an idle stretch the
+ * poller sat through, and a genuine change of pace.
+ *
+ * For every candidate split, compare fitting two independent lines against fitting one. Take
+ * the split that explains the most variance, keep it only if it beats one line by REGIME_GAIN,
+ * then recurse into the tail, because a day has more than one break in it: start work, lunch,
+ * resume. What survives is the last segment.
+ *
+ * Why not simply grow backwards until the points stop looking linear: tolerating T points of
+ * deviation always drags in T/Δrate hours of the previous regime, so a loose tolerance blurs
+ * the boundary and a tight one shreds a bursty-but-real trend. Locating the boundary avoids
+ * having to pick that tolerance at all. On synthetic regimes this recovers the true current
+ * rate in every case tried, including three consecutive ones; growing-until-non-linear
+ * recovered five of seven.
+ *
+ * A short regime is not silently blessed: it still has to clear the evidence gates, and a
+ * 68-minute stretch will not carry a 7-day projection. That is the intended outcome — the UI
+ * says "measuring" rather than extrapolating a spree across a week.
+ */
+function regimeChain(points, _minSegment) {
+  // Boundaries are found among the STEPS, where each observation is a real event and there
+  // are no plateaus to mistake for a change of pace; the rate is then fitted back over the
+  // raw samples inside the chosen stretch, because a growing plateau is exactly how a stop
+  // becomes visible. Fitted on steps alone the rate would never fall: no new step ever
+  // arrives to say you have finished, so it would report your old burn indefinitely.
+  const steps = stepsOf(points);
+  const chain = [points];
+  let seg = steps;
+  for (let depth = 0; depth < MAX_REGIME_DEPTH; depth++) {
+    const cut = bestSplit(seg, MIN_REGIME_STEPS);
+    if (cut === null) break;
+    seg = seg.slice(cut);
+    // The behaviour changed somewhere inside the tread leading up to the first kept step,
+    // so anchor at the step before it rather than clipping that tread off.
+    const from = cut > 0 ? seg[0].prevT : points[0].t;
+    chain.push(points.filter((pt) => pt.t >= from));
+  }
+  const stall = trailingStall(points, steps);
+  if (stall !== null) chain.push(points.filter((pt) => pt.t >= stall));
+  return chain.reverse(); // narrowest (the current regime) first, full series last
+}
+
+/**
+ * Where the current stretch of silence began, if it has run long enough to be a stop rather
+ * than an ordinary gap between steps. Returns null while the burn is merely slow.
+ */
+function trailingStall(points, steps) {
+  if (steps.length < MIN_REGIME_STEPS) return null;
+  const treads = [];
+  for (let i = 1; i < steps.length; i++) treads.push(steps[i].t - steps[i - 1].t);
+  treads.sort((a, b) => a - b);
+  const typical = treads[Math.floor(treads.length / 2)]; // median: one long lunch must not set the bar
+  const last = steps[steps.length - 1];
+  const silence = points[points.length - 1].t - last.t;
+  return typical > 0 && silence > typical * STALL_TREADS ? last.t : null;
+}
+
+/** One observation per integer transition: "it became p at t, having held prevT since". */
+function stepsOf(points) {
+  const steps = [];
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].p !== points[i - 1].p) steps.push({ t: points[i].t, p: points[i].p, prevT: points[i - 1].t });
+  }
+  return steps;
+}
+
+/** Index where a two-line fit beats one line by REGIME_GAIN, or null if none does. */
+function bestSplit(points, minSegment) {
+  const n = points.length;
+  if (n < 2 * minSegment) return null;
+  const sums = prefixSums(points);
+  const whole = rssOf(sums, 0, n);
+  let best = null;
+  for (let k = minSegment; k <= n - minSegment; k++) {
+    const total = rssOf(sums, 0, k) + rssOf(sums, k, n);
+    if (best === null || total < best.total) best = { k, total };
+  }
+  // Two lines always fit at least as well as one, so an unconditional split would find a
+  // "regime change" in perfectly steady data. Only a real improvement counts as evidence.
+  return best && best.total <= whole * (1 - REGIME_GAIN) ? best.k : null;
+}
+
+/**
+ * Cumulative sums that make the residual sum of squares of any range O(1).
+ *
+ * Time is carried as hours since the first point, not epoch ms: squaring epoch values
+ * reaches 1e24 and the sums lose the precision the fit is made of.
+ */
+function prefixSums(points) {
+  const t0 = points[0].t;
+  const s = { t: [0], p: [0], tt: [0], tp: [0], pp: [0] };
+  points.forEach((pt, i) => {
+    const t = (pt.t - t0) / HOUR_MS;
+    s.t.push(s.t[i] + t);
+    s.p.push(s.p[i] + pt.p);
+    s.tt.push(s.tt[i] + t * t);
+    s.tp.push(s.tp[i] + t * pt.p);
+    s.pp.push(s.pp[i] + pt.p * pt.p);
+  });
+  return s;
+}
+
+/** Residual sum of squares of the least-squares line over [a, b). */
+function rssOf(s, a, b) {
+  const n = b - a;
+  if (n < 3) return 0; // two points always fit a line exactly; claiming zero error is honest
+  const st = s.t[b] - s.t[a];
+  const sp = s.p[b] - s.p[a];
+  const sxx = s.tt[b] - s.tt[a] - (st * st) / n;
+  const sxy = s.tp[b] - s.tp[a] - (st * sp) / n;
+  const syy = s.pp[b] - s.pp[a] - (sp * sp) / n;
+  const rss = sxx > 0 ? syy - (sxy * sxy) / sxx : syy;
+  return Math.max(0, rss);
 }
 
 /**
@@ -395,13 +610,20 @@ function evidenceOf(points, key) {
   const latest = points[points.length - 1];
   const spanMs = points.length ? latest.t - first.t : 0;
   const deltaPercent = points.length ? latest.p - first.p : 0;
+  const stepCount = stepsOf(points).length;
+  // A flat run is the one case that clears on no movement at all: zero steps over a long
+  // enough span is a measurement, not a shortage of evidence, and it must stay tellable
+  // apart from "we do not know yet".
+  const flat = deltaPercent === 0 && stepCount === 0;
   return {
     spanMs,
     deltaPercent,
+    stepCount,
     minSpanMs,
+    minStepCount: MIN_GATE_STEPS,
     supported: points.length >= MIN_SAMPLES
       && minSpanMs !== null && spanMs >= minSpanMs
-      && (deltaPercent >= MIN_DELTA_PERCENT || deltaPercent === 0),
+      && (flat || (deltaPercent >= MIN_DELTA_PERCENT && stepCount >= MIN_GATE_STEPS)),
   };
 }
 
@@ -421,9 +643,9 @@ function burnRateOf(points) {
   return Number.isFinite(rate) ? rate : null;
 }
 
-function historyPath() {
+function historyPath(account = 'default') {
   const cache = process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
-  return join(cache, 'ccusageviz', 'history.jsonl');
+  return join(cache, 'ccusageviz', `history-${account}.jsonl`);
 }
 
 /**
