@@ -48,39 +48,29 @@ const HOUR_MS = 3_600_000;
 // blind spot that long deserves a fresh start.
 const GAP_INTERVALS = 6;
 
-// Fit honesty gates — see evidenceOf() for the reasoning behind the values. They govern
-// both numbers derived from a fit: the rate and the projection built on it.
+// Two points define a line exactly and say nothing about whether it is the right one.
 const MIN_SAMPLES = 3;
-const MIN_SPAN_FRACTION = 1 / 48;
-const MIN_DELTA_PERCENT = 2;
-// The evidence gate takes time AND steps, whichever binds harder. Time alone confirms a
-// slow burn on too few observations; steps alone confirm a brief flurry. For a series that
-// only rises this equals a stricter delta gate, but it is counted as transitions so it
-// stays meaningful if the data ever stops being monotonic.
-const MIN_GATE_STEPS = 6;
 
-// How much better two lines must fit than one before the split counts as a change of pace
-// rather than noise. Two lines can never fit worse, so without a bar every series would
-// "change regime" somewhere. 0.20 is deliberately eager: the point of the fit is the rate
-// you are burning at NOW, so it should follow a spree rather than average it away. The
-// evidence gates are what stop an eager split from being published as fact.
-const REGIME_GAIN = 0.20;
-// Segments are measured in integer STEPS, not samples. The series is a staircase — an
-// integer percent on a slow window sits flat between steps — and a tread is flat while the
-// trend is sloped, so splitting at any tread boundary improves the fit. With a 16-minute
-// minimum against a 20-minute median tread, the detector carved "regimes" out of single
-// stairs and reported 0.00 %/hr mid-climb. Requiring real steps on both sides makes the
-// answer stop depending on the knob: 2, 3, 4 steps all land within 0.05 %/hr of each other.
-const MIN_REGIME_STEPS = 4;
-// A working day realistically holds a handful of breaks; the cap is a runaway guard, not a
-// limit anyone should reach.
-const MAX_REGIME_DEPTH = 6;
-// How many typical treads of silence mean you have stopped rather than slowed. A stop
-// produces no steps at all, so the step-space search structurally cannot find it — the
-// boundary is the event that never came. Detected directly instead; without this the fit
-// keeps reporting the burn that has just ended, which is the failure mode this whole
-// projection exists to avoid.
-const STALL_TREADS = 3;
+// The variance of rounding to the nearest integer. This is the whole reason the segmentation
+// below needs no tuned thresholds: a percent is delivered rounded, so no model can explain
+// its residuals below this floor, and a split that merely carves up a staircase tread cannot
+// reduce error past it. Quantization — which broke every earlier attempt at this — is what
+// makes the penalty work.
+const QUANT_VAR = 1 / 12;
+
+// Parameters per model, for the BIC penalty: one line is slope + intercept + variance, two
+// lines are that twice minus the shared variance. Nothing here is chosen; k·ln(n) is the
+// criterion itself.
+const PARAMS_ONE = 3;
+const PARAMS_TWO = 5;
+
+// A runaway guard, not a limit any real day reaches.
+const MAX_BREAKS = 8;
+
+// Above this, the ETA's own uncertainty is too wide for the number to be read as fact and the
+// UI marks it "?". It is expressed in the thing the reader actually cares about — how far the
+// projected instant could move — rather than in proxies for it.
+const ETA_UNCERTAIN_RATIO = 0.25;
 
 // `lastError` is served verbatim to the browser by /api/quota and /api/stream, and the
 // internal messages name the credentials file — which leaks the OS username and home
@@ -202,51 +192,49 @@ export class QuotaPoller extends EventEmitter {
    * same entry field by field — should use series(), whose first element and length are
    * exactly this `sinceT` and `sampleCount`.
    *
-   * `spanMs`/`deltaPercent` and their `min*` counterparts are the evidence behind the two
-   * nullable numbers, so a UI can say WHICH gate it is still waiting on instead of only
-   * saying "measuring".
+   * `seRatePercentPerHour` and `etaUncertaintySeconds` are the evidence behind the two
+   * nullable numbers, so a UI can say how well resolved they are rather than only "measuring".
    */
   /**
-   * One rate and one ETA, always from the CURRENT regime, with doubt shown rather than hidden.
+   * One rate and one ETA over the current run, each carrying its own uncertainty.
    *
-   * The obvious alternative — when the regime is too short, widen the basis until the gates
-   * pass — is worse than it looks. A wider basis is a different behaviour, so it can flatly
-   * contradict what you are doing now: after you stop, it keeps reporting the burn you have
-   * just ended, and during an acceleration it reports the slow stretch that preceded it. That
-   * second case is the original defect, reintroduced through the back door.
+   * The run is found by penalised-likelihood segmentation, so an idle stretch, a stop and a
+   * change of pace are all just splits that repay their parameters — no case is special.
    *
-   * So the basis never changes. Below MIN_SAMPLES there is nothing to fit and the answer is
-   * "measuring". Above it, the numbers are published — but `provisional` is set until the
-   * regime clears the span and delta gates, and the UI marks those with a trailing "?".
-   * A thin reading of what you are actually doing beats a solid reading of something else.
+   * The basis never widens to meet a bar. Reaching back for a longer run means reaching into
+   * different behaviour, and a wider fit can contradict the present: after a stop it reports
+   * the burn just ended, during an acceleration the slow stretch before it. Instead both
+   * numbers are published from the current run, and `provisional` says the ETA's own spread
+   * is too wide to read as fact — the UI marks those with a trailing "?".
    */
   fit(key) {
     const points = this.series(key);
-    const ev = evidenceOf(points, key);
-    const enough = points.length >= MIN_SAMPLES;
+    const f = fitOf(points);
+    const projectedAt = f ? this.projectionFrom(points, key) : null;
+    // The ETA moves by (100 − now) / rate², so its spread follows from the rate's directly.
+    const remaining = points.length ? 100 - points[points.length - 1].p : null;
+    const etaSpreadMs = f && f.rate > 0 && remaining !== null
+      ? (remaining / (f.rate * f.rate)) * f.seRate * HOUR_MS
+      : null;
+    const horizonMs = projectedAt !== null ? Math.max(1, projectedAt - Date.now()) : null;
     return {
       key,
-      burnPercentPerHour: enough ? burnRateOf(points) : null,
-      projectedAt: enough ? this.projectionFrom(points, key, Date.now(), false) : null,
-      provisional: enough && !ev.supported,
+      burnPercentPerHour: f ? f.rate : null,
+      seRatePercentPerHour: f ? f.seRate : null,
+      projectedAt,
+      etaUncertaintySeconds: etaSpreadMs === null ? null : Math.round(etaSpreadMs / 1000),
+      // Wide relative to how far ahead it is: "01:15 give or take four hours" is not a time.
+      provisional: !!(etaSpreadMs !== null && horizonMs !== null
+        && etaSpreadMs / horizonMs > ETA_UNCERTAIN_RATIO),
       sinceT: points.length ? points[0].t : null,
       sampleCount: points.length,
-      spanMs: ev.spanMs,
-      deltaPercent: ev.deltaPercent,
-      stepCount: ev.stepCount,
+      spanMs: points.length ? points[points.length - 1].t - points[0].t : 0,
+      deltaPercent: points.length ? points[points.length - 1].p - points[0].p : 0,
       minSampleCount: MIN_SAMPLES,
-      minSpanMs: ev.minSpanMs,
-      minDeltaPercent: MIN_DELTA_PERCENT,
-      minStepCount: ev.minStepCount,
     };
   }
 
-  /**
-   * Percent per hour for one limit, least-squares over the contiguous series. A two-point
-   * difference is noise-dominated on integer percentages; the fit is not. null whenever the
-   * series does not clear the honesty gates, so the UI can say "measuring" instead of
-   * drawing a line it cannot support.
-   */
+  /** Percent per hour over the current run, or null when it cannot be fitted at all. */
   burnRate(key) {
     return this.fit(key).burnPercentPerHour;
   }
@@ -256,21 +244,17 @@ export class QuotaPoller extends EventEmitter {
     return this.fit(key).projectedAt;
   }
 
-  projectionFrom(points, key, now = Date.now(), requireSupport = true) {
+  projectionFrom(points, key, now = Date.now()) {
     const win = THRESHOLDS.windows[key]; // not `window`: shadowing a global reads as a typo
     if (!win) return null;
-    if (points.length < MIN_SAMPLES) return null;
-    // fit() publishes under-evidenced projections deliberately, flagged provisional; every
-    // other caller still wants the gated answer.
-    if (requireSupport && !evidenceOf(points, key).supported) return null;
-    const rate = burnRateOf(points);
-    if (!Number.isFinite(rate) || rate <= 0) return null; // NaN <= 0 is false — check finite first
+    const f = fitOf(points);
+    if (!f || !(f.rate > 0)) return null; // NaN > 0 is false, so this also rejects NaN
 
     const latest = points[points.length - 1];
     // A fit whose newest sample is older than a gap describes the past, not the present.
     if (now - latest.t > this.maxGapMs) return null;
 
-    let at = latest.t + ((100 - latest.p) / rate) * HOUR_MS;
+    let at = latest.t + ((100 - latest.p) / f.rate) * HOUR_MS;
     if (!Number.isFinite(at)) return null;
     // Anchored at the last sample, so an old anchor can put the answer behind us. "You hit
     // the cap 4 minutes ago" is not a projection; the soonest honest answer is "now".
@@ -446,17 +430,10 @@ export class QuotaPoller extends EventEmitter {
 
   /** The stretch the user is currently in — what "at the rate I am going now" means. */
   series(key) {
-    return regimeChain(this.rawSeries(key), this.minSegment)[0];
+    const points = this.rawSeries(key);
+    return points.slice(runStart(points));
   }
 
-  /**
-   * Fewest samples a regime may be made of. At the base interval this is ~16 minutes —
-   * short enough to catch a real change of pace, long enough that a single quantisation
-   * step cannot masquerade as one.
-   */
-  get minSegment() {
-    return Math.max(MIN_SAMPLES, Math.round((16 * 60_000) / this.intervalMs));
-  }
 }
 
 /**
@@ -483,74 +460,11 @@ export class QuotaPoller extends EventEmitter {
  * 68-minute stretch will not carry a 7-day projection. That is the intended outcome — the UI
  * says "measuring" rather than extrapolating a spree across a week.
  */
-function regimeChain(points, _minSegment) {
-  // Boundaries are found among the STEPS, where each observation is a real event and there
-  // are no plateaus to mistake for a change of pace; the rate is then fitted back over the
-  // raw samples inside the chosen stretch, because a growing plateau is exactly how a stop
-  // becomes visible. Fitted on steps alone the rate would never fall: no new step ever
-  // arrives to say you have finished, so it would report your old burn indefinitely.
-  const steps = stepsOf(points);
-  const chain = [points];
-  let seg = steps;
-  for (let depth = 0; depth < MAX_REGIME_DEPTH; depth++) {
-    const cut = bestSplit(seg, MIN_REGIME_STEPS);
-    if (cut === null) break;
-    seg = seg.slice(cut);
-    // The behaviour changed somewhere inside the tread leading up to the first kept step,
-    // so anchor at the step before it rather than clipping that tread off.
-    const from = cut > 0 ? seg[0].prevT : points[0].t;
-    chain.push(points.filter((pt) => pt.t >= from));
-  }
-  const stall = trailingStall(points, steps);
-  if (stall !== null) chain.push(points.filter((pt) => pt.t >= stall));
-  return chain.reverse(); // narrowest (the current regime) first, full series last
-}
-
 /**
- * Where the current stretch of silence began, if it has run long enough to be a stop rather
- * than an ordinary gap between steps. Returns null while the burn is merely slow.
- */
-function trailingStall(points, steps) {
-  if (steps.length < MIN_REGIME_STEPS) return null;
-  const treads = [];
-  for (let i = 1; i < steps.length; i++) treads.push(steps[i].t - steps[i - 1].t);
-  treads.sort((a, b) => a - b);
-  const typical = treads[Math.floor(treads.length / 2)]; // median: one long lunch must not set the bar
-  const last = steps[steps.length - 1];
-  const silence = points[points.length - 1].t - last.t;
-  return typical > 0 && silence > typical * STALL_TREADS ? last.t : null;
-}
-
-/** One observation per integer transition: "it became p at t, having held prevT since". */
-function stepsOf(points) {
-  const steps = [];
-  for (let i = 1; i < points.length; i++) {
-    if (points[i].p !== points[i - 1].p) steps.push({ t: points[i].t, p: points[i].p, prevT: points[i - 1].t });
-  }
-  return steps;
-}
-
-/** Index where a two-line fit beats one line by REGIME_GAIN, or null if none does. */
-function bestSplit(points, minSegment) {
-  const n = points.length;
-  if (n < 2 * minSegment) return null;
-  const sums = prefixSums(points);
-  const whole = rssOf(sums, 0, n);
-  let best = null;
-  for (let k = minSegment; k <= n - minSegment; k++) {
-    const total = rssOf(sums, 0, k) + rssOf(sums, k, n);
-    if (best === null || total < best.total) best = { k, total };
-  }
-  // Two lines always fit at least as well as one, so an unconditional split would find a
-  // "regime change" in perfectly steady data. Only a real improvement counts as evidence.
-  return best && best.total <= whole * (1 - REGIME_GAIN) ? best.k : null;
-}
-
-/**
- * Cumulative sums that make the residual sum of squares of any range O(1).
+ * Prefix sums over a run, so the least-squares fit of ANY sub-range costs O(1).
  *
- * Time is carried as hours since the first point, not epoch ms: squaring epoch values
- * reaches 1e24 and the sums lose the precision the fit is made of.
+ * Time is carried as hours since the run's first sample. Squaring epoch milliseconds reaches
+ * 1e24 and the sums lose the precision the fit is made of.
  */
 function prefixSums(points) {
   const t0 = points[0].t;
@@ -566,81 +480,75 @@ function prefixSums(points) {
   return s;
 }
 
-/** Residual sum of squares of the least-squares line over [a, b). */
-function rssOf(s, a, b) {
+/** Least-squares line over [a, b): slope in %/hr, residual sum of squares, and the spread of t. */
+function lineOf(s, a, b) {
   const n = b - a;
-  if (n < 3) return 0; // two points always fit a line exactly; claiming zero error is honest
+  if (n < 2) return { n, slope: 0, rss: n * QUANT_VAR, sxx: 0 };
   const st = s.t[b] - s.t[a];
   const sp = s.p[b] - s.p[a];
   const sxx = s.tt[b] - s.tt[a] - (st * st) / n;
   const sxy = s.tp[b] - s.tp[a] - (st * sp) / n;
   const syy = s.pp[b] - s.pp[a] - (sp * sp) / n;
-  const rss = sxx > 0 ? syy - (sxy * sxy) / sxx : syy;
-  return Math.max(0, rss);
+  const slope = sxx > 0 ? sxy / sxx : 0;
+  // Floored at the quantization variance: the data arrives rounded, so no fit can honestly
+  // claim to explain it more closely than that, and log(0) on a flat run is not a real -inf.
+  const rss = Math.max(sxx > 0 ? syy - (sxy * sxy) / sxx : syy, n * QUANT_VAR);
+  return { n, slope, rss, sxx };
+}
+
+/** Gaussian log-likelihood of a segment, up to constants shared by every model. */
+const cost = (line) => line.n * Math.log(line.rss / line.n);
+
+/**
+ * Where the current run begins: the last point at which splitting the series pays for itself.
+ *
+ * For every candidate split, the two-line model is scored against the one-line model by BIC —
+ * likelihood plus k·ln(n). A split must earn its two extra parameters out of the fit it buys,
+ * so noise never justifies one and a real change of pace always does. Recursing into the tail
+ * finds the most recent break of several, which is the one that describes now.
+ *
+ * This replaces an accumulation of hand-set thresholds — a minimum split gain, a minimum
+ * segment length in steps, a separate flat-gap detector for the idle the step search could not
+ * see, a stall detector for the stop that produces no steps, and a chain ordering to keep them
+ * straight. Each had been added to patch a case the previous one missed. None survives: an
+ * idle stretch, a stop and a change of pace are all just splits that repay their parameters.
+ */
+function runStart(points) {
+  let from = 0;
+  for (let depth = 0; depth < MAX_BREAKS; depth++) {
+    const rest = points.slice(from);
+    const n = rest.length;
+    if (n < 2 * MIN_SAMPLES) break;
+    const s = prefixSums(rest);
+    const whole = cost(lineOf(s, 0, n)) + PARAMS_ONE * Math.log(n);
+    let best = null;
+    for (let k = MIN_SAMPLES; k <= n - MIN_SAMPLES; k++) {
+      const c = cost(lineOf(s, 0, k)) + cost(lineOf(s, k, n)) + PARAMS_TWO * Math.log(n);
+      if (best === null || c < best.c) best = { k, c };
+    }
+    if (!best || best.c >= whole) break;
+    from += best.k;
+  }
+  return from;
 }
 
 /**
- * The evidence behind a fit, and whether it clears the honesty gates.
+ * The fit over a run, with the uncertainty that decides whether it can be stated as fact.
  *
- * A sample count bounds the NUMBER of points, not the elapsed time or the movement, so six
- * samples over 17 minutes in which weekly stepped 11% -> 12% used to produce both a confident
- * "+12.06 %/hr" on a 7-day window and, from the same one integer step, "hits 100% tomorrow
- * morning". A fit is trusted only when all three of these hold:
- *
- *   count >= 3                    a two-point difference is noise on integer percentages
- *   span  >= windowSeconds / 48   session 6m15s, weekly and Fable 3h30m
- *   delta >= 2 percentage points  twice the endpoint's 1-point quantization step
- *
- * The span scales with the window because a slope means far less on a 7-day window than on a
- * 5-hour one, and 1/48 is the largest fraction that still fits inside the 6-hour sample buffer
- * for the weekly windows. The two agree by construction: a burn at exactly full-window pace
- * covers 100/48 ≈ 2.08 points in that span, so the delta gate reads as "moving at least as
- * fast as the window itself".
- *
- * Zero delta is the one exemption, and it is not a loophole. A percent only ever drops on a
- * reset and series() cuts the run there, so points within a run never decrease: delta === 0
- * means every sample in a well-sampled span read the SAME percent. That is a measured flat
- * worth reporting as 0.00, not an absence of evidence. Only a delta between the two — a
- * single quantization step, which is exactly what noise looks like — is under-evidenced.
+ * `seRate` is the standard error of the slope. It is what the old gates were reaching for:
+ * "three samples", "an eighth of the window", "six integer steps" were all proxies for
+ * whether the trend was resolved, and each answered the question in a unit the reader does
+ * not care about. The standard error answers it directly, and carries through to the ETA.
  */
-function evidenceOf(points, key) {
-  const win = THRESHOLDS.windows[key];
-  const minSpanMs = win ? Math.round(win.windowSeconds * 1000 * MIN_SPAN_FRACTION) : null;
-  const first = points[0];
-  const latest = points[points.length - 1];
-  const spanMs = points.length ? latest.t - first.t : 0;
-  const deltaPercent = points.length ? latest.p - first.p : 0;
-  const stepCount = stepsOf(points).length;
-  // A flat run is the one case that clears on no movement at all: zero steps over a long
-  // enough span is a measurement, not a shortage of evidence, and it must stay tellable
-  // apart from "we do not know yet".
-  const flat = deltaPercent === 0 && stepCount === 0;
-  return {
-    spanMs,
-    deltaPercent,
-    stepCount,
-    minSpanMs,
-    minStepCount: MIN_GATE_STEPS,
-    supported: points.length >= MIN_SAMPLES
-      && minSpanMs !== null && spanMs >= minSpanMs
-      && (flat || (deltaPercent >= MIN_DELTA_PERCENT && stepCount >= MIN_GATE_STEPS)),
-  };
-}
-
-/** Least-squares percent-per-hour over `points`, or null when they cannot support one. */
-function burnRateOf(points) {
+function fitOf(points) {
   if (points.length < MIN_SAMPLES) return null;
-  const meanT = points.reduce((s, q) => s + q.t, 0) / points.length;
-  const meanP = points.reduce((s, q) => s + q.p, 0) / points.length;
-  let cov = 0;
-  let varT = 0;
-  for (const q of points) {
-    cov += (q.t - meanT) * (q.p - meanP);
-    varT += (q.t - meanT) ** 2;
-  }
-  if (varT === 0) return null; // every sample landed on the same millisecond
-  const rate = (cov / varT) * HOUR_MS;
-  return Number.isFinite(rate) ? rate : null;
+  const s = prefixSums(points);
+  const line = lineOf(s, 0, points.length);
+  if (!(line.sxx > 0)) return null; // every sample on one instant
+  const seRate = Math.sqrt(line.rss / Math.max(1, line.n - 2) / line.sxx);
+  return Number.isFinite(line.slope) && Number.isFinite(seRate)
+    ? { rate: line.slope, seRate, n: line.n }
+    : null;
 }
 
 function historyPath(account = 'default') {

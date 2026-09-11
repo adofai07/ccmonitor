@@ -109,7 +109,7 @@ hard and neither guard is worth much on its own:
   lock older than 5 s is debris from a killed process and gets reaped. It only covers requests
   that go *through* a poller — anything else on the machine hitting the endpoint is invisible
   to it.
-- **The backoff** is in `backoff.json` beside it. A penalty that died with the process was not
+- **The backoff** is in `backoff-<account>.json` beside it, scoped the same way. A penalty that died with the process was not
   a penalty: restarting was enough to walk back into the same 429 with a clean failure count
   and an expired floor. A fresh poller now inherits the deadline and the failure count, and
   surfaces the reason on its cold start so the page can say why the first reading is late. One
@@ -222,20 +222,19 @@ update or failure, and a `: ping` comment every 15 s.
     { "key": "weekly", "burnPercentPerHour": null, "projectedAt": null, "sinceT": 1788509381782,
       "sampleCount": 41, "spanMs": 2400000, "deltaPercent": 1, "minSampleCount": 3, "minSpanMs": 12600000, "minDeltaPercent": 2 },
     { "key": "fable", "burnPercentPerHour": null, "projectedAt": null, "sinceT": null,
-      "sampleCount": 0, "spanMs": 0, "deltaPercent": 0, "minSampleCount": 3, "minSpanMs": 12600000, "minDeltaPercent": 2 }
+      "seRatePercentPerHour": 1.31, "etaUncertaintySeconds": 2040,
+      "sampleCount": 10, "spanMs": 1080000, "deltaPercent": 4, "minSampleCount": 3 }
   ]
 }
 ```
 
 `t` is epoch ms and `p` is `[session, weekly, fable]` — the same fixed order as `limits`, each
-entry a percent or `null`. `burnPercentPerHour` is a least-squares slope over the fitted run of
-samples, `null` whenever the run fails the honesty gates below — the rate and the projection
-are held to the same evidence, so the API never publishes a precise-looking rate it has just
-refused to extrapolate from. `sinceT` is the timestamp of that run's first sample (`null` when
-there is no run) and `sampleCount` its length, so a client can clip the sparkline to the fitted
-span and tell a 40-sample trend from a 3-sample guess. `spanMs` and `deltaPercent` are the run's
-elapsed time and total movement, and `minSampleCount` / `minSpanMs` / `minDeltaPercent` the
-thresholds they are measured against, so a client can say WHICH gate it is still waiting on.
+entry a percent or `null`. `burnPercentPerHour` is a least-squares slope over the current run,
+`null` only when there is nothing to fit at all. `seRatePercentPerHour` is its standard error
+and `etaUncertaintySeconds` the spread that propagates to the projection, so a client can show
+`13:16 ± 6 min` instead of an unqualified time. `sinceT` is the timestamp of the run's first
+sample (`null` when there is no run) and `sampleCount` its length, so a client can clip the
+sparkline to the fitted span.
 
 The run restarts at any downward step, since a percent only ever drops on a window reset, and
 also at any gap longer than six poll intervals — a reset inside a gap is invisible when the new
@@ -247,52 +246,53 @@ trend that never happened.
 A burn rate has to answer "at the rate I am going *now*", so the fit must not span a change of
 behaviour. Fitting the whole retained trace does exactly that: 4.6 idle overnight hours inside a
 12-hour buffer pulled a measured 2.7 %/hr down to 1.93 and pushed the projected cap 2.9 hours
-late — optimistic, which is the wrong direction for this number to be wrong in.
+late. Optimistic is the wrong direction for this number to be wrong in — it reports runway that
+is not there. The same fault on the 5-hour window averaged 28 points burned in 12 minutes
+against 30 flat minutes before them, and published a rate four times too low.
 
-Boundaries are found by recursive change-point detection. For every candidate split, a two-line
-fit is compared against one line; the best split is kept only if it beats one line by 20%, and
-the search then recurses into the tail, because a day holds more than one break — start work,
-lunch, resume. What survives is the last segment.
+The run is found by penalised-likelihood segmentation. For every candidate split, a two-line
+model is scored against one line by **BIC** — log-likelihood plus `k·ln(n)` — and the split is
+taken only if it repays its two extra parameters out of the fit it buys. Recursing into the tail
+finds the most recent break of several, which is the one that describes now. Prefix sums make
+any sub-range fit O(1), so a full pass over 360 samples costs about 0.2 ms.
 
-Two representations are used, because the series is a **staircase**: an integer percent on a
-7-day window sits flat between steps, median tread ~20 minutes.
+Nothing here is tuned, and the reason is the noise floor: **residuals are floored at 1/12, the
+variance of rounding to the nearest integer.** The endpoint delivers whole percents, so no model
+can honestly claim to explain them more closely than that. It does two jobs at once — a flat run
+no longer has zero error and `log(0)` never arises, and a split that merely carves up a
+staircase tread cannot reduce error past the floor, so it can never repay its parameters.
+Quantization, which is what makes a slow series look flat between steps and defeated several
+earlier attempts at this, is exactly what makes the criterion work unaided.
 
-- **Boundaries are found among the steps.** A tread is flat while the trend is sloped, so a split
-  at any tread boundary improves the fit — RSS-based detection on quantized data will otherwise
-  find the quantization, carving "regimes" out of single stairs and reporting 0.00 %/hr mid-climb.
-  Each segment must contain at least 4 real integer steps.
-- **The rate is fitted over the raw samples** inside the chosen stretch, because a growing plateau
-  is how a stop becomes visible. Fitted on steps alone the rate would never fall: no new step
-  arrives to say you have finished, so it would report the old burn indefinitely.
+An idle stretch, a full stop and a change of pace are all the same thing to it: a split that
+pays for itself. An earlier version needed a minimum split gain, a minimum segment length
+counted in integer steps, a change-point search moved into step space to dodge the treads, a
+separate flat-gap detector for the leading idle that step space could not see, a stall detector
+for the stop that produces no steps at all, and an ordering fix to keep the candidates straight
+— six constants and four mechanisms, each added to patch what the last one missed. All of it is
+gone.
 
-A stop produces no steps at all, so the step search structurally cannot find one — the boundary
-is the event that never came. It is detected directly instead: a trailing silence longer than
-three median treads means the run starts at the last step, and the fit then sees the plateau.
+Against seven synthetic regimes — idle-then-burn, burn-then-stop, slow-to-fast, steady, pure
+idle, burn/lunch/burn, and three consecutive rates — this recovers the true current rate in all
+seven. Exponentially weighted least squares managed six and a Gamma-Poisson filter with
+forgetting four; both assume the rate drifts, and this one changes abruptly.
 
-### Honesty gates
+### Uncertainty, not gates
 
-`burnPercentPerHour` and `projectedAt` are held to the same evidence, so the API never publishes
-a precise-looking rate it has just refused to extrapolate from. Both need at least 3 samples, a
-run at least `windowSeconds / 48` long (6m15s session, 3h30m weekly), **and** at least 6 integer
-steps — time and steps, whichever binds harder. Time alone confirms a slow burn on too few
-observations; steps alone confirm a brief flurry. Percentages arrive as integers, so a single
-step is indistinguishable from quantization noise; without these, six samples over 17 minutes in
-which weekly stepped 11% → 12% produced both a confident "+12.06 %/hr" on a 7-day window and,
-from the same one step, "hits 100% tomorrow morning".
+The rate carries the standard error of its slope, and the projection carries the spread that
+follows from it. `provisional` is set when that spread is wide relative to how far ahead the
+projection sits, and the UI marks those with a trailing `?` — "01:15 give or take four hours" is
+not a time.
 
-The basis never widens to meet the gates. Reaching back for a longer run means reaching into
-different behaviour, and a wider fit can flatly contradict what you are doing now: after you stop
-it keeps reporting the burn you have just ended, and during an acceleration it reports the slow
-stretch that preceded it — the original defect, reintroduced through the back door. Instead the
-numbers are published from the current run either way, with `provisional: true` until the gates
-clear, and the UI marks those with a trailing `?`. A thin reading of what you are actually doing
-beats a solid reading of something else.
+This replaced three gates (at least 3 samples, a run at least `windowSeconds / 48` long, and
+movement of at least 2 percentage points, later joined by a minimum step count). Every one was a
+proxy for *is this trend resolved yet*, asked in a unit the reader does not care about. The
+standard error asks it directly, and unlike a gate it can be shown: `± 6 min` on the session
+window and `± 34 min` on the weekly one say what a bare `?` could not.
 
-Zero movement is the one exemption to the delta gate: a percent only ever drops on a reset and
-the run is cut there, so `deltaPercent === 0` means every sample across a long, well-populated
-run read the same percent. That is a measured flat, and it reports `0` — a real `0.00 %/hr` is
-distinguishable from `null`. A run that is merely too short to have moved yet is not flat, it is
-unmeasured, and reports `null`.
+A well-sampled flat run is still distinguishable from an absent one. A percent only ever drops
+on a reset and the run is cut there, so a flat run reports a real `0.00 %/hr` with a small
+standard error, while too little data to fit reports `null` and the UI says "measuring".
 
 `projectedAt` is the epoch ms at which the limit reaches 100% at that rate. Beyond the gates it
 is deliberately conservative, because a confident wrong date is worse than no date: it is `null`
