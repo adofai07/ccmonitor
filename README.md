@@ -256,13 +256,24 @@ taken only if it repays its two extra parameters out of the fit it buys. Recursi
 finds the most recent break of several, which is the one that describes now. Prefix sums make
 any sub-range fit O(1), so a full pass over 360 samples costs about 0.2 ms.
 
-Nothing here is tuned, and the reason is the noise floor: **residuals are floored at 1/12, the
-variance of rounding to the nearest integer.** The endpoint delivers whole percents, so no model
-can honestly claim to explain them more closely than that. It does two jobs at once — a flat run
-no longer has zero error and `log(0)` never arises, and a split that merely carves up a
-staircase tread cannot reduce error past the floor, so it can never repay its parameters.
-Quantization, which is what makes a slow series look flat between steps and defeated several
-earlier attempts at this, is exactly what makes the criterion work unaided.
+Nothing here is tuned, and the reason is that the noise level is **known** rather than
+estimated: a percent arrives rounded, so its variance is 1/12, the variance of rounding to the
+nearest integer. Scoring against a known sigma-squared is what lets a genuine level shift repay
+its parameters while a split that merely carves up a staircase tread cannot — a staircase
+already sits at exactly that noise level, so dividing one buys nothing. Quantization, which is
+what makes a slow series look flat between steps and defeated several earlier attempts at this,
+is exactly what makes the criterion work unaided.
+
+Estimating the variance from the data instead was subtly wrong, and the symptom was precise:
+when both the one-line and two-line models sat at the floor their likelihoods tied, BIC took the
+cheaper one, and a real stop went unfound. The run kept ten samples of the burn preceding it and
+reported 0.16 %/hr for someone who had put the laptop down. With the variance known, the same
+case finds the stop exactly and reports 0.00, within half an hour of it happening.
+
+The floor still appears once more, in the right place: the residual variance behind the standard
+error is floored at 1/12 too. A run that happens to sit exactly on a line still cannot be known
+more precisely than the rounding that produced it, and a standard error of zero would claim
+otherwise.
 
 An idle stretch, a full stop and a change of pace are all the same thing to it: a split that
 pays for itself. An earlier version needed a minimum split gain, a minimum segment length

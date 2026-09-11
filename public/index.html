@@ -980,7 +980,7 @@ function paintRing(key, th, f) {
   q(key, "label").textContent = (lim && lim.label) || SHORT[key];
 
   /* the served cut points, printed on the track */
-  paintThresholds(key, th, known && !quiet);
+  paintThresholds(key, th, known && !quiet, pct);
 
   const el = known && !dormant ? elapsedFrac(lim, paceAt(f)) : null;
   const notch = q(key, "notch"), gap = q(key, "gap");
@@ -1039,25 +1039,36 @@ function paintRing(key, th, f) {
   return heatOf(pct, el, band, known, dormant);
 }
 
-function paintThresholds(key, th, on) {
+/**
+ * One mark: the next colour change ahead of where the arc is now.
+ *
+ * All the cut points used to be drawn at once, which meant that past 70% the only mark on the
+ * ring sat behind the arc — covered, and answering a question already settled. The useful
+ * question is always the same one, "where does this turn?", and it only ever has one answer.
+ *
+ * Anchors closer together than they can be drawn apart are collapsed to the higher of them.
+ * On this tier criticalPercent is 99.75, a quarter-point from the cap, so past 70% the honest
+ * mark is the cap itself: there is no intermediate warning left to reach.
+ */
+function paintThresholds(key, th, on, pct) {
   const host = q(key, "thmarks");
-  const cuts = [];
-  if (on && th) {
-    const warn = num(th.warningFloorPercent, NaN);
-    const crit = num(th.criticalPercent, NaN);
-    if (isFinite(warn) && warn > 0 && warn < 100) cuts.push([warn, "var(--warning)"]);
-    /* 99.75 sits a quarter-point from the cap; drawing it would just
-       thicken the 100 mark, so it is only shown when it is far enough
-       away to be a distinct place on the ring */
-    if (isFinite(crit) && crit > 0 && crit < 98) cuts.push([crit, "var(--critical)"]);
+  let cut = null;
+  if (on && th && typeof pct === "number") {
+    const anchors = [
+      [num(th.warningFloorPercent, NaN), "var(--warning)"],
+      [num(th.criticalPercent, NaN), "var(--critical)"],
+      [num(th.exhaustedPercent, 100), "var(--exhausted)"],
+    ].filter(([v]) => isFinite(v) && v > 0 && v <= 100).sort((a, b) => a[0] - b[0]);
+    const collapsed = anchors.filter(([v], i) => i === anchors.length - 1 || anchors[i + 1][0] - v > 1.5);
+    cut = collapsed.find(([v]) => v > pct) ?? null;
   }
-  const key2 = cuts.map((c) => c[0]).join(",");
-  if (host.dataset.k === key2) return;
-  host.dataset.k = key2;
-  host.innerHTML = cuts.map(([v, col]) => {
+  const stamp = cut ? cut[0] + cut[1] : "";
+  if (host.dataset.k === stamp) return;
+  host.dataset.k = stamp;
+  host.innerHTML = !cut ? "" : (([v, col]) => {
     const a = ptAt(R - 5.4, v / 100), b = ptAt(R + 5.4, v / 100);
     return `<line class="thmark" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${col}"></line>`;
-  }).join("");
+  })(cut);
 }
 
 /* How much this limit should warm the room: the worse of raw consumption
@@ -1251,20 +1262,24 @@ function renderDetail(key) {
       "length: dotted grey while it is headroom, solid and lit in the pace colour once the arc has " +
       "overrun the clock, thickening with the size of the overrun.";
   }
-  /* paintThresholds(key, th, known && !quiet) — the `on` flag is half its
-     contract, so the prose has to carry it too. Mirroring only the value
-     conditions described marks that were never drawn. */
-  if (known && !quiet) {
-    const w = num(th && th.warningFloorPercent, NaN), c = num(th && th.criticalPercent, NaN);
-    const cuts = [];
-    if (isFinite(w) && w > 0 && w < 100) cuts.push("warning at " + w + "%");
-    if (isFinite(c) && c > 0 && c < 98) cuts.push("critical at " + c + "%");
-    if (cuts.length) {
-      legend += " The short marks across the track are the cut points the API serves — " +
-        cuts.join(" and ") + " — so you can see a threshold before you reach it.";
-    } else if (isFinite(c)) {
-      legend += " The short mark crossing the track is the served warning floor; the critical cut at " + c +
-        "% sits too close to the cap to draw as a place of its own.";
+  /* Mirrors paintThresholds exactly — its `on` flag and its choice of cut, not just the
+     values — so the prose never names a mark that was not drawn. */
+  if (known && !quiet && typeof lim.percent === "number") {
+    const anchors = [
+      [num(th && th.warningFloorPercent, NaN), "warning"],
+      [num(th && th.criticalPercent, NaN), "critical"],
+      [num(th && th.exhaustedPercent, 100), "the cap"],
+    ].filter(([v]) => isFinite(v) && v > 0 && v <= 100).sort((a, b) => a[0] - b[0]);
+    const collapsed = anchors.filter(([v], i) => i === anchors.length - 1 || anchors[i + 1][0] - v > 1.5);
+    const next = collapsed.find(([v]) => v > lim.percent);
+    if (next) {
+      const [v, word] = next;
+      legend += " The short mark crossing the track is the next colour change ahead of you — " +
+        word + " at " + showPct(v) + "%, " + showPct(v - lim.percent) + " points off" +
+        (word === "the cap" && isFinite(num(th && th.criticalPercent, NaN)) && num(th.criticalPercent, 100) > lim.percent
+          ? "; the served critical cut sits too close to the cap to draw as a place of its own." : ".");
+    } else {
+      legend += " No mark on the track: there is no colour change left ahead of this reading.";
     }
   }
 

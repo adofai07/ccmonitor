@@ -51,17 +51,22 @@ const GAP_INTERVALS = 6;
 // Two points define a line exactly and say nothing about whether it is the right one.
 const MIN_SAMPLES = 3;
 
-// The variance of rounding to the nearest integer. This is the whole reason the segmentation
-// below needs no tuned thresholds: a percent is delivered rounded, so no model can explain
-// its residuals below this floor, and a split that merely carves up a staircase tread cannot
-// reduce error past it. Quantization — which broke every earlier attempt at this — is what
-// makes the penalty work.
+// The variance of rounding to the nearest integer, and the reason the segmentation below
+// needs no tuned thresholds: a percent is delivered rounded, so this noise level is KNOWN
+// rather than something to estimate from the data. Used as a known sigma-squared it makes a
+// tread-split unable to repay its parameters (a staircase already sits at this level, so
+// carving one up buys nothing) while still letting a genuine level shift pay for itself.
+//
+// Estimating the variance instead was subtly wrong: when both the one-line and two-line
+// models sat at the floor their likelihoods tied, BIC took the cheaper one, and a real stop
+// went unfound — the run kept ten samples of the burn that preceded it and reported 0.16 %/hr
+// for someone who had put the laptop down.
 const QUANT_VAR = 1 / 12;
 
-// Parameters per model, for the BIC penalty: one line is slope + intercept + variance, two
-// lines are that twice minus the shared variance. Nothing here is chosen; k·ln(n) is the
-// criterion itself.
-const PARAMS_ONE = 3;
+// Parameters per model, for the BIC penalty. With sigma-squared known rather than fitted, one
+// line is slope + intercept; two lines are that twice plus the split location. Nothing here is
+// chosen; k·ln(n) is the criterion itself.
+const PARAMS_ONE = 2;
 const PARAMS_TWO = 5;
 
 // A runaway guard, not a limit any real day reaches.
@@ -490,14 +495,16 @@ function lineOf(s, a, b) {
   const sxy = s.tp[b] - s.tp[a] - (st * sp) / n;
   const syy = s.pp[b] - s.pp[a] - (sp * sp) / n;
   const slope = sxx > 0 ? sxy / sxx : 0;
-  // Floored at the quantization variance: the data arrives rounded, so no fit can honestly
-  // claim to explain it more closely than that, and log(0) on a flat run is not a real -inf.
-  const rss = Math.max(sxx > 0 ? syy - (sxy * sxy) / sxx : syy, n * QUANT_VAR);
+  const rss = Math.max(0, sxx > 0 ? syy - (sxy * sxy) / sxx : syy);
   return { n, slope, rss, sxx };
 }
 
-/** Gaussian log-likelihood of a segment, up to constants shared by every model. */
-const cost = (line) => line.n * Math.log(line.rss / line.n);
+/**
+ * Gaussian deviance of a segment under the KNOWN quantization variance, up to constants
+ * shared by every model. A perfectly flat run scores 0 here, which is the honest answer and
+ * needs no floor to keep it finite.
+ */
+const cost = (line) => line.rss / QUANT_VAR;
 
 /**
  * Where the current run begins: the last point at which splitting the series pays for itself.
@@ -545,7 +552,11 @@ function fitOf(points) {
   const s = prefixSums(points);
   const line = lineOf(s, 0, points.length);
   if (!(line.sxx > 0)) return null; // every sample on one instant
-  const seRate = Math.sqrt(line.rss / Math.max(1, line.n - 2) / line.sxx);
+  // The residual variance is floored here, where it belongs: a run that happens to sit exactly
+  // on a line still cannot be known more precisely than the rounding that produced it, and an
+  // SE of zero would claim otherwise.
+  const resVar = Math.max(line.rss / Math.max(1, line.n - 2), QUANT_VAR);
+  const seRate = Math.sqrt(resVar / line.sxx);
   return Number.isFinite(line.slope) && Number.isFinite(seRate)
     ? { rate: line.slope, seRate, n: line.n }
     : null;
