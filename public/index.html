@@ -224,6 +224,7 @@ main {
 /* threshold cut points, printed on the track: you can see where 70
    is before you get there. Re-read from the snapshot every render. */
 .thmark { stroke-width: 1.6; stroke-linecap: butt; opacity: .5; }
+.thmark.station { stroke-width: 1.1; opacity: .26; }
 
 /* the span between the value and the pace marker, drawn as a length:
    dotted and neutral when it is headroom, solid and PACE-coloured when
@@ -624,6 +625,11 @@ const STOP = {
   steady:    [114, 234, 208], warning:  [224, 165, 46], critical: [239, 106, 58],
   exhausted: [224,  48,  79], unknown:  [125, 140, 163],
 };
+/* The warning band is read in this many visually distinct steps; the marks go at the
+   boundaries, so the ring shows the colours it is heading into, not only the one it is on.
+   Four across a 30-point band puts them on the quarter points — 77.5, 85, 92.5 — which are
+   derived from the served floor and cap, not invented. */
+const WARN_STATIONS = 4;
 const BLOOM_STOP = { steady: .3, warning: .45, critical: .62, exhausted: .78, unknown: 0 };
 const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
 const rgbCss = (c) => "rgb(" + c[0] + " " + c[1] + " " + c[2] + ")";
@@ -640,8 +646,17 @@ function rampOf(pct, th, band) {
     return { rgb: mix(STOP[a], STOP[b], t), bloom: BLOOM_STOP[a] + (BLOOM_STOP[b] - BLOOM_STOP[a]) * t };
   };
   if (pct >= exh)  return { rgb: STOP.exhausted, bloom: BLOOM_STOP.exhausted };
-  if (pct >= crit) return seg("critical", "exhausted", crit, exh);
-  if (pct >= warn) return seg("warning", "critical", warn, crit);
+  /* Runs the whole way to --exhausted across the band, rather than stopping at --critical.
+     On this tier the critical cut is 99.75, so amber → orange had to cover 70 → 99.75 and
+     only 0.138 of luminance was available to spend on it: 75% and 95% were a hundredth apart
+     and read as the same colour. Amber → red covers the same span with 0.241, and measures
+     better on BOTH counts — wider range and a larger worst-case gap between two readings
+     someone would actually compare.
+     Reparametrising was tried first and cannot help: every easing tested made the worst gap
+     smaller, because the constraint is the range available, not how it is distributed. What
+     changes here is only the colour partway up; the band boundaries are still exactly the
+     ones the API serves, and --critical keeps its own mark at its served position. */
+  if (pct >= warn) return seg("warning", "exhausted", warn, exh);
   return { rgb: STOP.steady, bloom: BLOOM_STOP.steady };
 }
 
@@ -1040,35 +1055,46 @@ function paintRing(key, th, f) {
 }
 
 /**
- * One mark: the next colour change ahead of where the arc is now.
+ * The colour changes still ahead of the arc, each drawn in the colour it brings.
  *
- * All the cut points used to be drawn at once, which meant that past 70% the only mark on the
- * ring sat behind the arc — covered, and answering a question already settled. The useful
- * question is always the same one, "where does this turn?", and it only ever has one answer.
+ * Every cut point used to be drawn at once, so past 70% the only mark sat behind the arc —
+ * covered, and answering a question already settled. Now the marks all sit ahead: the ring
+ * shows where it is going.
  *
- * Anchors closer together than they can be drawn apart are collapsed to the higher of them.
- * On this tier criticalPercent is 99.75, a quarter-point from the cap, so past 70% the honest
- * mark is the cap itself: there is no intermediate warning left to reach.
+ * Two kinds, told apart by weight. A SERVED mark is a threshold the API publishes, drawn
+ * full strength. A STATION is a quarter point of the warning band, drawn lighter — the
+ * colour changes there, but nothing official happens, and the ring should not imply it does.
+ * Anchors closer together than they can be drawn apart collapse to the higher of them, which
+ * on this tier folds the 99.75 critical cut into the cap.
  */
 function paintThresholds(key, th, on, pct) {
   const host = q(key, "thmarks");
-  let cut = null;
+  let marks = [];
   if (on && th && typeof pct === "number") {
-    const anchors = [
-      [num(th.warningFloorPercent, NaN), "var(--warning)"],
-      [num(th.criticalPercent, NaN), "var(--critical)"],
-      [num(th.exhaustedPercent, 100), "var(--exhausted)"],
-    ].filter(([v]) => isFinite(v) && v > 0 && v <= 100).sort((a, b) => a[0] - b[0]);
-    const collapsed = anchors.filter(([v], i) => i === anchors.length - 1 || anchors[i + 1][0] - v > 1.5);
-    cut = collapsed.find(([v]) => v > pct) ?? null;
+    const warn = num(th.warningFloorPercent, NaN);
+    const crit = num(th.criticalPercent, NaN);
+    const exh = num(th.exhaustedPercent, 100);
+    const served = [[warn, "warning"], [crit, "critical"], [exh, "exhausted"]]
+      .filter(([v]) => isFinite(v) && v > 0 && v <= 100)
+      .sort((a, b) => a[0] - b[0]);
+    const kept = served.filter(([v], i) => i === served.length - 1 || served[i + 1][0] - v > 1.5);
+    marks = kept.map(([v]) => ({ v, served: true }));
+    if (isFinite(warn) && exh > warn) {
+      for (let k = 1; k < WARN_STATIONS; k++) {
+        marks.push({ v: warn + ((exh - warn) * k) / WARN_STATIONS, served: false });
+      }
+    }
+    marks = marks.filter((m) => m.v > pct).sort((a, b) => a.v - b.v);
   }
-  const stamp = cut ? cut[0] + cut[1] : "";
+  const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",");
   if (host.dataset.k === stamp) return;
   host.dataset.k = stamp;
-  host.innerHTML = !cut ? "" : (([v, col]) => {
-    const a = ptAt(R - 5.4, v / 100), b = ptAt(R + 5.4, v / 100);
-    return `<line class="thmark" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${col}"></line>`;
-  })(cut);
+  host.innerHTML = marks.map(({ v, served }) => {
+    const reach = served ? 5.4 : 3.6;
+    const a = ptAt(R - reach, v / 100), b = ptAt(R + reach, v / 100);
+    const col = rgbCss(rampOf(v, th, bandOf(v, th)).rgb);
+    return `<line class="thmark${served ? "" : " station"}" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${col}"></line>`;
+  }).join("");
 }
 
 /* How much this limit should warm the room: the worse of raw consumption
@@ -1262,24 +1288,24 @@ function renderDetail(key) {
       "length: dotted grey while it is headroom, solid and lit in the pace colour once the arc has " +
       "overrun the clock, thickening with the size of the overrun.";
   }
-  /* Mirrors paintThresholds exactly — its `on` flag and its choice of cut, not just the
-     values — so the prose never names a mark that was not drawn. */
+  /* Mirrors paintThresholds — its `on` flag and its choice of marks, not just the values —
+     so the prose never names a mark that was not drawn. */
   if (known && !quiet && typeof lim.percent === "number") {
-    const anchors = [
-      [num(th && th.warningFloorPercent, NaN), "warning"],
-      [num(th && th.criticalPercent, NaN), "critical"],
-      [num(th && th.exhaustedPercent, 100), "the cap"],
-    ].filter(([v]) => isFinite(v) && v > 0 && v <= 100).sort((a, b) => a[0] - b[0]);
-    const collapsed = anchors.filter(([v], i) => i === anchors.length - 1 || anchors[i + 1][0] - v > 1.5);
-    const next = collapsed.find(([v]) => v > lim.percent);
-    if (next) {
-      const [v, word] = next;
-      legend += " The short mark crossing the track is the next colour change ahead of you — " +
-        word + " at " + showPct(v) + "%, " + showPct(v - lim.percent) + " points off" +
-        (word === "the cap" && isFinite(num(th && th.criticalPercent, NaN)) && num(th.criticalPercent, 100) > lim.percent
-          ? "; the served critical cut sits too close to the cap to draw as a place of its own." : ".");
+    const w = num(th && th.warningFloorPercent, NaN), e = num(th && th.exhaustedPercent, 100);
+    const c = num(th && th.criticalPercent, NaN);
+    const ahead = [];
+    if (isFinite(w) && w > lim.percent) ahead.push("the warning floor at " + showPct(w) + "%");
+    if (isFinite(c) && c > lim.percent && e - c > 1.5) ahead.push("critical at " + showPct(c) + "%");
+    if (e > lim.percent) ahead.push("the cap");
+    if (ahead.length) {
+      legend += " The marks still ahead on the track are where the colour changes: " +
+        ahead.join(", ") + " at full strength because the API serves them, and the fainter ones" +
+        " at the quarter points between, which are colour steps rather than thresholds." +
+        (isFinite(c) && e - c <= 1.5
+          ? " The served critical cut at " + showPct(c) + "% sits too close to the cap to draw as a place of its own."
+          : "");
     } else {
-      legend += " No mark on the track: there is no colour change left ahead of this reading.";
+      legend += " No marks on the track: there is no colour change left ahead of this reading.";
     }
   }
 

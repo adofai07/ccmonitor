@@ -393,3 +393,26 @@ src/server.js        http, SSE, static, loopback guard
 src/cost.js          ccusage subprocess, cached — the footer number, not quota
 bin/ccquota.js       json | watch | serve
 ```
+
+### Colour across the warning band
+
+The arc's colour ramps from `--warning` at the served warning floor all the way to
+`--exhausted` at the cap, rather than stopping at `--critical`. On a `default_claude_max_20x`
+tier the critical cut is 99.75 — a quarter-point from the cap — so an amber→orange ramp had to
+cover 70 → 99.75 with only 0.138 of relative luminance to spend, and 75% and 95% came out a
+hundredth apart. Amber→red covers the same span with 0.241 and measures better on both counts:
+wider range, and a larger worst-case gap between two readings someone would actually compare.
+
+Reparametrising was tried first and cannot help. Every easing tested (exponents 0.85 down to
+0.5) made the worst adjacent gap *smaller* than linear, because the constraint is the range
+available, not how it is distributed. Linear over the wider range wins outright.
+
+The band boundaries are unchanged — they are still exactly what the API serves, and
+`--critical` keeps its own mark at its served position. What changes is only the colour
+partway up.
+
+Marks on the track are all *ahead* of the arc; drawing the ones behind it answers a question
+already settled. A **served** cut point is drawn full strength, a **station** — a quarter point
+of the band, where the colour steps but nothing official happens — is drawn lighter. Marks
+closer together than they can be drawn apart collapse to the higher, which folds the 99.75 cut
+into the cap. At 100% nothing is drawn, because nothing is ahead.
