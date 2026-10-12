@@ -2053,7 +2053,7 @@ function makeFluid(canvas, onDead) {
     },
     frame(dt) {
       if (lost || !P) return;
-      const k = (L.hold ? 0.3 : 1) * FLUID.speed;
+      const k = (L.hold ? 0.2 : 1) * FLUID.speed;
       stir(dt * k);
       step(dt * k);
       show();
