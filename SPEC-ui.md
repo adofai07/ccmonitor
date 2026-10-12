@@ -13,20 +13,26 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 - Backdrop: 3–4 large soft color blobs drifting on a ~30s loop, deep charcoal base.
 - Panels: `backdrop-filter: blur(24px)`, white ~8% fill, 1px light top edge, soft outer shadow.
-- Motion is confined to the backdrop. Data elements only move when the data moves.
-- `prefers-reduced-motion` freezes the gradient.
+- Motion is confined to the backdrop and the rings' interiors (see *Ring interior* below).
+  Arcs, ticks and charts only move when the data moves.
+- `prefers-reduced-motion` freezes the gradient and holds each ring's fluid as a still frame.
 
-## Primary view — three radial rings
+## Primary view — three rows, each a ring and its chart
 
 ```
-      ◜◞        ◜◞        ◜◞
-    ( 1% )    ( 9% )    ( 0% )
-    SESSION   WEEKLY    FABLE
-    4h 22m    5d 17h    dormant
+  ◜◞   SESSION              │ ▁▁▁▁▁▂▃▅▆▇  ┊ burn +9.2 %/hr
+ (1%)  4h 22m               │             ┊
+       ▼ 3 pts under pace   │ 03:17          now
+  ─────────────────────────────────────────────────
+  ◜◞   WEEKLY  …            │ …
+  ─────────────────────────────────────────────────
+  ◜◞   FABLE   dormant      │ …
 ```
 
-Fixed order: **session, weekly, Fable.** The order never changes and no ring is ever dropped,
-so the layout cannot reflow under you.
+Fixed order, top to bottom: **session, weekly, Fable.** The order never changes and no row is
+ever dropped, so the layout cannot reflow under you. Every limit's history chart is drawn at
+rest, beside its ring — no click needed to see a trace. Below ~680px the chart drops under its
+ring at full width.
 
 Each ring:
 
@@ -44,6 +50,22 @@ Arc **past** the tick = burning hot, will hit the cap before the window resets.
 
 The session ring's pace marker is the useful one day-to-day; the weekly ring's marker is
 what catches a Monday-morning spree.
+
+### Ring interior
+
+The well inside each ring is a small **WebGL fluid simulation** (stable fluids: advection,
+vorticity confinement, pressure projection), one per ring. It is the look, not a reading, so
+it borrows its meaning instead of adding any:
+
+- the dye is the arc's own band colour, saturated, with a little hue play around it;
+- how hard it is stirred follows the same heat that warms the backdrop — calm limits drift,
+  hot ones churn;
+- a ring with no reading, or dormant at zero, gets a dim grey, barely moving fluid;
+- a held (stale) reading slows to a crawl;
+- the pointer drags dye across the ring it is over.
+
+The numeral stays legible over it through a dark halo on the glyphs and a calmer core. Without
+WebGL or renderable half-float textures the canvas is dropped and the plain well is drawn.
 
 ## Color bands
 
@@ -74,23 +96,25 @@ Same treatment for any limit the API returns as null or inactive.
 
 ## Detail on click
 
-At rest the page shows **only the three rings**. Clicking a ring expands a detail panel in
-place for that limit:
+At rest the page shows the three rings and their charts. Clicking a ring expands a detail
+panel directly under that ring's row:
 
 ```
-┌──────────────────────────────┐
-│  WEEKLY  9%   resets 5d 17h  │
-│  burn 0.4 %/h → cap ≈ Tue    │
-│  ▁▂▂▃▃▄▅▅▆▆▇▇                │
-└──────────────────────────────┘
+┌───────────────────────────────────────────────────┐
+│  WEEKLY · 7 days window                  NOMINAL  │
+│  +0.40 %/hr │ ~Tue 14:05 │ ▲ 6 over │ 57 samples  │
+│  what the tick, the overshoot span and the marks  │
+│  mean, in words                                   │
+└───────────────────────────────────────────────────┘
 ```
 
-- **burn rate** — percent per hour over a recent window
+- **burn rate** — percent per hour over the current fitted run, with its standard error
 - **projection** — when this limit hits 100% at the current rate, or "not at this rate"
   if the window resets first
-- **sparkline** — the limit's trace over the last few hours
+- **pace** and **fitted run** — the over/under-pace verdict and the span the fit was taken over
 
-One panel open at a time. Clicking the open ring collapses it.
+The history chart is not repeated here; it is already beside the ring. One panel open at a
+time. Clicking the open ring collapses it.
 
 ## Footer strip
 

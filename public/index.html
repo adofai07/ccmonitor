@@ -10,10 +10,13 @@
 /* ══════════════════════════════════════════════════════════════════
    ccquota — dark glass over a living gradient.
 
-   One piece of glass holds all three rings; the detail panel opens
-   inside it, below them, so the rings never move. Motion belongs to
-   the backdrop: the sky drifts on a ~30s loop and warms when the
-   hottest limit heats up. Data elements move only when data moves.
+   One piece of glass holds the three limits as rows, each ring with
+   its history chart beside it, so every trace is visible at rest.
+   Clicking a ring opens its detail directly beneath that row. Motion
+   belongs to the backdrop and to the rings' interiors: the sky drifts
+   on a ~30s loop and warms when the hottest limit heats up, and each
+   ring holds a small fluid stirred by its own heat. The arcs, ticks
+   and charts move only when data moves.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -179,22 +182,27 @@ main {
   background: radial-gradient(120% 88% at 10% -14%, rgba(255,255,255,.085), rgba(255,255,255,0) 56%);
 }
 
-/* ── rings ───────────────────────────────────────────────────── */
-.rings {
-  position: relative;
-  display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
-  gap: clamp(2px, 1.4vw, 14px);
-  padding: clamp(20px, 3vw, 32px) clamp(8px, 2vw, 20px) clamp(20px, 3vw, 30px);
+/* ── rows: one limit each, ring on the left, its chart beside it ──
+   Stacking the limits vertically gives every chart the full width
+   that is left beside its ring, instead of a third of the panel. */
+.rings { position: relative; display: flex; flex-direction: column; padding: 6px 0; }
+
+.lrow {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+  gap: clamp(14px, 2.6vw, 30px);
+  padding: clamp(10px, 1.6vw, 16px) clamp(12px, 2.4vw, 26px);
+  /* the band lives on the row, so the ring and its chart share it; JS overwrites all three */
+  --band: var(--unknown); --band-rgb: var(--unknown-rgb); --bloom: .3;
 }
+.lrow + .lrow, .detailWrap + .lrow { border-top: 1px solid var(--hair); }
 
 .ring {
   appearance: none; -webkit-appearance: none;
   background: none; border: 0; margin: 0;
-  padding: 10px clamp(2px, 1vw, 10px) 8px;
-  border-radius: 16px; text-align: center; cursor: pointer; min-width: 0;
-  display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 1.5vw, 15px);
+  padding: 8px 10px 8px 8px;
+  border-radius: 16px; text-align: left; cursor: pointer; min-width: 0;
+  display: flex; flex-direction: row; align-items: center; gap: clamp(12px, 1.8vw, 20px);
   transition: background .22s var(--ease), opacity .5s var(--ease);
-  --band: var(--unknown); --band-rgb: var(--unknown-rgb); --bloom: .3;
   /* pace severity 0–1 and the two colours it drives; JS overwrites all three */
   --psev: 0; --pace-ink: var(--ink-3); --pace-mark: #fff;
 }
@@ -203,10 +211,18 @@ main {
 .ring:focus { outline: none; }
 .ring:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
 
-.art { position: relative; width: 100%; max-width: 186px; aspect-ratio: 1; container-type: inline-size; }
-.art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.art { position: relative; flex: none; width: clamp(116px, 14vw, 152px); aspect-ratio: 1; container-type: inline-size; }
+.art svg { position: relative; z-index: 1; display: block; width: 100%; height: 100%; overflow: visible; }
+/* The fluid fills the well: r = 44.5 of the 120-unit ring, so it is inset by
+   15.5/120 of the box on every side and never reaches under the track. */
+.art .fluid {
+  position: absolute; z-index: 0; inset: 12.917%; width: 74.166%; height: 74.166%;
+  border-radius: 50%; pointer-events: none;
+}
 
 .well  { fill: rgba(255,255,255,.018); transition: fill .5s ease; }
+/* with a fluid behind it the well is the fluid; only the exhausted flood below still paints */
+.art.fluid-on .well { fill: transparent; }
 /* At 100% the arc closes into a complete circle, which is geometrically identical to an
    untouched track — the one reading where the arc alone tells you nothing. Flooding the
    well turns the ring from a line into a full vessel, so "at the cap" is a different
@@ -267,22 +283,24 @@ main {
 .num {
   font-size: 27cqi; font-weight: 300; letter-spacing: -.035em; line-height: 1;
   font-variant-numeric: tabular-nums; color: #fff;
-  text-shadow: 0 2px 20px rgb(var(--band-rgb)/.35);
+  text-shadow: var(--scrim, 0 0 0 transparent), 0 2px 20px rgb(var(--band-rgb)/.35);
 }
-.pctsign { font-size: 10cqi; font-weight: 400; color: var(--ink-3); line-height: 1; }
+.pctsign { font-size: 10cqi; font-weight: 400; color: var(--ink-3); line-height: 1; text-shadow: var(--scrim, none); }
+/* a dark halo hugging the glyphs, so the numeral reads over moving dye */
+.art.fluid-on { --scrim: 0 1px 3px rgba(2,3,6,.75), 0 0 14px rgba(2,3,6,.62); }
 /* The numeral is where the eye lands first, so the pace channel is given a
    halo behind it — invisible at severity 0, a clear warm bloom by the time
    the burn is several times the clock. It is layered OVER the band's own
    shadow rather than replacing it: the two are answering different
    questions and both answers stay on screen. */
 .ring[data-pace="over"] .num {
-  text-shadow: 0 2px 20px rgb(var(--band-rgb)/.35),
+  text-shadow: var(--scrim, 0 0 0 transparent), 0 2px 20px rgb(var(--band-rgb)/.35),
                0 0 calc(8px + 26px * var(--psev)) rgb(var(--pace-hot-rgb) / calc(var(--psev) * .6));
 }
 .ring[data-state="unknown"] .num { font-size: 19cqi; color: var(--ink-4); text-shadow: none; }
 .ring[data-state="unknown"] .pctsign { display: none; }
 
-.meta { min-width: 0; width: 100%; display: flex; flex-direction: column; gap: 5px; }
+.meta { min-width: 0; width: clamp(150px, 19vw, 214px); display: flex; flex-direction: column; gap: 5px; }
 .mlabel {
   font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -311,6 +329,14 @@ main {
    box the row reserves — otherwise a pace line with a marker is 1px
    taller than one without, and the row moves when a verdict appears. */
 .mpace .tri { font-size: 8px; margin-right: 4px; line-height: 1; }
+/* when this limit reaches the cap at the fitted rate — or, plainly, why there is no such time */
+.meta-eta {
+  font-size: 11.5px; letter-spacing: .015em; color: var(--ink-4);
+  line-height: 17px; min-height: 17px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.meta-eta[data-on="1"] { color: var(--ink-2); }
+.meta-eta b { font-weight: 600; color: var(--band); }
 
 /* dormant AND empty: full size in its slot, just quiet. Waking up is the
    signal. Dormancy is a statement about the reset window and none at all
@@ -393,13 +419,14 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 /* "measuring" is a real answer, not a missing value — it reads as prose, not as a number */
 .ro dd.est { font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); font-style: italic; letter-spacing: .01em; }
 
-.chartwrap { margin-top: 12px; }
+/* each row's chart, always drawn: the trace sits beside the ring it belongs to */
+.spark { min-width: 0; }
 .chartcap {
   display: flex; justify-content: space-between; align-items: baseline; gap: 14px; flex-wrap: wrap;
-  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 7px;
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 6px;
 }
-.chartcap .note { text-transform: none; letter-spacing: .02em; font-size: 11px; }
-.chart { display: block; width: 100%; height: 116px; overflow: visible; }
+.chartcap .note { text-transform: none; letter-spacing: .02em; font-size: 11px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.chart { display: block; width: 100%; height: 118px; overflow: visible; }
 .chart .grid  { stroke: rgba(233,239,247,.075); stroke-width: 1; }
 .chart .warnln{ stroke: rgb(var(--warning-rgb)/.4); stroke-width: 1; stroke-dasharray: 3 4; }
 .chart .full  { fill: none; stroke: rgba(233,239,247,.34); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
@@ -414,7 +441,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    passes under them, so the dashed ramp cannot strike through a glyph */
 .chart .lbl   { paint-order: stroke; stroke: rgba(6,8,12,.9); stroke-width: 3.4; stroke-linejoin: round; }
 .chartempty {
-  height: 116px; display: flex; align-items: center; justify-content: center;
+  height: 118px; display: flex; align-items: center; justify-content: center;
   font-size: 12px; color: var(--ink-4); font-style: italic;
   border: 1px solid var(--hair); border-radius: 10px; background: rgba(7,9,13,.28);
 }
@@ -467,14 +494,17 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 /* ── narrow ──────────────────────────────────────────────────── */
+/* too narrow to sit a chart beside a ring: it drops underneath, full width */
+@media (max-width: 680px) {
+  .lrow { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .meta { flex: 1 1 auto; width: auto; }
+}
 @media (max-width: 560px) {
   main { justify-content: flex-start; gap: 12px; }
-  .rings { grid-template-columns: minmax(0,1fr); gap: 4px; padding: 12px 10px 14px; }
-  .ring { flex-direction: row; gap: 16px; text-align: left; padding: 12px; align-items: center; }
-  .art { width: 104px; flex: none; }
-  .meta { flex: 1 1 auto; }
+  .lrow { padding: 10px 12px 12px; }
+  .ring { gap: 16px; padding: 8px; }
+  .art { width: 104px; }
   .mclock { font-size: 16px; }
-  .seam { display: none; }
   .dhead { margin-bottom: 11px; }
   .chart, .chartempty { height: 100px; }
 }
@@ -570,7 +600,8 @@ const S = {
   link: "connecting",  // connecting | live | down
   lastFrame: 0,        // when the last SSE frame landed
   announced: "",
-  chartW: 0
+  chartsAt: 0,         // when the row charts were last drawn
+  chartsDirty: true    // new history, a new snapshot or a new width since then
 };
 
 const $ = (id) => document.getElementById(id);
@@ -863,9 +894,11 @@ function arcPath(r, f0, f1) {
 
 function buildRings() {
   ringsEl.innerHTML = ORDER.map((key) => `
+   <div class="lrow" id="row-${key}">
     <button class="ring" type="button" id="ring-${key}" data-key="${key}"
             aria-expanded="false" aria-controls="detail" data-state="unknown" data-pace="none">
       <span class="art">
+        <canvas class="fluid" data-r="fluid" aria-hidden="true"></canvas>
         <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
           <circle class="well" cx="60" cy="60" r="44.5"></circle>
           <circle class="rim" cx="60" cy="60" r="55.2"></circle>
@@ -892,9 +925,14 @@ function buildRings() {
         <span class="mlabel" data-r="label">${SHORT[key]}</span>
         <span class="mclock" data-r="clock">—</span>
         <span class="mpace" data-r="pace"></span>
+        <span class="meta-eta" data-r="eta"></span>
       </span>
       <span class="sr-only" data-r="sr"></span>
-    </button>`).join("");
+    </button>
+    <div class="spark" id="spark-${key}"></div>
+   </div>`).join("");
+  /* the detail panel lives among the rows and moves under whichever one is open */
+  ringsEl.appendChild(detailWrap);
 
   ringsEl.querySelectorAll(".ring").forEach((b) => {
     b.addEventListener("click", () => toggle(b.dataset.key));
@@ -962,11 +1000,13 @@ function render() {
   if (sig !== S.announced) { S.announced = sig; $("live").textContent = spokenSummary(f); }
 
   if (S.open) renderDetail(S.open);
+  /* the charts' right edge is "now", so they redraw every few seconds even with no new data */
+  if (S.chartsDirty || Date.now() - S.chartsAt > CHART_REFRESH_MS) renderCharts();
   placeSeam();
 }
 
 function paintRing(key, th, f) {
-  const btn = $("ring-" + key);
+  const btn = $("ring-" + key), row = $("row-" + key);
   const lim = limitOf(key);
   const known = !f.blank && lim && typeof lim.percent === "number";
   const dormant = !!(known && lim.dormant);
@@ -982,10 +1022,11 @@ function paintRing(key, th, f) {
   btn.dataset.quiet = quiet ? "1" : "0";
   btn.dataset.band = band; // data-state is liveness; the band needs its own hook for CSS
 
+  /* set on the row, so the ring and the chart beside it read one colour */
   const ramp = rampOf(pct, th, band);
-  btn.style.setProperty("--band", rgbCss(ramp.rgb));
-  btn.style.setProperty("--band-rgb", ramp.rgb.join(" "));
-  btn.style.setProperty("--bloom", ramp.bloom.toFixed(3));
+  row.style.setProperty("--band", rgbCss(ramp.rgb));
+  row.style.setProperty("--band-rgb", ramp.rgb.join(" "));
+  row.style.setProperty("--bloom", ramp.bloom.toFixed(3));
 
   const frac = known ? clamp(pct / 100, 0, 1) : 0;
   paintArc(key, frac);
@@ -1050,8 +1091,19 @@ function paintRing(key, th, f) {
       : '<span class="tri">◆</span>on pace') + (f.hold ? " · held" : "");
   }
 
-  q(key, "sr").textContent = srText(key, lim, known, dormant, pct, el, rem, band, f);
-  return heatOf(pct, el, band, known, dormant);
+  const eta = capOutlook(lim, fitFor(key), f, known);
+  const etaEl = q(key, "eta");
+  etaEl.dataset.on = eta.at === null ? "0" : "1";
+  if (eta.at === null) etaEl.textContent = known ? "cap · " + eta.short : "";
+  else etaEl.innerHTML = "<b>cap</b> ~" + esc(stamp(eta.at)) + (eta.provisional ? "?" : "") +
+    " · in " + esc(fmtIn(eta.at - Date.now())) + (f.hold ? " · held" : "");
+
+  q(key, "sr").textContent = srText(key, lim, known, dormant, pct, el, rem, band, f, eta);
+  const heat = heatOf(pct, el, band, known, dormant);
+  /* the fluid takes the arc's colour and is stirred by the same heat that warms the room;
+     a ring with nothing to show (no reading, or dormant at zero) gets a grey, barely-moving one */
+  if (FLUIDS[key]) FLUIDS[key].look(ramp.rgb, known && !quiet ? heat : -1, !!f.hold);
+  return heat;
 }
 
 /**
@@ -1111,7 +1163,7 @@ function heatOf(pct, el, band, known, dormant) {
   return clamp(Math.max(byBand, byPace), 0, 1);
 }
 
-function srText(key, lim, known, dormant, pct, el, rem, band, f) {
+function srText(key, lim, known, dormant, pct, el, rem, band, f, eta) {
   const name = (lim && lim.label) || SHORT[key];
   if (!known) return name + (f.blank ? ": no reading yet." : ": the API returned no value for this limit.") +
     " Activate for detail.";
@@ -1128,8 +1180,12 @@ function srText(key, lim, known, dormant, pct, el, rem, band, f) {
       (f.hold ? " when the reading was taken" : "")) +
     ", band " + BAND_WORD[band] +
     (rem === null ? "" : ", resets in " + fmtSpoken(rem)) +
+    (!eta ? "" : eta.at !== null
+      ? ", at the fitted rate it reaches the cap " + stamp(eta.at) + ", in " + fmtSpoken((eta.at - Date.now()) / 1000) +
+        (eta.provisional ? ", though that time is still uncertain" : "")
+      : ", no cap time: " + eta.long) +
     (f.hold ? ". Held: this is the last verified reading, and the pace comparison is frozen at that instant, not live" : "") +
-    ". Activate for burn rate, projection and history.";
+    ". Activate for burn rate, projection and pace detail.";
 }
 
 function spokenSummary(f) {
@@ -1147,19 +1203,22 @@ function spokenSummary(f) {
 function toggle(key) {
   S.open = S.open === key ? null : key;
   ORDER.forEach((k) => $("ring-" + k).setAttribute("aria-expanded", String(S.open === k)));
+  /* open directly under the row it explains; closing collapses it where it stands */
+  if (S.open) $("row-" + S.open).after(detailWrap);
   detailWrap.classList.toggle("open", !!S.open);
   $("detailOuter").inert = !S.open;
-  if (S.open) { S.chartW = 0; renderDetail(S.open); placeSeam(); }
+  if (S.open) { renderDetail(S.open); placeSeam(); }
 }
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && S.open) { const k = S.open; toggle(k); $("ring-" + k).focus(); }
 });
 
+/* the lit stretch of the panel's top edge sits under the ring it belongs to */
 function placeSeam() {
   if (!S.open) return;
-  const btn = $("ring-" + S.open), host = detailWrap.querySelector(".detailInner");
-  if (!btn || !host) return;
-  const b = btn.getBoundingClientRect(), r = host.getBoundingClientRect();
+  const art = $("ring-" + S.open).querySelector(".art"), host = detailWrap.querySelector(".detailInner");
+  if (!art || !host) return;
+  const b = art.getBoundingClientRect(), r = host.getBoundingClientRect();
   seamEl.style.left = (b.left + b.width / 2 - r.left) + "px";
 }
 
@@ -1197,20 +1256,16 @@ function renderDetail(key) {
     : "not enough of a run yet";
   const burnHtml = burn === null
     ? `<dd class="est">measuring<small>${need ? esc(need) : "not enough of a run yet"}</small></dd>`
-    : `<dd>${burn > 0 ? "+" : ""}${Math.abs(burn) >= 10 ? burn.toFixed(1) : burn.toFixed(2)}<small>%/hr${
+    : `<dd>${fmtRate(burn)}<small>%/hr${
         fit && typeof fit.seRatePercentPerHour === "number" && fit.seRatePercentPerHour > 0
-          ? " ± " + fit.seRatePercentPerHour.toFixed(fit.seRatePercentPerHour >= 10 ? 0 : 1) : ""}</small></dd>`;
+          ? " ± " + fmtSpread(fit.seRatePercentPerHour) : ""}</small></dd>`;
   /* Never draw a projection the API returned as null. A provisional one is drawn, but wears
-     its doubt: the trailing "?" says the number comes from a longer stretch than the pace
-     you are on right now, because the current one is not yet long enough to carry it. */
+     its doubt: the trailing "?" says the projection's own spread is wide relative to how far
+     ahead it sits. */
   const prov = !!(fit && fit.provisional);
-  /* A null projection has three different causes and they are not interchangeable. If the
-     rate itself is published, the evidence gates passed, so the silence is about the shape
-     of the burn rather than a shortage of it — saying "not enough of a run" there would be
-     plainly false, since the number beside it came from that same run. */
-  const projWhy = burn === null ? (need || "not enough of a run yet")
-    : burn > 0 ? "the window resets first"
-    : "not rising";
+  /* The reason for a missing projection is the row's reason too (capOutlook), so the panel
+     and the ring can never disagree about why there is no time to show. */
+  const projWhy = burn === null ? (need || "not enough of a run yet") : capOutlook(lim, fit, f, known).long;
   /* The spread is the honest half of this number and it is now measurable, so show it
      rather than only flagging it: "13:40 ± 4 min" says what "?" alone could not. */
   const spread = fit && typeof fit.etaUncertaintySeconds === "number" ? fit.etaUncertaintySeconds : null;
@@ -1310,8 +1365,9 @@ function renderDetail(key) {
   }
 
   const winSec = num(lim && lim.windowSeconds, FALLBACK_WINDOW[key]);
-  const boxW = Math.max(260, Math.round(detailEl.clientWidth || 640));
-  S.chartW = boxW;
+  /* the chart now lives beside the ring, always drawn; its marks are explained here */
+  legend += " In the chart beside the ring the trace is bright where the burn rate was fitted," +
+    " a dashed upright marks where that run starts, and a dashed ramp runs to the cap when a projection is published.";
 
   const html =
     `<div class="dhead">
@@ -1325,10 +1381,9 @@ function renderDetail(key) {
        <div class="ro"><dt>pace</dt>${paceHtml}</div>
        <div class="ro"><dt>fitted run</dt>${runHtml}</div>
      </dl>
-     <div class="chartwrap">${chartHTML(key, fit, band, proj, th, boxW, !known)}</div>
      <p class="dfoot">${esc(marker)}${esc(legend)}${
        burn === null ? " The fitted burn rate is a second, separate model, and it needs three readings in an unbroken run before it can say anything at all." :
-       proj === null ? " The fitted burn rate is a second, separate model: it publishes no projection while that fitted rate is flat or falling, the run is too short to extrapolate from, or the window resets before the cap." : ""}${
+       proj === null ? " The fitted burn rate is a second, separate model: it publishes no projection while that fitted rate is flat or falling, when the window resets before the cap, or when the newest reading is too old to extrapolate from." : ""}${
        proj !== null && fit && fit.provisional ? " The ? on that time means its own spread is wide relative to how far ahead it is — the run supports the direction but not yet the hour." : ""}</p>`;
 
   /* render() runs at 1 Hz and almost every tick produces identical
@@ -1348,18 +1403,75 @@ function renderDetail(key) {
    fit was actually taken over, lit. Nulls break the line rather
    than being drawn as zero. A projection ramp only when the API
    returned one.                                                */
-function chartHTML(key, fit, band, proj, th, W, presentUnknown) {
+/* A rate as printed: the sign only on a rate that survives rounding, so a flat run reads
+   "0.00" rather than "+0.00"; and a spread with enough digits that a small one is not "± 0.0". */
+function fmtRate(b) {
+  const t = Math.abs(b) >= 10 ? b.toFixed(1) : b.toFixed(2);
+  return (Number(t) > 0 ? "+" : "") + (Number(t) === 0 ? (0).toFixed(2) : t);
+}
+function fmtSpread(se) {
+  return se.toFixed(se >= 10 ? 0 : se >= 0.1 ? 1 : 2);
+}
+/* A coarse "in …" for an ETA: minutes, then hours and minutes, then days and hours. */
+function fmtIn(ms) {
+  const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 60) return m + " min";
+  const h = Math.floor(m / 60);
+  if (h < 48) return h + "h " + String(m % 60).padStart(2, "0") + "m";
+  return Math.floor(h / 24) + "d " + (h % 24) + "h";
+}
+
+/**
+ * When this limit reaches the cap at the fitted rate: { at, provisional } — or at: null with
+ * the reason, short for the row and long for the detail panel.
+ *
+ * A null projectedAt has several causes and they are not interchangeable. The server withholds
+ * one when there is no fit yet, when the rate is flat or falling, when the window resets first,
+ * and when the newest sample is too old to extrapolate from. The last two used to be reported
+ * as one ("the window resets first"), which was false through any long outage; the reset
+ * instant is in hand, so they are told apart here.
+ */
+function capOutlook(lim, fit, f, known) {
+  const none = (short, long) => ({ at: null, provisional: false, short, long: long || short });
+  if (!known) return none("no reading");
+  if (lim.percent >= num(S.snap && S.snap.thresholds && S.snap.thresholds.exhaustedPercent, 100)) return none("at the cap now");
+  const proj = fit && typeof fit.projectedAt === "number" && isFinite(fit.projectedAt) ? fit.projectedAt : null;
+  if (proj !== null) return { at: proj, provisional: !!fit.provisional, short: "", long: "" };
+  if (lim.dormant) return none("no window running", "no reset window is running");
+  const burn = fit && typeof fit.burnPercentPerHour === "number" && isFinite(fit.burnPercentPerHour) ? fit.burnPercentPerHour : null;
+  if (burn === null) return none("measuring");
+  if (!(Number(fmtRate(burn)) > 0)) return none("not rising");
+  const reset = Date.parse(lim.resetsAt || "");
+  if (isFinite(reset) && Date.now() + ((100 - lim.percent) / burn) * 3600000 > reset) {
+    return none("resets first", "the window resets first");
+  }
+  if (!isFinite(reset)) return none("no reset time", "no reset time to project against");
+  return none("reading too old", "the newest reading is too old to extrapolate from");
+}
+
+/* The fitted rate, in the same form the detail panel prints it, for the chart's caption. */
+function burnNote(fit) {
+  const b = fit && typeof fit.burnPercentPerHour === "number" && isFinite(fit.burnPercentPerHour) ? fit.burnPercentPerHour : null;
+  if (b === null) return "burn · measuring";
+  const se = typeof fit.seRatePercentPerHour === "number" && fit.seRatePercentPerHour > 0 ? fit.seRatePercentPerHour : null;
+  return "burn " + fmtRate(b) + " %/hr" + (se === null ? "" : " ± " + fmtSpread(se));
+}
+
+function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   const h = S.hist, idx = ORDER.indexOf(key);
   const raw = h && Array.isArray(h.samples) ? h.samples : [];
   const pts = raw.filter((s) => s && Array.isArray(s.p) && isFinite(s.t))
                  .map((s) => ({ t: s.t, v: typeof s.p[idx] === "number" ? s.p[idx] : null }));
   const usable = pts.filter((p) => p.v !== null);
   if (usable.length < 2) {
-    return `<div class="chartcap"><span>history${presentUnknown ? " · current reading unknown" : ""}</span></div>
-            <div class="chartempty">not enough readings retained yet to draw a line</div>`;
+    return `<div class="chartcap"><span>history${presentUnknown ? " · current reading unknown" : ""}</span>
+              <span class="note">${esc(burnNote(fit))}</span></div>
+            <div class="chartempty">${h ? "not enough readings retained yet to draw a line" : "loading history…"}</div>`;
   }
 
-  const H = 116, PL = 34, PR = 46, PT = 10, PB = 19;
+  const PL = 34, PR = 46, PT = 10, PB = 19;
+  /* advance of one .ax glyph: 10px of a ui-monospace face (~0.6em) plus .04em of tracking */
+  const CHAR_W = 6.4;
   const now = Date.now();
   let t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, now);
   if (t1 - t0 < 60000) t1 = t0 + 60000;
@@ -1398,9 +1510,9 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown) {
     s += `<text class="ax" x="${PL - 7}" y="${(y + 3.4).toFixed(1)}" text-anchor="end">${Math.round(ymax * fr)}</text>`;
   }
   const warn = num(th && th.warningFloorPercent, NaN);
-  if (isFinite(warn) && warn <= ymax) {
+  const warnOn = isFinite(warn) && warn <= ymax;
+  if (warnOn) {
     s += `<line class="warnln" x1="${PL}" y1="${Y(warn).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(warn).toFixed(1)}"></line>`;
-    s += `<text class="ax" x="${(W - PR + 5).toFixed(1)}" y="${(Y(warn) + 3.4).toFixed(1)}" fill="rgb(var(--warning-rgb)/.65)">warn</text>`;
   }
 
   s += `<path class="full" d="${seg(() => true)}"></path>`;
@@ -1434,13 +1546,13 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown) {
   let capLeft = Infinity;
   if (projX !== null) {
     const capText = "cap " + stamp(projX);
-    capLeft = X(projX) - 5 - capText.length * 5.9;   // 10px mono ≈ 5.9px/char
+    capLeft = X(projX) - 5 - capText.length * CHAR_W;
     s += `<path class="proj" d="M${X(last.t).toFixed(1)} ${Y(last.v).toFixed(1)}L${X(projX).toFixed(1)} ${Y(100).toFixed(1)}"></path>`;
     s += `<text class="ax lbl" x="${(X(projX) - 5).toFixed(1)}" y="${PT + 9}" text-anchor="end" fill="var(--band)">${esc(capText)}</text>`;
   }
   const headX = X(last.t), headY = Y(last.v);
   const label = last.v + "%";
-  const lw = label.length * 5.9;
+  const lw = label.length * CHAR_W;
   const capRow = PT + 9;
   let lx = headX + 7, la = "start";
   if (lx + lw > W - 2) { lx = headX - 7; la = "end"; }          // never off the right edge
@@ -1453,8 +1565,16 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown) {
     /* they only fight when the label reaches into the cap label's span
        AND sits in its row — which is exactly the high-percent case,
        because a projection is drawn precisely when the head is high */
-    if (r > capLeft && l < X(projX) && Math.abs(ly - capRow) < 12) {
+    if (r + 8 > capLeft && l < X(projX) && Math.abs(ly - capRow) < 12) {
       ly = clamp(Math.max(headY + 15, capRow + 15), PT + 8, H - PB - 3);
+    }
+  }
+  /* "warn" sits in the right margin at the warning line, which is exactly where the head
+     label lands when the reading is near the floor; the head's value wins, the line stays */
+  if (warnOn) {
+    const wy = Y(warn) + 3.4, wl = W - PR + 5, hl = la === "end" ? lx - lw : lx, hr = la === "end" ? lx : lx + lw;
+    if (!(hr > wl - 3 && hl < wl + 4 * CHAR_W + 3 && Math.abs(ly - wy) < 11)) {
+      s += `<text class="ax" x="${wl.toFixed(1)}" y="${wy.toFixed(1)}" fill="rgb(var(--warning-rgb)/.65)">warn</text>`;
     }
   }
   s += `<circle class="head" cx="${headX.toFixed(1)}" cy="${headY.toFixed(1)}" r="2.6"></circle>`;
@@ -1466,8 +1586,535 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown) {
   return `<div class="chartcap">
       <span>last ${esc(fmtSpan((Math.max(...usable.map(p=>p.t)) - t0) / 1000))} of history${
         presentUnknown ? " · current reading unknown" : ""}</span>
-      <span class="note">bright where the burn rate was fitted${since !== null && since > t0 ? " · dashed line marks where that run starts" : ""}</span>
+      <span class="note">${esc(burnNote(fit))}</span>
     </div>${s}`;
+}
+
+/* Every row's chart, from the one /api/history payload. Called when the history or the
+   snapshot changes, when the layout resizes, and every CHART_REFRESH_MS so "now" keeps
+   moving; a chart whose markup came out the same is left alone. */
+const CHART_REFRESH_MS = 20000;
+const chartMarkup = {};
+function renderCharts() {
+  S.chartsDirty = false;
+  S.chartsAt = Date.now();
+  const th = S.snap ? S.snap.thresholds : null, f = freshness();
+  const H = matchMedia("(max-width: 560px)").matches ? 100 : 118;   // the .chart height in CSS
+  for (const key of ORDER) {
+    const host = $("spark-" + key);
+    if (!host) continue;
+    const lim = limitOf(key), fit = fitFor(key);
+    const known = !f.blank && lim && typeof lim.percent === "number";
+    const quiet = !!(known && lim.dormant) && !(lim.percent > 0);
+    const band = !known || quiet ? "unknown" : bandOf(lim.percent, th);
+    const proj = fit && typeof fit.projectedAt === "number" && isFinite(fit.projectedAt) ? fit.projectedAt : null;
+    const W = Math.max(220, Math.round(host.clientWidth || 480));
+    const html = chartHTML(key, fit, band, proj, th, W, !known, H);
+    if (html !== chartMarkup[key]) { chartMarkup[key] = html; host.innerHTML = html; }
+  }
+}
+
+/* ═════════════════════════ fluid ═════════════════════════
+   Each ring's interior is a small GPU fluid: the stable-fluids method —
+   semi-Lagrangian advection, vorticity confinement and a Jacobi
+   pressure projection — on half-float textures, one instance per ring.
+   It is the ring's look, not a reading, so it borrows its meaning rather
+   than inventing any: the dye is the arc's own colour, and the stirring
+   follows the heat that warms the room, so a calm limit drifts and a hot
+   one churns. A ring with nothing to show gets a grey, barely moving
+   fluid, and a held reading slows to a crawl because the page is no
+   longer watching it change. Without WebGL or a renderable half-float
+   format the canvas is dropped and the plain well stands in. Under
+   reduced motion the fluid is stirred once into a still frame.        */
+const FLUIDS = {};
+/* speed: simulated seconds per real second — the whole fluid plays at this rate */
+const FLUID = { sim: 64, dye: 256, iters: 18, curl: 26, velFade: 0.5, dyeFade: 0.95, speed: 0.5 };
+const REDUCE = matchMedia("(prefers-reduced-motion: reduce)");
+
+/* No uniform is declared in both stages: a shared one must match precision, and the
+   fragment stage may only have mediump. */
+const GLSL_VERT = `
+precision highp float;
+attribute vec2 aPosition;
+uniform vec2 texelSize;
+varying vec2 vUv; varying vec2 vL; varying vec2 vR; varying vec2 vT; varying vec2 vB;
+void main () {
+  vUv = aPosition * 0.5 + 0.5;
+  vL = vUv - vec2(texelSize.x, 0.0); vR = vUv + vec2(texelSize.x, 0.0);
+  vT = vUv + vec2(0.0, texelSize.y); vB = vUv - vec2(0.0, texelSize.y);
+  gl_Position = vec4(aPosition, 0.0, 1.0);
+}`;
+const GLSL_HEAD = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float; precision highp sampler2D;
+#else
+precision mediump float; precision mediump sampler2D;
+#endif
+varying vec2 vUv; varying vec2 vL; varying vec2 vR; varying vec2 vT; varying vec2 vB;
+`;
+const GLSL = {
+  scale: `uniform sampler2D uTexture; uniform float value;
+void main () { gl_FragColor = value * texture2D(uTexture, vUv); }`,
+
+  splat: `uniform sampler2D uTarget; uniform vec3 color; uniform vec2 point; uniform float radius;
+void main () {
+  vec2 p = vUv - point;
+  gl_FragColor = vec4(texture2D(uTarget, vUv).xyz + exp(-dot(p, p) / radius) * color, 1.0);
+}`,
+
+  /* Velocity is in sim texels per second; MANUAL_FILTERING stands in for hardware
+     bilinear filtering where half-float textures cannot be filtered. */
+  advect: `uniform sampler2D uVelocity; uniform sampler2D uSource;
+uniform vec2 velTexel; uniform vec2 srcTexel; uniform float dt; uniform float fade;
+vec4 bilerp (sampler2D s, vec2 uv, vec2 ts) {
+  vec2 st = uv / ts - 0.5; vec2 i = floor(st); vec2 f = fract(st);
+  vec4 a = texture2D(s, (i + vec2(0.5, 0.5)) * ts), b = texture2D(s, (i + vec2(1.5, 0.5)) * ts);
+  vec4 c = texture2D(s, (i + vec2(0.5, 1.5)) * ts), d = texture2D(s, (i + vec2(1.5, 1.5)) * ts);
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+void main () {
+#ifdef MANUAL_FILTERING
+  vec2 coord = vUv - dt * bilerp(uVelocity, vUv, velTexel).xy * velTexel;
+  vec4 result = bilerp(uSource, coord, srcTexel);
+#else
+  vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * velTexel;
+  vec4 result = texture2D(uSource, coord);
+#endif
+  gl_FragColor = result / (1.0 + fade * dt);
+}`,
+
+  /* walls reflect: a neighbour outside the box is the mirror of the centre */
+  divergence: `uniform sampler2D uVelocity;
+void main () {
+  float L = texture2D(uVelocity, vL).x, R = texture2D(uVelocity, vR).x;
+  float T = texture2D(uVelocity, vT).y, B = texture2D(uVelocity, vB).y;
+  vec2 C = texture2D(uVelocity, vUv).xy;
+  if (vL.x < 0.0) L = -C.x;
+  if (vR.x > 1.0) R = -C.x;
+  if (vT.y > 1.0) T = -C.y;
+  if (vB.y < 0.0) B = -C.y;
+  gl_FragColor = vec4(0.5 * (R - L + T - B), 0.0, 0.0, 1.0);
+}`,
+
+  curl: `uniform sampler2D uVelocity;
+void main () {
+  float L = texture2D(uVelocity, vL).y, R = texture2D(uVelocity, vR).y;
+  float T = texture2D(uVelocity, vT).x, B = texture2D(uVelocity, vB).x;
+  gl_FragColor = vec4(0.5 * (R - L - T + B), 0.0, 0.0, 1.0);
+}`,
+
+  /* vorticity confinement: puts back the small eddies the coarse grid smears out */
+  vorticity: `uniform sampler2D uVelocity; uniform sampler2D uCurl; uniform float curl; uniform float dt;
+void main () {
+  float L = texture2D(uCurl, vL).x, R = texture2D(uCurl, vR).x;
+  float T = texture2D(uCurl, vT).x, B = texture2D(uCurl, vB).x;
+  float C = texture2D(uCurl, vUv).x;
+  vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
+  force /= length(force) + 0.0001;
+  force *= curl * C;
+  force.y *= -1.0;
+  vec2 v = texture2D(uVelocity, vUv).xy + force * dt;
+  gl_FragColor = vec4(clamp(v, -1000.0, 1000.0), 0.0, 1.0);
+}`,
+
+  pressure: `uniform sampler2D uPressure; uniform sampler2D uDivergence;
+void main () {
+  float L = texture2D(uPressure, vL).x, R = texture2D(uPressure, vR).x;
+  float T = texture2D(uPressure, vT).x, B = texture2D(uPressure, vB).x;
+  gl_FragColor = vec4((L + R + B + T - texture2D(uDivergence, vUv).x) * 0.25, 0.0, 0.0, 1.0);
+}`,
+
+  gradient: `uniform sampler2D uPressure; uniform sampler2D uVelocity;
+void main () {
+  float L = texture2D(uPressure, vL).x, R = texture2D(uPressure, vR).x;
+  float T = texture2D(uPressure, vT).x, B = texture2D(uPressure, vB).x;
+  gl_FragColor = vec4(texture2D(uVelocity, vUv).xy - 0.5 * vec2(R - L, T - B), 0.0, 1.0);
+}`,
+
+  /* Dye to screen: relief shading from the dye's own gradient, a two-ring glow that stands
+     in for the original demo's bloom pass, a soft tone curve so
+     stacked dye glows instead of clipping, a calmer core under the numeral, and a
+     feathered disc edge that meets the track. The curve maps the brightest channel and
+     scales the others with it, so dense dye stays its own hue instead of washing to white.
+     Output is premultiplied. */
+  display: `uniform sampler2D uTexture; uniform vec2 dyeTexel; uniform float gain; uniform float core; uniform float glow; uniform vec3 base;
+void main () {
+  vec3 c = texture2D(uTexture, vUv).rgb;
+  float dx = length(texture2D(uTexture, vR).rgb) - length(texture2D(uTexture, vL).rgb);
+  float dy = length(texture2D(uTexture, vT).rgb) - length(texture2D(uTexture, vB).rgb);
+  vec3 n = normalize(vec3(dx, dy, length(dyeTexel)));
+  c *= clamp(n.z + 0.82, 0.82, 1.0);
+  vec3 g = vec3(0.0);
+  for (int i = 0; i < 8; i++) {
+    vec2 d = vec2(cos(float(i) * 0.7854), sin(float(i) * 0.7854)) * dyeTexel;
+    g += texture2D(uTexture, vUv + d * 6.0).rgb * 0.62 + texture2D(uTexture, vUv + d * 14.0).rgb * 0.38;
+  }
+  c += g * (glow / 8.0);
+  float m = max(c.r, max(c.g, c.b));
+  c *= (1.0 - exp(-m * gain)) / max(m, 0.0001);
+  float r = length(vUv * 2.0 - 1.0);
+  c *= mix(core, 1.0, smoothstep(0.08, 0.82, r));
+  float disc = 1.0 - smoothstep(0.955, 1.0, r);
+  gl_FragColor = vec4((base + c) * disc, disc);
+}`,
+};
+
+/**
+ * One ring's fluid, or null when this browser cannot run one.
+ * `onDead` is called if the GPU context is lost and cannot be rebuilt.
+ */
+function makeFluid(canvas, onDead) {
+  const attrs = { alpha: true, depth: false, stencil: false, antialias: false,
+                  premultipliedAlpha: true, preserveDrawingBuffer: false, powerPreference: "low-power" };
+  let gl = null;
+  try { gl = canvas.getContext("webgl2", attrs) || canvas.getContext("webgl", attrs); } catch (_) { gl = null; }
+  if (!gl) return null;
+  const gl2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
+
+  let P = null, T = null, type = 0, linear = false, lost = false, ptr = null;
+  const L = { rgb: [0.49, 0.55, 0.64], energy: 0.04, dim: true, hold: false };
+  let clock = Math.random() * 1000, burstIn = 0.25;
+  /* two emitters orbiting in opposite senses at different radii — where their wakes
+     cross is where the eddies come from */
+  const orbits = [
+    { a: Math.random() * 6.283, spin: 1, r0: 0.47, wob: 0.15, f: 0.29, hue: -1 },
+    { a: Math.random() * 6.283, spin: -0.72, r0: 0.27, wob: 0.12, f: 0.43, hue: 1 },
+  ];
+
+  function compile(kind, src) {
+    const s = gl.createShader(kind);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS) && !gl.isContextLost()) throw new Error(gl.getShaderInfoLog(s) || "shader");
+    return s;
+  }
+  function link(vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, vs);
+    gl.attachShader(p, fs);
+    gl.bindAttribLocation(p, 0, "aPosition");
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS) && !gl.isContextLost()) throw new Error(gl.getProgramInfoLog(p) || "link");
+    const u = {};
+    const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS) || 0;
+    for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
+    return { use() { gl.useProgram(p); return u; } };
+  }
+  /* a format is only usable if a framebuffer built on it is complete */
+  function renderable(internal, format) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, internal, 4, 4, 0, format, type, null);
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.deleteFramebuffer(fbo);
+    gl.deleteTexture(tex);
+    return ok ? { internal, format } : null;
+  }
+  function target(size, f, filter) {
+    gl.activeTexture(gl.TEXTURE0);
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, f.internal, size, size, 0, f.format, type, null);
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    gl.viewport(0, 0, size, size);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    return { fbo, size, texel: 1 / size,
+             bind(unit) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); return unit; } };
+  }
+  function pair(size, f, filter) {
+    let a = target(size, f, filter), b = target(size, f, filter);
+    return { size, texel: 1 / size, get read() { return a; }, get write() { return b; },
+             swap() { const t = a; a = b; b = t; } };
+  }
+
+  function setup() {
+    if (gl2) {
+      gl.getExtension("EXT_color_buffer_float");
+      gl.getExtension("EXT_color_buffer_half_float");
+      type = gl.HALF_FLOAT;
+      linear = true;                        // half-float filtering is core in WebGL2
+    } else {
+      const hf = gl.getExtension("OES_texture_half_float");
+      if (!hf) return false;
+      type = hf.HALF_FLOAT_OES;
+      linear = !!gl.getExtension("OES_texture_half_float_linear");
+    }
+    const rgba = gl2 ? renderable(gl.RGBA16F, gl.RGBA) : renderable(gl.RGBA, gl.RGBA);
+    if (!rgba) return false;
+    const rg = gl2 ? renderable(gl.RG16F, gl.RG) || rgba : rgba;
+    const r = gl2 ? renderable(gl.R16F, gl.RED) || rg : rgba;
+
+    const vs = compile(gl.VERTEX_SHADER, GLSL_VERT);
+    const prog = (name, defs) => link(vs, compile(gl.FRAGMENT_SHADER, (defs || "") + GLSL_HEAD + GLSL[name]));
+    P = {
+      scale: prog("scale"), splat: prog("splat"),
+      advect: prog("advect", linear ? "" : "#define MANUAL_FILTERING\n"),
+      divergence: prog("divergence"), curl: prog("curl"), vorticity: prog("vorticity"),
+      pressure: prog("pressure"), gradient: prog("gradient"), display: prog("display"),
+    };
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, -1, 1, 1, 1, 1, -1]), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(0);
+
+    const filter = linear ? gl.LINEAR : gl.NEAREST;
+    T = {
+      vel: pair(FLUID.sim, rg, filter), dye: pair(FLUID.dye, rgba, filter),
+      div: target(FLUID.sim, r, gl.NEAREST), curl: target(FLUID.sim, r, gl.NEAREST),
+      pres: pair(FLUID.sim, r, gl.NEAREST),
+    };
+    gl.disable(gl.BLEND);
+    return true;
+  }
+
+  function draw(t) {
+    if (t) { gl.viewport(0, 0, t.size, t.size); gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo); }
+    else { gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight); gl.bindFramebuffer(gl.FRAMEBUFFER, null); }
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+  }
+
+  /* a gaussian of velocity (sim texels per second) and dye at (x, y) in 0–1 */
+  function splat(x, y, vx, vy, rgb, radius) {
+    const u = P.splat.use();
+    gl.uniform2f(u.point, x, y);
+    gl.uniform1f(u.radius, radius);
+    gl.uniform1i(u.uTarget, T.vel.read.bind(0));
+    gl.uniform3f(u.color, vx, vy, 0);
+    draw(T.vel.write); T.vel.swap();
+    gl.uniform1i(u.uTarget, T.dye.read.bind(0));
+    gl.uniform3f(u.color, rgb[0], rgb[1], rgb[2]);
+    draw(T.dye.write); T.dye.swap();
+  }
+
+  function step(dt) {
+    const v = T.vel, s = v.texel;
+    let u = P.curl.use();
+    gl.uniform2f(u.texelSize, s, s);
+    gl.uniform1i(u.uVelocity, v.read.bind(0));
+    draw(T.curl);
+
+    u = P.vorticity.use();
+    gl.uniform2f(u.texelSize, s, s);
+    gl.uniform1i(u.uVelocity, v.read.bind(0));
+    gl.uniform1i(u.uCurl, T.curl.bind(1));
+    gl.uniform1f(u.curl, FLUID.curl);
+    gl.uniform1f(u.dt, dt);
+    draw(v.write); v.swap();
+
+    u = P.divergence.use();
+    gl.uniform2f(u.texelSize, s, s);
+    gl.uniform1i(u.uVelocity, v.read.bind(0));
+    draw(T.div);
+
+    /* the last frame's pressure, decayed, is the warm start for this one's solve */
+    u = P.scale.use();
+    gl.uniform1i(u.uTexture, T.pres.read.bind(0));
+    gl.uniform1f(u.value, 0.8);
+    draw(T.pres.write); T.pres.swap();
+
+    u = P.pressure.use();
+    gl.uniform2f(u.texelSize, s, s);
+    gl.uniform1i(u.uDivergence, T.div.bind(0));
+    for (let i = 0; i < FLUID.iters; i++) {
+      gl.uniform1i(u.uPressure, T.pres.read.bind(1));
+      draw(T.pres.write); T.pres.swap();
+    }
+
+    u = P.gradient.use();
+    gl.uniform2f(u.texelSize, s, s);
+    gl.uniform1i(u.uPressure, T.pres.read.bind(0));
+    gl.uniform1i(u.uVelocity, v.read.bind(1));
+    draw(v.write); v.swap();
+
+    u = P.advect.use();
+    gl.uniform2f(u.velTexel, s, s);
+    gl.uniform1f(u.dt, dt);
+    gl.uniform2f(u.srcTexel, s, s);
+    gl.uniform1f(u.fade, FLUID.velFade);
+    gl.uniform1i(u.uVelocity, v.read.bind(0));
+    gl.uniform1i(u.uSource, 0);
+    draw(v.write); v.swap();
+
+    gl.uniform2f(u.srcTexel, T.dye.texel, T.dye.texel);
+    gl.uniform1f(u.fade, FLUID.dyeFade);
+    gl.uniform1i(u.uVelocity, v.read.bind(0));
+    gl.uniform1i(u.uSource, T.dye.read.bind(1));
+    draw(T.dye.write); T.dye.swap();
+  }
+
+  function show() {
+    const u = P.display.use();
+    gl.uniform2f(u.texelSize, T.dye.texel, T.dye.texel);
+    gl.uniform2f(u.dyeTexel, T.dye.texel, T.dye.texel);
+    gl.uniform1i(u.uTexture, T.dye.read.bind(0));
+    gl.uniform1f(u.gain, L.dim ? 1.0 : 2.4);
+    gl.uniform1f(u.core, L.dim ? 0.7 : 0.64);
+    gl.uniform1f(u.glow, L.dim ? 0.15 : 0.55);
+    gl.uniform3f(u.base, 0.026 + 0.03 * L.rgb[0], 0.032 + 0.03 * L.rgb[1], 0.046 + 0.03 * L.rgb[2]);
+    draw(null);
+  }
+
+  /* the band colour turned `shift` radians round the grey axis and pushed away from its own
+     luma, so the dye is a more saturated cousin of the arc — scaled to `amount` of dye */
+  function tint(shift, amount) {
+    const [r, g, b] = L.rgb;
+    const c = Math.cos(shift), k = (1 - c) / 3, q = Math.sqrt(1 / 3) * Math.sin(shift);
+    const m = amount * (L.dim ? 0.35 : 1);
+    const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return [r * (c + k) + g * (k - q) + b * (k + q),
+            r * (k + q) + g * (c + k) + b * (k - q),
+            r * (k - q) + g * (k + q) + b * (c + k)].map((x) => Math.max(0, y + (x - y) * 1.6) * m);
+  }
+
+  function stir(dt) {
+    clock += dt;
+    const e = L.energy;
+    const spin = 0.32 + 1.3 * e;                 // radians per second round the disc
+    /* both are per step and scaled by it, so a 120 Hz display stirs no harder than a 60 Hz one
+       and slowing the clock slows the motion rather than only thinning the dye */
+    const push = (22 + 150 * e) * dt * 60;       // velocity kick, sim texels per second
+    const dose = (0.026 + 0.05 * e) * dt * 60;   // dye
+    for (const o of orbits) {
+      o.a += o.spin * spin * dt;
+      const r = o.r0 + o.wob * Math.sin(clock * o.f + o.hue);
+      const dir = Math.sign(o.spin);
+      splat(0.5 + 0.5 * r * Math.cos(o.a), 0.5 + 0.5 * r * Math.sin(o.a),
+            -Math.sin(o.a) * push * dir, Math.cos(o.a) * push * dir,
+            tint(o.hue * 0.6 * Math.sin(clock * 0.21 + o.a), dose), 0.0032 + 0.0024 * e);
+    }
+    /* now and then a gust from a random point, more often the hotter the ring */
+    burstIn -= dt;
+    if (burstIn <= 0) {
+      burstIn = (3.2 - 2.4 * e) * (0.55 + Math.random() * 0.9);
+      const a = Math.random() * 6.283, r = 0.1 + Math.random() * 0.55, d = Math.random() * 6.283;
+      const f = 160 + 520 * e;
+      splat(0.5 + 0.5 * r * Math.cos(a), 0.5 + 0.5 * r * Math.sin(a), Math.cos(d) * f, Math.sin(d) * f,
+            tint((Math.random() * 2 - 1) * 0.6, 0.3 + 0.4 * e), 0.009 + 0.007 * e);
+    }
+  }
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    if (canvas.width === w && canvas.height === h) return false;
+    canvas.width = w;
+    canvas.height = h;
+    return true;
+  }
+
+  /* reduced motion: run the stirring forward once, then hold that frame */
+  function still() {
+    if (lost || !P) return;
+    for (let i = 0; i < 120; i++) { stir(1 / 60); step(1 / 60); }
+    show();
+  }
+
+  canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); lost = true; });
+  canvas.addEventListener("webglcontextrestored", () => {
+    lost = false;
+    let ok = false;
+    try { ok = setup(); } catch (_) { ok = false; }
+    if (!ok) { P = null; onDead(); return; }
+    resize();
+    if (REDUCE.matches) still();
+  });
+
+  let ok = false;
+  try { ok = setup(); } catch (_) { ok = false; }
+  if (!ok) return null;
+  resize();
+
+  return {
+    /* rgb255: the arc's colour; heat 0–1, or < 0 for a ring with nothing to show */
+    look(rgb255, heat, hold) {
+      const rgb = rgb255.map((x) => x / 255);
+      const dim = heat < 0;
+      const energy = dim ? 0.04 : 0.12 + 0.88 * clamp(heat, 0, 1);
+      const changed = dim !== L.dim || Math.abs(energy - L.energy) > 0.02 ||
+        rgb.some((x, i) => Math.abs(x - L.rgb[i]) > 0.01);
+      L.rgb = rgb; L.energy = energy; L.dim = dim; L.hold = hold;
+      if (changed && REDUCE.matches) still();
+    },
+    frame(dt) {
+      if (lost || !P) return;
+      const k = (L.hold ? 0.3 : 1) * FLUID.speed;
+      stir(dt * k);
+      step(dt * k);
+      show();
+    },
+    /* the pointer drags dye along with it, as in the original demo */
+    poke(x, y, ts) {
+      if (x === null || lost || !P) { ptr = null; return; }
+      const px = x * 2 - 1, py = y * 2 - 1;
+      if (px * px + py * py > 1) { ptr = null; return; }
+      if (ptr && ts > ptr.ts) {
+        /* pointer speed is real time; the fluid runs at FLUID.speed, so convert or the dye lags the hand */
+        const dt = Math.min(0.1, (ts - ptr.ts) / 1000), g = (FLUID.sim * 1.4) / FLUID.speed;
+        splat(x, y, ((x - ptr.x) / dt) * g, ((y - ptr.y) / dt) * g, tint(0, 0.22 + 0.2 * L.energy), 0.0022);
+      }
+      ptr = { x, y, ts };
+    },
+    resize() { if (resize() && !lost && P) show(); },
+    still,
+  };
+}
+
+let fluidLoop = false, fluidLast = 0;
+function fluidTick(ts) {
+  if (!fluidLoop) return;
+  const dt = fluidLast ? Math.min(1 / 30, Math.max(0.001, (ts - fluidLast) / 1000)) : 1 / 60;
+  fluidLast = ts;
+  for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].frame(dt);
+  requestAnimationFrame(fluidTick);
+}
+/* one animation loop for all three; requestAnimationFrame already stops in a hidden tab */
+function fluidMotion() {
+  if (!REDUCE.matches) {
+    if (!fluidLoop) { fluidLoop = true; fluidLast = 0; requestAnimationFrame(fluidTick); }
+  } else {
+    fluidLoop = false;
+    for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].still();
+  }
+}
+function dropFluid(key) {
+  delete FLUIDS[key];
+  const canvas = q(key, "fluid");
+  if (canvas) { canvas.parentNode.classList.remove("fluid-on"); canvas.remove(); }
+}
+function startFluids() {
+  for (const key of ORDER) {
+    const canvas = q(key, "fluid");
+    let fluid = null;
+    try { fluid = makeFluid(canvas, () => dropFluid(key)); } catch (_) { fluid = null; }
+    if (!fluid) { canvas.remove(); continue; }
+    FLUIDS[key] = fluid;
+    const art = canvas.parentNode;
+    art.classList.add("fluid-on");
+    art.addEventListener("pointermove", (e) => {
+      if (REDUCE.matches || !FLUIDS[key]) return;
+      const r = canvas.getBoundingClientRect();
+      FLUIDS[key].poke((e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height, e.timeStamp);
+    });
+    art.addEventListener("pointerleave", () => { if (FLUIDS[key]) FLUIDS[key].poke(null); });
+  }
+  if (REDUCE.addEventListener) REDUCE.addEventListener("change", fluidMotion);
+  fluidMotion();
 }
 
 /* ═════════════════════════ cost ═════════════════════════
@@ -1514,12 +2161,14 @@ function renderCost() {
 
 /* ═════════════════════════ wiring ═════════════════════════ */
 buildRings();
+startFluids();
 $("detailOuter").inert = true;
 render();
 
 function apply(next) {
   if (!next || !Array.isArray(next.limits)) return;
   S.snap = next;
+  S.chartsDirty = true;   // a new head value, band and threshold line
   render();
 }
 
@@ -1554,7 +2203,7 @@ connect();
 function loadHistory() {
   S.histAt = Date.now();
   fetch("/api/history", { cache: "no-store" }).then((r) => r.json()).then((j) => {
-    if (j && Array.isArray(j.samples)) { S.hist = j; if (S.open) renderDetail(S.open); }
+    if (j && Array.isArray(j.samples)) { S.hist = j; renderCharts(); if (S.open) renderDetail(S.open); }
   }).catch(() => {});
 }
 /* the first /api/cost blocks on a ccusage subprocess for seconds —
@@ -1573,9 +2222,18 @@ setInterval(loadCost, 300000);
    from resetsAt on the client — nothing here re-polls anything. */
 setInterval(render, 1000);
 
+/* charts are drawn to their measured width and the fluids to their pixel size, so both
+   follow a resize — once per frame at most, however fast the events come */
+let resizeQueued = false;
 addEventListener("resize", () => {
-  if (S.open && Math.abs((detailEl.clientWidth || 0) - S.chartW) > 8) { S.lastDetail = ""; renderDetail(S.open); }
-  placeSeam();
+  if (resizeQueued) return;
+  resizeQueued = true;
+  requestAnimationFrame(() => {
+    resizeQueued = false;
+    renderCharts();
+    for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].resize();
+    placeSeam();
+  });
 });
 
 })();
