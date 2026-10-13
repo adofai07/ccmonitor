@@ -13,9 +13,11 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 - Backdrop: 3–4 large soft color blobs drifting on a ~30s loop, deep charcoal base.
 - Panels: `backdrop-filter: blur(24px)`, white ~8% fill, 1px light top edge, soft outer shadow.
-- Motion is confined to the backdrop and the rings' interiors (see *Ring interior* below).
-  Arcs, ticks and charts only move when the data moves.
-- `prefers-reduced-motion` freezes the gradient and holds each ring's fluid as a still frame.
+- Motion is confined to the backdrop, the rings' interiors (see *Ring interior* below) and
+  one alarm, the shake of a ring that is over pace (see *Over pace*). Arcs, ticks and charts
+  otherwise only move when the data moves.
+- `prefers-reduced-motion` freezes the gradient, holds each ring's fluid as a still frame and
+  stops the shake.
 
 ## Primary view — three rows, each a ring and its chart
 
@@ -50,6 +52,17 @@ Arc **past** the tick = burning hot, will hit the cap before the window resets.
 
 The session ring's pace marker is the useful one day-to-day; the weekly ring's marker is
 what catches a Monday-morning spree.
+
+### Over pace
+
+A ring whose verdict is *over pace* shakes, continuously, for as long as it stays over — no
+beat and no rest. The motion goes every way: a fast jitter and a slower sway, both in two
+dimensions, with a twist on top, in loops of unrelated lengths so it never visibly repeats.
+How hard it shakes follows the pace severity — the same score that heats the tick and the
+caption — so a two-point overrun trembles and a 3× burn rattles. Only rings that are over pace
+move, and each shakes on its own rather than in step with another. A held reading keeps
+shaking, like every other severity channel. A ring at the cap does not: the flooded well
+already says it, and there is no pace left to warn about.
 
 ### Ring interior
 

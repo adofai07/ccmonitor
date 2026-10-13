@@ -275,6 +275,59 @@ main {
   transition: fill .45s var(--ease), stroke .45s var(--ease), stroke-width .45s var(--ease);
 }
 
+/* Over pace, the ring shakes, and keeps shaking for as long as it is
+   over: no beat and no rest. Three loops of unrelated lengths add up — a
+   fast jitter and a slower sway, both in two dimensions, and a twist — so
+   the ring is knocked every way and the motion never visibly repeats.
+   How hard it shakes is --psev, so a two-point overrun trembles and a 3×
+   burn rattles. Only a ring that is over pace runs the loops, and each
+   ring enters them at its own offset, so two rings over pace at once do
+   not move as one. The parts move rather than the .art box, so anything
+   that measures the ring (the detail panel's seam) finds it at rest. A
+   held reading keeps shaking, like every other severity channel; at the
+   cap it stops, since the flooded well already says so and there is no
+   pace left to warn about. Reduced motion stills it with everything else. */
+.ring[data-key="weekly"] { --shake-in: -.31s; }
+.ring[data-key="fable"]  { --shake-in: -.67s; }
+.ring[data-pace="over"]:not([data-band="exhausted"]) .art > * {
+  --amp: calc(1.5px + 3px * var(--psev));
+  --tilt: calc(.6deg + 1.4deg * var(--psev));
+  animation: jitter .683s ease-in-out var(--shake-in, 0s) infinite,
+             sway 1.297s ease-in-out var(--shake-in, 0s) infinite,
+             twist .887s ease-in-out var(--shake-in, 0s) infinite;
+}
+@keyframes jitter {
+  0%, 100% { translate: 0 0; }
+  10.1% { translate: calc(var(--amp) * .4) calc(var(--amp) * .5); }
+  19.3% { translate: calc(var(--amp) * -.07) calc(var(--amp) * -.61); }
+  29.8% { translate: calc(var(--amp) * -.22) calc(var(--amp) * .47); }
+  41.7% { translate: calc(var(--amp) * .27) calc(var(--amp) * -.39); }
+  53.3% { translate: calc(var(--amp) * -.31) calc(var(--amp) * .52); }
+  63.5% { translate: calc(var(--amp) * .51) calc(var(--amp) * -.19); }
+  73.6% { translate: calc(var(--amp) * -.61) calc(var(--amp) * .24); }
+  84.4% { translate: calc(var(--amp) * .51) calc(var(--amp) * .05); }
+  93.2% { translate: calc(var(--amp) * -.4) calc(var(--amp) * -.33); }
+}
+@keyframes sway {
+  0%, 100% { transform: none; }
+  16.8% { transform: translate(calc(var(--amp) * .12), calc(var(--amp) * -.15)); }
+  30.2% { transform: translate(calc(var(--amp) * .16), calc(var(--amp) * .17)); }
+  41.9% { transform: translate(calc(var(--amp) * -.13), calc(var(--amp) * .13)); }
+  56.9% { transform: translate(calc(var(--amp) * -.05), calc(var(--amp) * -.23)); }
+  69.1% { transform: translate(calc(var(--amp) * .19), calc(var(--amp) * .08)); }
+  87.9% { transform: translate(calc(var(--amp) * -.02), calc(var(--amp) * .28)); }
+}
+@keyframes twist {
+  0%, 100% { rotate: 0deg; }
+  10.7% { rotate: calc(var(--tilt) * -.66); }
+  25%   { rotate: calc(var(--tilt) * .72); }
+  39.2% { rotate: calc(var(--tilt) * -.57); }
+  49.4% { rotate: calc(var(--tilt) * .91); }
+  63.4% { rotate: calc(var(--tilt) * -.76); }
+  77.7% { rotate: calc(var(--tilt) * .65); }
+  87.4% { rotate: calc(var(--tilt) * -.81); }
+}
+
 .readout {
   position: absolute; inset: 0; pointer-events: none;
   display: flex; align-items: center; justify-content: center;
@@ -511,6 +564,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 
 @media (prefers-reduced-motion: reduce) {
   .blob { animation: none !important; }
+  .art > * { animation: none !important; }
   .warm { transition: none !important; }
   .fresh .dot { animation: none !important; }
   *, *::before, *::after { transition-duration: .001ms !important; }
