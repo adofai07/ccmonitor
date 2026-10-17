@@ -1514,7 +1514,14 @@ function burnNote(fit) {
 function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   const h = S.hist, idx = ORDER.indexOf(key);
   const raw = h && Array.isArray(h.samples) ? h.samples : [];
-  const pts = raw.filter((s) => s && Array.isArray(s.p) && isFinite(s.t))
+  /* The cache keeps a count of readings, not an age. An account switched back to after days
+     away still holds the last ones it took, and drawn as given they stretch the axis back to
+     that day: the old window's climb fills the chart and the present is squeezed onto its
+     right edge, so the rows look like another account's. The chart spans what the cache is
+     sized for — capacity readings at the poll interval, 12 hours — and nothing older. */
+  const now = Date.now();
+  const from = now - num(h && h.capacity, 360) * num(h && h.intervalMs, 120000);
+  const pts = raw.filter((s) => s && Array.isArray(s.p) && isFinite(s.t) && s.t >= from)
                  .map((s) => ({ t: s.t, v: typeof s.p[idx] === "number" ? s.p[idx] : null }));
   const usable = pts.filter((p) => p.v !== null);
   if (usable.length < 2) {
@@ -1526,7 +1533,6 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   const PL = 34, PR = 46, PT = 10, PB = 19;
   /* advance of one .ax glyph: 10px of a ui-monospace face (~0.6em) plus .04em of tracking */
   const CHAR_W = 6.4;
-  const now = Date.now();
   let t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, now);
   if (t1 - t0 < 60000) t1 = t0 + 60000;
 

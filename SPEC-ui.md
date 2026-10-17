@@ -33,8 +33,10 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 Fixed order, top to bottom: **session, weekly, Fable.** The order never changes and no row is
 ever dropped, so the layout cannot reflow under you. Every limit's history chart is drawn at
-rest, beside its ring — no click needed to see a trace. Below ~680px the chart drops under its
-ring at full width.
+rest, beside its ring — no click needed to see a trace. A chart covers at most the last 12
+hours, the span the history cache is sized for, so an account switched back to after days away
+starts a fresh trace instead of redrawing its old window. Below ~680px the chart drops under
+its ring at full width.
 
 Each ring:
 
