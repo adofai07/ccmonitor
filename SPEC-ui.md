@@ -15,7 +15,8 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 - Panels: `backdrop-filter: blur(24px)`, white ~8% fill, 1px light top edge, soft outer shadow.
 - Motion is confined to the backdrop, the rings' interiors (see *Ring interior* below) and
   one alarm, the shake of a ring that is over pace (see *Over pace*). Arcs, ticks and charts
-  otherwise only move when the data moves.
+  otherwise only move when the data moves. Each of the three can be switched off in
+  *Settings*.
 - `prefers-reduced-motion` freezes the gradient, holds each ring's fluid as a still frame and
   stops the shake.
 
@@ -130,6 +131,30 @@ panel directly under that ring's row:
 
 The history chart is not repeated here; it is already beside the ring. One panel open at a
 time. Clicking the open ring collapses it.
+
+## Settings
+
+A gear at the right end of the header, beside the freshness pill, opens a small panel that grows
+out of it and floats over the page, so a switch can be flipped while watching the ring it
+changes. The gear again, Escape, a click elsewhere or focus moving away closes it.
+
+| setting | choices | default |
+| --- | --- | --- |
+| Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
+| Speed | slow / normal / fast (0.25×, 0.5×, 1×), while the fluid is on | normal |
+| Vibration | on / off — the shake of a ring over pace | on |
+| Animated background | on / off — off pauses the drifting sky where it stands | on |
+| Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
+
+Settings change how the page looks, never what it measures or how it judges a reading:
+switching the shake off leaves the over-pace verdict in the tick, the caption and the halo.
+They are kept in this browser (only the ones that differ from the default), applied before the
+rings are first drawn, and followed in other open tabs. The system's reduced-motion setting
+still stills everything, and the panel says so while it is on.
+
+The three named typefaces are bundled with the dashboard and served by it, never fetched from a
+font service. Fira Code also takes over the figures, which are otherwise set in the system's
+monospaced face.
 
 ## Footer strip
 

@@ -27,11 +27,13 @@ const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 // without this a hostile origin embeds the rings and the framed page reads /api/quota happily.
 // X-Frame-Options says the same thing to anything older than CSP.
 //
-// The rest is as tight as CSP goes because the page is one self-contained file with zero
-// external requests: no script, style, font or image may be fetched from anywhere. 'unsafe-inline'
-// twice is what the page is — an inline <style> and an inline <script>, no external ones to
-// allow; `img-src data:` covers the data-URI favicon and the noise background (the inline SVG is
-// markup, not an image fetch); connect-src 'self' is fetch()/EventSource to this same server.
+// The rest is as tight as CSP goes because the page makes zero external requests: no script,
+// style or image may be fetched from anywhere. 'unsafe-inline' twice is what the page is — an
+// inline <style> and an inline <script>, no external ones to allow; `img-src data:` covers the
+// data-URI favicon and the noise background (the inline SVG is markup, not an image fetch);
+// connect-src 'self' is fetch()/EventSource to this same server. font-src 'self' is the
+// typefaces Settings offers, bundled under public/fonts and served from the allowlist below —
+// this server, never a font CDN.
 const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
   'x-content-type-options': 'nosniff',
@@ -42,20 +44,25 @@ const SECURITY_HEADERS = {
     "style-src 'unsafe-inline'",
     'img-src data:',
     "connect-src 'self'",
+    "font-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
     "frame-ancestors 'none'",
   ].join('; '),
 };
 
-// The dashboard is ONE file: public/index.html, self-contained, with no other asset to fetch.
-// So the servable set is an allowlist of exactly the names it needs, not a blocklist of the
-// tricks a path can play. Nothing the client writes reaches the filesystem, which retires
-// traversal, percent-escapes, NUL bytes, FIFOs and symlinked directories in a single rule
-// instead of one guard each — a guarantee this page is small enough to simply afford.
+// The dashboard is ONE page, public/index.html, self-contained but for the typefaces its
+// Settings panel offers, which are bundled rather than fetched from anywhere. So the servable
+// set is an allowlist of exactly the names it needs, not a blocklist of the tricks a path can
+// play. Nothing the client writes reaches the filesystem, which retires traversal,
+// percent-escapes, NUL bytes, FIFOs and symlinked directories in a single rule instead of one
+// guard each — a guarantee this page is small enough to simply afford.
 const ASSETS = new Map([
   ['/', 'index.html'],
   ['/index.html', 'index.html'],
+  ['/fonts/SourceSerif4Variable-Roman.ttf.woff2', 'fonts/SourceSerif4Variable-Roman.ttf.woff2'],
+  ['/fonts/NotoSans-Latin.woff2', 'fonts/NotoSans-Latin.woff2'],
+  ['/fonts/FiraCode-VF.woff2', 'fonts/FiraCode-VF.woff2'],
 ]);
 
 const MIME = {
@@ -210,7 +217,7 @@ async function serveStatic(pathname, res) {
     // itself and the inode is trivially the one just opened, so every check above passes and
     // `ln ~/.claude/.credentials.json public/index.html` is served as the dashboard. The extra
     // name is the only trace it leaves, and nlink is where that shows. The allowlist is what
-    // makes so blunt a rule safe to apply: public/ holds one plain checked-out file, and
+    // makes so blunt a rule safe to apply: public/ holds a few plain checked-out files, and
     // package.json does not ship public/ at all, so this never runs out of a hard-linking
     // package store (pnpm, an npm cache) where nlink > 1 would be an ordinary, honest file.
     if (info.nlink !== 1) throw failed('EESCAPE');
@@ -225,7 +232,11 @@ async function serveStatic(pathname, res) {
     return send(res, 404, { error: 'not found' });
   }
 
-  res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
+  // A typeface does not change under a running dashboard, and the Settings panel draws a sample
+  // in each, so every load would fetch all of them again; a day's cache ends that. The page is
+  // left uncached, since it is the part that does change.
+  const cache = extname(file) === '.woff2' ? { 'cache-control': 'max-age=86400' } : {};
+  res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[extname(file)] ?? 'application/octet-stream', ...cache });
   // pipeline, not pipe: it closes the file handle whichever end fails first, including the
   // client hanging up mid-file. An unhandled stream 'error' would be rethrown and kill us.
   await pipeline(handle.createReadStream(), res).catch(() => res.destroy());

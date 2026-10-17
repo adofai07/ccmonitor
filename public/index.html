@@ -21,8 +21,23 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* The typefaces Settings offers beyond the system's own, bundled under public/fonts (each
+   with its licence) and served by this same server, so they look the same on every machine
+   and nothing is fetched from anywhere else. Variable fonts: one file covers every weight
+   the page uses. "fallback" waits a moment for a face that is on its way instead of flashing
+   the default one first, and from loopback it arrives long before the moment is up. */
+@font-face { font-family: "Source Serif 4"; src: url("/fonts/SourceSerif4Variable-Roman.ttf.woff2") format("woff2"); font-weight: 200 900; font-display: fallback; }
+@font-face { font-family: "Noto Sans";      src: url("/fonts/NotoSans-Latin.woff2") format("woff2");                font-weight: 100 900; font-display: fallback; }
+@font-face { font-family: "Fira Code";      src: url("/fonts/FiraCode-VF.woff2") format("woff2");                   font-weight: 300 700; font-display: fallback; }
+
 :root {
-  --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* --sans is whichever typeface Settings has chosen; figures that must line up stay in --mono,
+     except that Fira Code takes them too — two monospaced faces side by side read as a mistake. */
+  --font-system: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif:  "Source Serif 4", ui-serif, Georgia, serif;
+  --font-noto:   "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-code:   "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: var(--font-system);
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   --ink:    rgba(233,239,247,.95);
@@ -71,6 +86,9 @@
 
   --ease: cubic-bezier(.32,.72,.28,1);
 }
+:root[data-font="source-serif-4"] { --sans: var(--font-serif); }
+:root[data-font="noto-sans"]      { --sans: var(--font-noto); }
+:root[data-font="fira-code"]      { --sans: var(--font-code); --mono: var(--font-code); }
 
 html, body { height: 100%; }
 body {
@@ -108,6 +126,9 @@ button { font: inherit; color: inherit; }
 @keyframes d2 { 0%,100%{transform:translate3d(0,0,0) scale(1.05)}   40%{transform:translate3d(-8vmax,6vmax,0) scale(.9)}  70%{transform:translate3d(3vmax,-5vmax,0) scale(1.15)} }
 @keyframes d3 { 0%,100%{transform:translate3d(0,0,0) scale(.96)}    50%{transform:translate3d(6vmax,-7vmax,0) scale(1.16)} }
 @keyframes d4 { 0%,100%{transform:translate3d(0,0,0) scale(1)}      45%{transform:translate3d(-6vmax,-4vmax,0) scale(1.2)} }
+/* Settings can still the sky. Paused rather than removed, so it stops where it stands and
+   picks up from there instead of jumping home. The warmth still follows the hottest limit. */
+:root[data-sky="off"] .blob { animation-play-state: paused; }
 
 /* grain kills the banding across those big blurs and gives the glass a surface */
 .grain {
@@ -162,6 +183,107 @@ main {
 .fresh[data-tone="down"] { color: #f7c6cf; border-color: rgb(var(--exhausted-rgb)/.3); background: rgb(var(--exhausted-rgb)/.09); }
 .fresh[data-tone="wait"] .dot { animation: breathe 2.2s var(--ease) infinite; }
 @keyframes breathe { 0%,100% { opacity:.3 } 50% { opacity:1 } }
+/* The pill and the settings gear travel as a pair: a narrow header wraps them together, and
+   the pill gives way with an ellipsis rather than leaving the gear on a line of its own. */
+.side { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; margin-left: auto; }
+
+/* ── settings: a gear that opens a small panel over the page ──────
+   It floats instead of pushing the rows down, so a switch can be
+   flipped while watching the ring it changes. Everything in it is
+   about how the page looks; nothing changes what is measured.    */
+.prefs { position: relative; flex: none; }
+.gear {
+  display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--hair); background: rgba(255,255,255,.045);
+  color: var(--ink-3); cursor: pointer;
+  transition: color .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
+}
+.gear svg { width: 15px; height: 15px; fill: currentColor; transition: transform .5s var(--ease); }
+.gear:hover, .gear[aria-expanded="true"] { color: var(--ink); border-color: var(--edge); background: rgba(255,255,255,.08); }
+.gear[aria-expanded="true"] svg { transform: rotate(90deg); }
+.gear:focus { outline: none; }
+.gear:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+
+/* It grows out of the gear, scaled from the gear's own centre, and is hidden only once the
+   fade has finished, so closing is as smooth as opening. Closed, it is also inert. */
+.panel {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 10;
+  width: min(300px, calc(100vw - 32px)); max-height: calc(100vh - 90px); overflow-y: auto;
+  padding: 14px 16px 12px; border-radius: 16px;
+  background: linear-gradient(168deg, rgba(30,35,48,.82), rgba(14,17,24,.86));
+  backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow: inset 0 1px 0 var(--edge), 0 26px 58px -20px rgba(0,0,0,.85), 0 3px 12px -6px rgba(0,0,0,.5);
+  transform-origin: calc(100% - 14px) -24px;
+  opacity: 0; transform: scale(.86); visibility: hidden;
+  transition: opacity .18s var(--ease), transform .28s var(--ease), visibility 0s linear .28s;
+}
+.prefs.open .panel { opacity: 1; transform: none; visibility: visible; transition-delay: 0s; }
+
+.ptitle { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+.psec + .psec { margin-top: 10px; border-top: 1px solid var(--hair); }
+.phead { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-4); font-weight: 600; margin: 10px 0 2px; }
+
+.prow { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 6px 0; cursor: pointer; }
+.ptext { min-width: 0; }
+.pname { display: block; font-size: 13px; line-height: 1.35; color: var(--ink); }
+.phint { display: block; font-size: 11px; line-height: 1.35; color: var(--ink-4); }
+/* the speed belongs to the fluid, so it sits under it, and steps back while the fluid is off */
+.prow.sub { cursor: default; padding: 0 0 6px 12px; }
+.prow.sub .pname { font-size: 12px; color: var(--ink-2); }
+.prow:has(input:disabled) { opacity: .4; }
+
+/* a switch is a checkbox underneath, so Space flips it and it is announced as one */
+.switch {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; cursor: pointer;
+  position: relative; width: 34px; height: 20px; border-radius: 999px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  transition: background .2s var(--ease), border-color .2s var(--ease);
+}
+.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(233,239,247,.55); box-shadow: 0 1px 3px rgba(0,0,0,.45);
+  transition: transform .2s var(--ease), background .2s var(--ease);
+}
+/* on is white, not a band colour: on this page a colour is a reading, and a switch is not one */
+.switch:checked { background: rgba(233,239,247,.3); border-color: rgba(233,239,247,.42); }
+.switch:checked::before { transform: translateX(14px); background: #fff; }
+.switch:focus, .seg input:focus, .font input:focus { outline: none; }
+.switch:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+
+/* the radios lie invisibly over their own labels, so clicks land on them and arrows move between them */
+.seg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: rgba(255,255,255,.045); border: 1px solid var(--hair); }
+.seg label { position: relative; flex: 1; }
+.seg input, .font input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.seg input:disabled { cursor: default; }
+.seg span { display: block; padding: 2px 9px; border-radius: 6px; font-size: 11.5px; text-align: center; color: var(--ink-3);
+            transition: background .2s var(--ease), color .2s var(--ease); }
+.seg input:checked + span { background: rgba(255,255,255,.13); color: var(--ink); }
+.seg input:focus-visible + span { outline: 2px solid rgba(255,255,255,.7); outline-offset: 1px; }
+
+.fonts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px 0 2px; }
+.font {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 8px 4px 6px; border-radius: 10px; border: 1px solid var(--hair); background: rgba(255,255,255,.025);
+  transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+.font:hover { border-color: rgba(255,255,255,.14); }
+.font:has(input:checked) { border-color: rgba(233,239,247,.5); background: rgba(255,255,255,.08); }
+.font:has(input:focus-visible) { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+/* each sample is set in its own face, whatever the page itself is set in */
+.font .fs { font-size: 18px; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+.font .fn { font-size: 10px; letter-spacing: .05em; color: var(--ink-3); }
+
+.pnote { margin: 2px 0 6px; font-size: 11px; line-height: 1.45; color: #f4dfb2; }
+.pfoot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hair); font-size: 11px; color: var(--ink-4);
+}
+.preset { border: 1px solid var(--hair); background: rgba(255,255,255,.04); color: var(--ink-2); font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+.preset:hover:not(:disabled) { color: var(--ink); border-color: var(--edge); }
+.preset:disabled { opacity: .4; cursor: default; }
+.preset:focus { outline: none; }
+.preset:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
 
 /* ── the one piece of glass ──────────────────────────────────── */
 .glass {
@@ -327,6 +449,9 @@ main {
   77.7% { rotate: calc(var(--tilt) * .65); }
   87.4% { rotate: calc(var(--tilt) * -.81); }
 }
+/* Settings can switch the shake off. The verdict stays: the heated tick, the caption and the
+   halo behind the numeral all still say it. */
+:root[data-shake="off"] .art > * { animation: none !important; }
 
 .readout {
   position: absolute; inset: 0; pointer-events: none;
@@ -354,6 +479,10 @@ main {
 .ring[data-state="unknown"] .pctsign { display: none; }
 
 .meta { min-width: 0; width: clamp(150px, 19vw, 214px); display: flex; flex-direction: column; gap: 5px; }
+/* Fira Code is monospaced and runs wider than the proportional faces, so the column grows with
+   it — otherwise the over-pace caption loses its verdict to the ellipsis ("2.6× clo…"). Below
+   680px the column already fills the row, so this is for the side-by-side layout only. */
+@media (min-width: 681px) { :root[data-font="fira-code"] .meta { width: clamp(150px, 22vw, 246px); } }
 .mlabel {
   font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -587,9 +716,18 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
       <span class="plan" id="plan"></span>
     </div>
     <span class="grow"></span>
-    <span class="fresh" id="fresh" data-tone="wait">
-      <span class="dot" aria-hidden="true"></span><span id="freshText">connecting…</span>
-    </span>
+    <div class="side">
+      <span class="fresh" id="fresh" data-tone="wait">
+        <span class="dot" aria-hidden="true"></span><span id="freshText">connecting…</span>
+      </span>
+      <div class="prefs" id="prefs">
+        <button class="gear" id="gear" type="button" aria-expanded="false" aria-controls="prefsPanel" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M9.96 4.37L10.28 1.74L13.72 1.74L14.04 4.37A7.9 7.9 0 0 1 15.95 5.16L18.04 3.53L20.47 5.96L18.84 8.05A7.9 7.9 0 0 1 19.63 9.96L22.26 10.28L22.26 13.72L19.63 14.04A7.9 7.9 0 0 1 18.84 15.95L20.47 18.04L18.04 20.47L15.95 18.84A7.9 7.9 0 0 1 14.04 19.63L13.72 22.26L10.28 22.26L9.96 19.63A7.9 7.9 0 0 1 8.05 18.84L5.96 20.47L3.53 18.04L5.16 15.95A7.9 7.9 0 0 1 4.37 14.04L1.74 13.72L1.74 10.28L4.37 9.96A7.9 7.9 0 0 1 5.16 8.05L3.53 5.96L5.96 3.53L8.05 5.16A7.9 7.9 0 0 1 9.96 4.37ZM15.3 12A3.3 3.3 0 1 0 8.7 12A3.3 3.3 0 1 0 15.3 12Z"/></svg>
+          <span class="sr-only">Settings</span>
+        </button>
+        <div class="panel" id="prefsPanel" role="group" aria-label="Settings" inert></div>
+      </div>
+    </div>
   </header>
 
   <section class="glass" aria-label="Subscription quota">
@@ -1264,7 +1402,10 @@ function toggle(key) {
   if (S.open) { renderDetail(S.open); placeSeam(); }
 }
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && S.open) { const k = S.open; toggle(k); $("ring-" + k).focus(); }
+  if (e.key !== "Escape") return;
+  /* the settings panel floats over everything, so it is the first thing Escape closes */
+  if (prefsOpen()) { setPrefsOpen(false); gearEl.focus(); return; }
+  if (S.open) { const k = S.open; toggle(k); $("ring-" + k).focus(); }
 });
 
 /* the lit stretch of the panel's top edge sits under the ring it belongs to */
@@ -1687,7 +1828,8 @@ function renderCharts() {
    format the canvas is dropped and the plain well stands in. Under
    reduced motion the fluid is stirred once into a still frame.        */
 const FLUIDS = {};
-/* speed: simulated seconds per real second — the whole fluid plays at this rate */
+/* speed: simulated seconds per real second — the whole fluid plays at this rate. This is the
+   default; Settings can slow it or speed it up. */
 const FLUID = { sim: 64, dye: 256, iters: 18, curl: 26, velFade: 0.5, dyeFade: 0.95, speed: 0.5 };
 const REDUCE = matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -2135,21 +2277,34 @@ function makeFluid(canvas, onDead) {
   };
 }
 
-let fluidLoop = false, fluidLast = 0;
+/* the pending frame is kept so stopping can cancel it: a switch flipped off and on inside one
+   frame would otherwise leave the old callback running beside the new loop, at double speed */
+let fluidLoop = false, fluidLast = 0, fluidRaf = 0;
 function fluidTick(ts) {
   if (!fluidLoop) return;
   const dt = fluidLast ? Math.min(1 / 30, Math.max(0.001, (ts - fluidLast) / 1000)) : 1 / 60;
   fluidLast = ts;
   for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].frame(dt);
-  requestAnimationFrame(fluidTick);
+  fluidRaf = requestAnimationFrame(fluidTick);
 }
-/* one animation loop for all three; requestAnimationFrame already stops in a hidden tab */
+/* One animation loop for all three; requestAnimationFrame already stops in a hidden tab.
+   Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
+   through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
-  if (!REDUCE.matches) {
-    if (!fluidLoop) { fluidLoop = true; fluidLast = 0; requestAnimationFrame(fluidTick); }
+  const on = PREFS.fluid;
+  for (const key of ORDER) {
+    if (!FLUIDS[key]) continue;
+    const canvas = q(key, "fluid");
+    /* visibility, not display: a hidden canvas keeps its size, so resize() stays right */
+    canvas.style.visibility = on ? "" : "hidden";
+    canvas.parentNode.classList.toggle("fluid-on", on);
+  }
+  if (on && !REDUCE.matches) {
+    if (!fluidLoop) { fluidLoop = true; fluidLast = 0; fluidRaf = requestAnimationFrame(fluidTick); }
   } else {
     fluidLoop = false;
-    for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].still();
+    cancelAnimationFrame(fluidRaf);
+    if (on) for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].still();
   }
 }
 function dropFluid(key) {
@@ -2157,7 +2312,11 @@ function dropFluid(key) {
   const canvas = q(key, "fluid");
   if (canvas) { canvas.parentNode.classList.remove("fluid-on"); canvas.remove(); }
 }
+/* built the first time the fluid is wanted, so a page that keeps it off never makes a context */
+let fluidsMade = false;
 function startFluids() {
+  if (fluidsMade) return;
+  fluidsMade = true;
   for (const key of ORDER) {
     const canvas = q(key, "fluid");
     let fluid = null;
@@ -2167,15 +2326,149 @@ function startFluids() {
     const art = canvas.parentNode;
     art.classList.add("fluid-on");
     art.addEventListener("pointermove", (e) => {
-      if (REDUCE.matches || !FLUIDS[key]) return;
+      if (REDUCE.matches || !PREFS.fluid || !FLUIDS[key]) return;
       const r = canvas.getBoundingClientRect();
       FLUIDS[key].poke((e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height, e.timeStamp);
     });
     art.addEventListener("pointerleave", () => { if (FLUIDS[key]) FLUIDS[key].poke(null); });
   }
-  if (REDUCE.addEventListener) REDUCE.addEventListener("change", fluidMotion);
-  fluidMotion();
 }
+
+/* ═════════════════════════ settings ═════════════════════════
+   How the page looks, never what it measures: the fluid, its speed,
+   the shake, the drifting sky and the typeface. Kept in this browser,
+   applied before the rings are first drawn so a chosen face never
+   flashes in the default one, and followed in other open tabs. Only
+   choices that differ from the defaults are stored, so a later change
+   of default reaches everyone who never picked otherwise. The system's
+   reduced-motion setting still stills everything, whatever these say. */
+const PREFS_KEY = "ccquota.prefs";
+const PREF_DEFAULTS = { fluid: true, speed: FLUID.speed, shake: true, sky: true, font: "system" };
+const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
+/* key, label, and the stylesheet variable holding its stack */
+const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source Serif 4", "--font-serif"],
+               ["noto-sans", "Noto Sans", "--font-noto"], ["fira-code", "Fira Code", "--font-code"]];
+const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside each ring"],
+                  ["shake", "Vibration", "A ring over pace shakes"],
+                  ["sky", "Animated background", "The colour drifting behind the glass"]];
+
+/* Never trusts the stored copy further than it can be checked: a stale or hand-edited entry
+   falls back to the default one key at a time instead of breaking the page. */
+function loadPrefs() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "null"); } catch (_) { saved = null; }
+  const p = { ...PREF_DEFAULTS };
+  if (!saved || typeof saved !== "object") return p;
+  for (const [k] of SWITCHES) if (typeof saved[k] === "boolean") p[k] = saved[k];
+  if (SPEEDS.some(([v]) => v === saved.speed)) p.speed = saved.speed;
+  if (FONTS.some(([k]) => k === saved.font)) p.font = saved.font;
+  return p;
+}
+let PREFS = loadPrefs();
+
+function savePrefs() {
+  const picked = Object.fromEntries(Object.entries(PREFS).filter(([k, v]) => v !== PREF_DEFAULTS[k]));
+  try {
+    if (Object.keys(picked).length) localStorage.setItem(PREFS_KEY, JSON.stringify(picked));
+    else localStorage.removeItem(PREFS_KEY);
+  } catch (_) { /* storage blocked: the choice still holds until the page is closed */ }
+}
+
+function buildPrefs() {
+  const sw = ([name, label, hint]) => `
+      <label class="prow">
+        <span class="ptext"><span class="pname">${label}</span><span class="phint">${hint}</span></span>
+        <input class="switch" type="checkbox" role="switch" name="${name}">
+      </label>`;
+  $("prefsPanel").innerHTML = `
+    <div class="ptitle">Settings</div>
+    <div class="psec" role="group" aria-labelledby="ph-motion">
+      <div class="phead" id="ph-motion">Motion</div>
+      ${sw(SWITCHES[0])}
+      <div class="prow sub">
+        <span class="pname" id="pn-speed">Speed</span>
+        <div class="seg" role="radiogroup" aria-labelledby="pn-speed">${SPEEDS.map(([v, label]) =>
+          `<label><input type="radio" name="speed" value="${v}"><span>${label}</span></label>`).join("")}</div>
+      </div>
+      ${sw(SWITCHES[1])}
+      ${sw(SWITCHES[2])}
+      <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
+    </div>
+    <div class="psec" role="group" aria-labelledby="ph-font">
+      <div class="phead" id="ph-font">Typeface</div>
+      <div class="fonts" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
+        `<label class="font"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
+    </div>
+    <div class="pfoot"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
+
+  $("prefsPanel").addEventListener("change", (e) => {
+    const t = e.target;
+    if (SWITCHES.some(([k]) => k === t.name)) PREFS[t.name] = t.checked;
+    else if (t.name === "speed") PREFS.speed = Number(t.value);
+    else if (t.name === "font") PREFS.font = t.value;
+    else return;
+    savePrefs();
+    showPrefs();
+  });
+  $("prefsReset").addEventListener("click", () => {
+    PREFS = { ...PREF_DEFAULTS };
+    savePrefs();
+    showPrefs();
+    /* the button disables itself once everything is default, which would drop focus to the page */
+    $("prefsPanel").querySelector("input").focus();
+  });
+}
+
+/* the controls show what is in force, whoever changed it — this tab, another one, or a reset */
+function syncPrefs() {
+  const panel = $("prefsPanel");
+  for (const [k] of SWITCHES) panel.querySelector(`input[name="${k}"]`).checked = PREFS[k];
+  panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; r.disabled = !PREFS.fluid; });
+  panel.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === PREFS.font; });
+  $("prefsStill").hidden = !REDUCE.matches;
+  $("prefsReset").disabled = Object.keys(PREF_DEFAULTS).every((k) => PREFS[k] === PREF_DEFAULTS[k]);
+}
+
+function applyPrefs() {
+  const root = document.documentElement;
+  root.dataset.font = PREFS.font;
+  root.dataset.shake = PREFS.shake ? "on" : "off";
+  root.dataset.sky = PREFS.sky ? "on" : "off";
+  FLUID.speed = PREFS.speed;
+  if (PREFS.fluid) startFluids();
+  fluidMotion();
+  syncPrefs();
+}
+
+/* After a change, render at once: a fluid built just now is the default grey until it is told
+   its ring's colour, and a new typeface can move the text the charts are laid out around. */
+function showPrefs() {
+  applyPrefs();
+  S.chartsDirty = true;
+  render();
+}
+
+const prefsEl = $("prefs"), gearEl = $("gear");
+const prefsOpen = () => prefsEl.classList.contains("open");
+function setPrefsOpen(open) {
+  prefsEl.classList.toggle("open", open);
+  gearEl.setAttribute("aria-expanded", String(open));
+  $("prefsPanel").inert = !open;
+}
+gearEl.addEventListener("click", () => setPrefsOpen(!prefsOpen()));
+/* it closes the way a popover should: a click anywhere else, or focus moving out of it
+   (Escape is handled with the detail panel's, so one key press closes one thing) */
+document.addEventListener("pointerdown", (e) => { if (prefsOpen() && !prefsEl.contains(e.target)) setPrefsOpen(false); });
+prefsEl.addEventListener("focusout", (e) => {
+  if (prefsOpen() && e.relatedTarget && !prefsEl.contains(e.relatedTarget)) setPrefsOpen(false);
+});
+/* changed in another tab: follow it, without writing it back */
+addEventListener("storage", (e) => {
+  if (e.key !== PREFS_KEY && e.key !== null) return;   // null: storage was cleared
+  PREFS = loadPrefs();
+  showPrefs();
+});
+if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); syncPrefs(); });
 
 /* ═════════════════════════ cost ═════════════════════════
    A different data source with a different meaning, in a colour
@@ -2221,7 +2514,8 @@ function renderCost() {
 
 /* ═════════════════════════ wiring ═════════════════════════ */
 buildRings();
-startFluids();
+buildPrefs();
+applyPrefs();   // before the first render, so the first frame is already in the chosen look
 $("detailOuter").inert = true;
 render();
 
