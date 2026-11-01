@@ -16,7 +16,8 @@
    backdrop and to the ring's interior: the sky drifts on a ~30s loop
    and warms when the limit heats up, and the ring holds a small fluid
    stirred by the same heat. The arc, tick and chart move only when
-   data moves.
+   data moves. Settings offers a second theme, Matrix, at the end of
+   this sheet.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -40,14 +41,20 @@
   --sans: var(--font-system);
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  --ink:    rgba(233,239,247,.95);
-  --ink-2:  rgba(233,239,247,.66);
-  --ink-3:  rgba(233,239,247,.44);
-  --ink-4:  rgba(233,239,247,.28);
+  /* Every neutral on the page is mixed from two tints, kept as channels so a theme can recolour
+     all of them at once: --tint is the glass's white (hairlines, fills, focus rings, the track),
+     --ink-rgb the text's cool off-white. --hi is the numeral. */
+  --tint:    255 255 255;
+  --ink-rgb: 233 239 247;
+  --hi:      #fff;
+  --ink:    rgb(var(--ink-rgb) / .95);
+  --ink-2:  rgb(var(--ink-rgb) / .66);
+  --ink-3:  rgb(var(--ink-rgb) / .44);
+  --ink-4:  rgb(var(--ink-rgb) / .28);
   --base:   #07090d;
 
-  --hair:  rgba(255,255,255,.075);
-  --edge:  rgba(255,255,255,.16);
+  --hair:  rgb(var(--tint) / .075);
+  --edge:  rgb(var(--tint) / .16);
 
   /* ── Threshold bands ────────────────────────────────────────────
      Relative luminance descends monotonically with danger
@@ -158,7 +165,7 @@ main {
 .plan {
   font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3);
   padding: 3px 8px; border-radius: 5px; border: 1px solid var(--hair);
-  background: rgba(255,255,255,.035); white-space: nowrap;
+  background: rgb(var(--tint) / .035); white-space: nowrap;
 }
 .plan:empty { display: none; }
 .grow { flex: 1 1 24px; }
@@ -167,7 +174,7 @@ main {
   display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%;
   font-size: 12.5px; color: var(--ink-2);
   padding: 4px 12px 4px 10px; border-radius: 999px;
-  border: 1px solid var(--hair); background: rgba(255,255,255,.045);
+  border: 1px solid var(--hair); background: rgb(var(--tint) / .045);
   transition: color .4s var(--ease), border-color .4s var(--ease), background .4s var(--ease);
 }
 .fresh .dot {
@@ -194,15 +201,15 @@ main {
 .prefs { position: relative; flex: none; }
 .gear {
   display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
-  border-radius: 50%; border: 1px solid var(--hair); background: rgba(255,255,255,.045);
+  border-radius: 50%; border: 1px solid var(--hair); background: rgb(var(--tint) / .045);
   color: var(--ink-3); cursor: pointer;
   transition: color .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
 }
 .gear svg { width: 15px; height: 15px; fill: currentColor; transition: transform .5s var(--ease); }
-.gear:hover, .gear[aria-expanded="true"] { color: var(--ink); border-color: var(--edge); background: rgba(255,255,255,.08); }
+.gear:hover, .gear[aria-expanded="true"] { color: var(--ink); border-color: var(--edge); background: rgb(var(--tint) / .08); }
 .gear[aria-expanded="true"] svg { transform: rotate(90deg); }
 .gear:focus { outline: none; }
-.gear:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.gear:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 
 /* It grows out of the gear, scaled from the gear's own centre, and is hidden only once the
    fade has finished, so closing is as smooth as opening. Closed, it is also inert. */
@@ -212,7 +219,7 @@ main {
   padding: 14px 16px 12px; border-radius: 16px;
   background: linear-gradient(168deg, rgba(30,35,48,.82), rgba(14,17,24,.86));
   backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(255,255,255,.07);
+  border: 1px solid rgb(var(--tint) / .07);
   box-shadow: inset 0 1px 0 var(--edge), 0 26px 58px -20px rgba(0,0,0,.85), 0 3px 12px -6px rgba(0,0,0,.5);
   transform-origin: calc(100% - 14px) -24px;
   opacity: 0; transform: scale(.86); visibility: hidden;
@@ -228,70 +235,84 @@ main {
 .ptext { min-width: 0; }
 .pname { display: block; font-size: 13px; line-height: 1.35; color: var(--ink); }
 .phint { display: block; font-size: 11px; line-height: 1.35; color: var(--ink-4); }
-/* the speed belongs to the fluid, so it sits under it, and steps back while the fluid is off */
+/* the speed belongs to the fluid, so it sits under it, and is there only while the fluid is on */
 .prow.sub { cursor: default; padding: 0 0 6px 12px; }
 .prow.sub .pname { font-size: 12px; color: var(--ink-2); }
-.prow:has(input:disabled) { opacity: .4; }
 
 /* a switch is a checkbox underneath, so Space flips it and it is announced as one */
 .switch {
   appearance: none; -webkit-appearance: none; flex: none; margin: 0; cursor: pointer;
   position: relative; width: 34px; height: 20px; border-radius: 999px;
-  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  background: rgb(var(--tint) / .07); border: 1px solid rgb(var(--tint) / .12);
   transition: background .2s var(--ease), border-color .2s var(--ease);
 }
 .switch::before {
   content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
-  background: rgba(233,239,247,.55); box-shadow: 0 1px 3px rgba(0,0,0,.45);
+  background: rgb(var(--ink-rgb) / .55); box-shadow: 0 1px 3px rgba(0,0,0,.45);
   transition: transform .2s var(--ease), background .2s var(--ease);
 }
 /* on is white, not a band colour: on this page a colour is a reading, and a switch is not one */
-.switch:checked { background: rgba(233,239,247,.3); border-color: rgba(233,239,247,.42); }
+.switch:checked { background: rgb(var(--ink-rgb) / .3); border-color: rgb(var(--ink-rgb) / .42); }
 .switch:checked::before { transform: translateX(14px); background: #fff; }
-.switch:focus, .seg input:focus, .font input:focus { outline: none; }
-.switch:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.switch:focus, .seg input:focus, .pick input:focus { outline: none; }
+.switch:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 
 /* the radios lie invisibly over their own labels, so clicks land on them and arrows move between them */
-.seg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: rgba(255,255,255,.045); border: 1px solid var(--hair); }
+.seg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: rgb(var(--tint) / .045); border: 1px solid var(--hair); }
 .seg label { position: relative; flex: 1; }
-.seg input, .font input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.seg input:disabled { cursor: default; }
+.seg input, .pick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .seg span { display: block; padding: 2px 9px; border-radius: 6px; font-size: 11.5px; text-align: center; color: var(--ink-3);
             transition: background .2s var(--ease), color .2s var(--ease); }
-.seg input:checked + span { background: rgba(255,255,255,.13); color: var(--ink); }
-.seg input:focus-visible + span { outline: 2px solid rgba(255,255,255,.7); outline-offset: 1px; }
+.seg input:checked + span { background: rgb(var(--tint) / .13); color: var(--ink); }
+.seg input:focus-visible + span { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 1px; }
 
-.fonts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px 0 2px; }
-.font {
+.picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px 0 2px; }
+.pick {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
-  padding: 8px 4px 6px; border-radius: 10px; border: 1px solid var(--hair); background: rgba(255,255,255,.025);
+  padding: 8px 4px 6px; border-radius: 10px; border: 1px solid var(--hair); background: rgb(var(--tint) / .025);
   transition: border-color .2s var(--ease), background .2s var(--ease);
 }
-.font:hover { border-color: rgba(255,255,255,.14); }
-.font:has(input:checked) { border-color: rgba(233,239,247,.5); background: rgba(255,255,255,.08); }
-.font:has(input:focus-visible) { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.pick:hover { border-color: rgb(var(--tint) / .14); }
+.pick:has(input:checked) { border-color: rgb(var(--ink-rgb) / .5); background: rgb(var(--tint) / .08); }
+.pick:has(input:focus-visible) { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 /* each sample is set in its own face, whatever the page itself is set in */
-.font .fs { font-size: 18px; line-height: 1.2; color: var(--ink); white-space: nowrap; }
-.font .fn { font-size: 10px; letter-spacing: .05em; color: var(--ink-3); }
+.pick .fs { font-size: 18px; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+.pick .fn { font-size: 10px; letter-spacing: .05em; color: var(--ink-3); }
+/* a theme is shown as a patch of itself */
+.pick .swatch {
+  display: block; width: 100%; height: 26px; margin-bottom: 4px; border-radius: 6px; overflow: hidden;
+  border: 1px solid rgb(var(--tint) / .08);
+}
+.pick[data-pick="glass"] .swatch {
+  background: radial-gradient(70% 140% at 18% 20%, #2c4ad6, transparent 70%),
+              radial-gradient(60% 130% at 82% 30%, #128f92, transparent 70%),
+              radial-gradient(70% 140% at 50% 110%, #622fc0, transparent 72%), #0a0d14;
+}
+.pick[data-pick="matrix"] .swatch {
+  background: #000; color: #34ff7f; font: 13px/24px var(--font-code); letter-spacing: .32em; text-align: center;
+  text-shadow: 0 0 6px rgb(0 255 102 / .7);
+}
 
 .pnote { margin: 2px 0 6px; font-size: 11px; line-height: 1.45; color: #f4dfb2; }
+/* the panel lists only what applies: another theme's settings, or the speed with no fluid, are left out */
+.panel [hidden] { display: none !important; }
 .pfoot {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hair); font-size: 11px; color: var(--ink-4);
 }
-.preset { border: 1px solid var(--hair); background: rgba(255,255,255,.04); color: var(--ink-2); font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+.preset { border: 1px solid var(--hair); background: rgb(var(--tint) / .04); color: var(--ink-2); font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
 .preset:hover:not(:disabled) { color: var(--ink); border-color: var(--edge); }
 .preset:disabled { opacity: .4; cursor: default; }
 .preset:focus { outline: none; }
-.preset:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.preset:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 
 /* ── the one piece of glass ──────────────────────────────────── */
 .glass {
   position: relative; border-radius: 22px;
-  background: linear-gradient(168deg, rgba(255,255,255,.085) 0%, rgba(255,255,255,.045) 52%, rgba(255,255,255,.032) 100%);
+  background: linear-gradient(168deg, rgb(var(--tint) / .085) 0%, rgb(var(--tint) / .045) 52%, rgb(var(--tint) / .032) 100%);
   backdrop-filter: blur(24px) saturate(155%);
   -webkit-backdrop-filter: blur(24px) saturate(155%);
-  border: 1px solid rgba(255,255,255,.06);
+  border: 1px solid rgb(var(--tint) / .06);
   box-shadow:
     inset 0 1px 0 var(--edge),
     inset 0 -1px 0 rgba(0,0,0,.22),
@@ -301,7 +322,7 @@ main {
 }
 .glass::before {
   content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background: radial-gradient(120% 88% at 10% -14%, rgba(255,255,255,.085), rgba(255,255,255,0) 56%);
+  background: radial-gradient(120% 88% at 10% -14%, rgb(var(--tint) / .085), rgb(var(--tint) / 0) 56%);
 }
 
 /* ── a row per limit, ring on the left, its chart beside it ──────
@@ -328,10 +349,10 @@ main {
   /* pace severity 0–1 and the two colours it drives; JS overwrites all three */
   --psev: 0; --pace-ink: var(--ink-3); --pace-mark: #fff;
 }
-.ring:hover { background: rgba(255,255,255,.03); }
-.ring[aria-expanded="true"] { background: rgba(255,255,255,.045); }
+.ring:hover { background: rgb(var(--tint) / .03); }
+.ring[aria-expanded="true"] { background: rgb(var(--tint) / .045); }
 .ring:focus { outline: none; }
-.ring:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.ring:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 
 .art { position: relative; flex: none; width: clamp(116px, 14vw, 152px); aspect-ratio: 1; container-type: inline-size; }
 .art svg { position: relative; z-index: 1; display: block; width: 100%; height: 100%; overflow: visible; }
@@ -342,7 +363,7 @@ main {
   border-radius: 50%; pointer-events: none;
 }
 
-.well  { fill: rgba(255,255,255,.018); transition: fill .5s ease; }
+.well  { fill: rgb(var(--tint) / .018); transition: fill .5s ease; }
 /* with a fluid behind it the well is the fluid; only the exhausted flood below still paints */
 .art.fluid-on .well { fill: transparent; }
 /* At 100% the arc closes into a complete circle, which is geometrically identical to an
@@ -351,8 +372,8 @@ main {
    SHAPE and not only a different colour. Reserved for exhausted: nothing else fills. */
 .ring[data-band="exhausted"] .well { fill: rgb(var(--band-rgb)/.20); }
 .ring[data-band="exhausted"] .rim  { stroke: rgb(var(--band-rgb)/.55); stroke-width: 1.6; }
-.track { fill: none; stroke: rgba(255,255,255,.088); stroke-width: 9; }
-.rim   { fill: none; stroke: rgba(255,255,255,.075); stroke-width: 1; }
+.track { fill: none; stroke: rgb(var(--tint) / .088); stroke-width: 9; }
+.rim   { fill: none; stroke: rgb(var(--tint) / .075); stroke-width: 1; }
 .arc   { fill: none; stroke: var(--band); stroke-width: 9; stroke-linecap: round;
          transition: stroke-dasharray .85s var(--ease), stroke-dashoffset .85s var(--ease),
                      stroke .55s var(--ease); }
@@ -367,7 +388,7 @@ main {
 /* the span between the value and the pace marker, drawn as a length:
    dotted and neutral when it is headroom, solid and PACE-coloured when
    the arc has overrun the clock. */
-.gap { fill: none; stroke-linecap: butt; stroke: rgba(233,239,247,.26); stroke-width: 1.3; stroke-dasharray: 1 5;
+.gap { fill: none; stroke-linecap: butt; stroke: rgb(var(--ink-rgb) / .26); stroke-width: 1.3; stroke-dasharray: 1 5;
        transition: stroke .45s var(--ease), stroke-width .45s var(--ease), opacity .45s var(--ease); }
 /* Overrun is drawn in the PACE colour, never the band's: at 9% the band
    is calm green and the overrun is the whole story. Weight and opacity
@@ -457,7 +478,7 @@ main {
 .numrow { display: inline-flex; align-items: baseline; gap: .03em; }
 .num {
   font-size: 27cqi; font-weight: 300; letter-spacing: -.035em; line-height: 1;
-  font-variant-numeric: tabular-nums; color: #fff;
+  font-variant-numeric: tabular-nums; color: var(--hi);
   text-shadow: var(--scrim, 0 0 0 transparent), 0 2px 20px rgb(var(--band-rgb)/.35);
 }
 .pctsign { font-size: 10cqi; font-weight: 400; color: var(--ink-3); line-height: 1; text-shadow: var(--scrim, none); }
@@ -527,7 +548,7 @@ main {
 .ring[data-quiet="1"][aria-expanded="true"],
 .ring[data-quiet="1"]:focus-visible { opacity: .78; }
 /* unknown: a broken track and a dash. Never a zero. */
-.ring[data-state="unknown"] .track { stroke-width: 2.5; stroke-dasharray: .5 7; stroke-linecap: round; stroke: rgba(255,255,255,.17); }
+.ring[data-state="unknown"] .track { stroke-width: 2.5; stroke-dasharray: .5 7; stroke-linecap: round; stroke: rgb(var(--tint) / .17); }
 
 /* ── held: two different questions, two different channels ───────
    FRESHNESS is "is this current?". SEVERITY is "are you in trouble?".
@@ -544,9 +565,9 @@ main {
    into a dash, the labels and the panel's scaffolding step back, and
    the pace tick dashes because the comparison behind it stopped when
    the reading did. Every pace caption also says "· held" outright. */
-body[data-hold="1"] .rim { stroke-dasharray: 3.4 5; stroke: rgba(255,255,255,.2); }
-body[data-hold="1"] .well { fill: rgba(255,255,255,.009); }
-body[data-hold="1"] .track { stroke: rgba(255,255,255,.062); }
+body[data-hold="1"] .rim { stroke-dasharray: 3.4 5; stroke: rgb(var(--tint) / .2); }
+body[data-hold="1"] .well { fill: rgb(var(--tint) / .009); }
+body[data-hold="1"] .track { stroke: rgb(var(--tint) / .062); }
 body[data-hold="1"] .mlabel,
 body[data-hold="1"] .mclock,
 body[data-hold="1"] .dtitle,
@@ -565,7 +586,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 .seam {
   position: absolute; top: -1px; left: 0; width: 56px; height: 1px;
   transform: translateX(-50%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.62) 22%, rgba(255,255,255,.62) 78%, transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--tint) / .62) 22%, rgb(var(--tint) / .62) 78%, transparent);
   transition: left .3s var(--ease);
 }
 
@@ -576,12 +597,12 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   padding: 2.5px 7px; border-radius: 4px; border: 1px solid currentColor; opacity: .9; white-space: nowrap;
 }
 .dclose {
-  margin-left: auto; border: 1px solid var(--hair); background: rgba(255,255,255,.04); color: var(--ink-3);
+  margin-left: auto; border: 1px solid var(--hair); background: rgb(var(--tint) / .04); color: var(--ink-3);
   font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px;
   border-radius: 6px; cursor: pointer;
 }
 .dclose:hover { color: var(--ink); border-color: var(--edge); }
-.dclose:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.dclose:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 
 .readouts {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(146px,1fr)); gap: 1px;
@@ -606,12 +627,12 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 }
 .chartcap .note { text-transform: none; letter-spacing: .02em; font-size: 11px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .chart { display: block; width: 100%; height: 118px; overflow: visible; }
-.chart .grid  { stroke: rgba(233,239,247,.075); stroke-width: 1; }
+.chart .grid  { stroke: rgb(var(--ink-rgb) / .075); stroke-width: 1; }
 .chart .warnln{ stroke: rgb(var(--warning-rgb)/.4); stroke-width: 1; stroke-dasharray: 3 4; }
-.chart .full  { fill: none; stroke: rgba(233,239,247,.34); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.chart .full  { fill: none; stroke: rgb(var(--ink-rgb) / .34); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .chart .run   { fill: none; stroke: var(--band); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
 .chart .area  { fill: rgb(var(--band-rgb)/.13); stroke: none; }
-.chart .since { stroke: rgba(233,239,247,.22); stroke-width: 1; stroke-dasharray: 2 3; }
+.chart .since { stroke: rgb(var(--ink-rgb) / .22); stroke-width: 1; stroke-dasharray: 2 3; }
 .chart .proj  { fill: none; stroke: var(--band); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .8; }
 .chart .head  { fill: var(--band); }
 .chart .ax    { fill: var(--ink-4); font-family: var(--mono); font-size: 10px; letter-spacing: .04em; }
@@ -636,9 +657,9 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 
 .cost {
   border-radius: 12px; padding: 16px 20px 15px;
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.022));
+  background: linear-gradient(180deg, rgb(var(--tint) / .05), rgb(var(--tint) / .022));
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,.055); border-top-color: rgba(255,255,255,.13);
+  border: 1px solid rgb(var(--tint) / .055); border-top-color: rgb(var(--tint) / .13);
   border-left: 2px solid rgb(154 164 220 / .55);
   box-shadow: 0 18px 44px -24px rgba(0,0,0,.75);
   display: grid; grid-template-columns: 1fr; gap: 14px;
@@ -657,12 +678,12 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 .ctot { margin-top: 15px; }
 .ctot .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 17px; letter-spacing: -.01em; line-height: 1.15; color: #b6bee0; }
 .ctot .k { font-size: 9px; letter-spacing: .17em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
-.cbar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; margin: 2px 0 11px; background: rgba(255,255,255,.05); }
+.cbar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; margin: 2px 0 11px; background: rgb(var(--tint) / .05); }
 .cbar span { display: block; height: 100%; }
 .ctab { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 .ctab th { text-align: left; font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-4); font-weight: 600; padding: 0 8px 5px 0; border-bottom: 1px solid var(--hair); }
 .ctab th.r, .ctab td.r { text-align: right; }
-.ctab td { padding: 4.5px 8px 4.5px 0; border-bottom: 1px solid rgba(233,239,247,.04); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctab td { padding: 4.5px 8px 4.5px 0; border-bottom: 1px solid rgb(var(--ink-rgb) / .04); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctab tr:last-child td { border-bottom: 0; }
 .ctab td.mn { color: var(--ink-2); }
 .ctab td.r { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -695,6 +716,57 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   .fresh .dot { animation: none !important; }
   *, *::before, *::after { transition-duration: .001ms !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Matrix — the second theme, chosen in Settings: a terminal.
+
+   The glass page is put out of sight but kept, for screen readers and
+   the keyboard, and the terminal (the matrix section of the script)
+   draws in its place on two canvases sharing one grid of cells: green
+   rain below, the page in amber above. Only the settings panel is still
+   drawn by the page itself, and it goes amber and square to match.
+   All of it keys on data-tui, which is set only while the terminal runs,
+   so a browser that cannot run it keeps the glass page, glass through
+   and through.
+   ══════════════════════════════════════════════════════════════════ */
+.mx { position: fixed; inset: 0; width: 100%; height: 100%; display: none; }
+#rain { z-index: 0; pointer-events: none; }
+#tui { z-index: 5; }
+:root[data-tui] .mx { display: block; }
+:root[data-tui], :root[data-tui] body { overflow: hidden; }
+:root[data-tui] {
+  --tint:    255 176 0;
+  --ink-rgb: 255 194 92;
+  --hi:      #ffc845;
+  --base:    #000;
+}
+:root[data-tui] .sky,
+:root[data-tui] .grain,
+:root[data-tui] .vig { display: none; }
+/* the glass page: there for screen readers and the keyboard, not for the eye or the pointer */
+:root[data-tui] .glass,
+:root[data-tui] .rule,
+:root[data-tui] .cost,
+:root[data-tui] .mark,
+:root[data-tui] .grow,
+:root[data-tui] .fresh { opacity: 0; pointer-events: none; }
+:root[data-tui] .art > *,
+:root[data-tui] .fresh .dot { animation: none !important; }
+/* the settings gear sits, unseen, over the terminal's [≡]: the click and the focus stay its own */
+:root[data-tui] .prefs {
+  position: fixed; left: var(--mx-x, auto); right: auto; top: var(--mx-y, 8px);
+  width: var(--mx-w, 27px); height: var(--mx-h, 20px); z-index: 6;
+}
+:root[data-tui] .gear { width: 100%; height: 100%; opacity: 0; }
+:root[data-tui] .panel {
+  background: #000; border: 1px solid rgb(255 176 0 / .4); box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  /* it hangs from the [≡] of a page centred in a window that cannot scroll: room below it only */
+  max-height: calc(100vh - var(--mx-y, 0px) - var(--mx-h, 20px) - 24px);
+}
+:root[data-tui] .panel,
+:root[data-tui] .panel *,
+:root[data-tui] .panel *::before { border-radius: 0; }
 </style>
 </head>
 <body data-hold="0">
@@ -703,6 +775,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
   <div class="warm" id="warm"><div class="blob w1"></div><div class="blob w2"></div><div class="blob w3"></div></div>
 </div>
+<canvas class="mx" id="rain" aria-hidden="true"></canvas>
 <div class="grain" aria-hidden="true"></div>
 <div class="vig" aria-hidden="true"></div>
 
@@ -747,7 +820,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
     <div class="chead">
       <h2 id="costh">Local token accounting <span class="sl">/ ccusage</span></h2>
       <p class="cwarn"><b>Not your quota.</b> Tokens counted from local transcripts and priced at public
-        API list rates. The subscription does not meter against these dollars — the ring above is the
+        API list rates. The subscription does not meter against these dollars — the <span id="cwGauge">ring</span> above is the
         only thing that does, and the two can never be added together.</p>
       <div class="ctot">
         <div class="v" id="costTotal">—</div>
@@ -765,6 +838,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
       <p class="cnote" id="costNote">&nbsp;</p>
     </div>
   </footer>
+  <canvas class="mx" id="tui" aria-hidden="true"></canvas>
 </main>
 
 <p class="sr-only" role="status" aria-live="polite" id="live"></p>
@@ -1188,6 +1262,8 @@ function render() {
      a measured emergency into a calm room. The hold is stated instead:
      amber pill, dashed rim, "· held" on every pace line. */
   $("warm").style.opacity = String(heat);
+  roomHeat = heat;   // the Matrix theme's rain warms with it too
+  if (matrix) matrix.heat();
 
   const sig = f.tone + "|" + (s && s.lastError ? s.lastError.code : "") + "|" +
     ORDER.map((k) => { const l = limitOf(k); return l && l.percent !== null ? showPct(l.percent) : "?"; }).join(",");
@@ -1313,25 +1389,28 @@ function paintRing(key, th, f) {
  * Anchors closer together than they can be drawn apart collapse to the higher of them, which
  * on this tier folds the 99.75 critical cut into the cap.
  */
+/* the colour changes still ahead of a reading: served cut points, then the stations between,
+   shared by the ring's marks and the terminal's */
+function marksAhead(th, pct) {
+  const warn = num(th.warningFloorPercent, NaN);
+  const crit = num(th.criticalPercent, NaN);
+  const exh = num(th.exhaustedPercent, 100);
+  const served = [[warn, "warning"], [crit, "critical"], [exh, "exhausted"]]
+    .filter(([v]) => isFinite(v) && v > 0 && v <= 100)
+    .sort((a, b) => a[0] - b[0]);
+  const kept = served.filter(([v], i) => i === served.length - 1 || served[i + 1][0] - v > 1.5);
+  const marks = kept.map(([v]) => ({ v, served: true }));
+  if (isFinite(warn) && exh > warn) {
+    for (let k = 1; k < WARN_STATIONS; k++) {
+      marks.push({ v: warn + ((exh - warn) * k) / WARN_STATIONS, served: false });
+    }
+  }
+  return marks.filter((m) => m.v > pct).sort((a, b) => a.v - b.v);
+}
+
 function paintThresholds(key, th, on, pct) {
   const host = q(key, "thmarks");
-  let marks = [];
-  if (on && th && typeof pct === "number") {
-    const warn = num(th.warningFloorPercent, NaN);
-    const crit = num(th.criticalPercent, NaN);
-    const exh = num(th.exhaustedPercent, 100);
-    const served = [[warn, "warning"], [crit, "critical"], [exh, "exhausted"]]
-      .filter(([v]) => isFinite(v) && v > 0 && v <= 100)
-      .sort((a, b) => a[0] - b[0]);
-    const kept = served.filter(([v], i) => i === served.length - 1 || served[i + 1][0] - v > 1.5);
-    marks = kept.map(([v]) => ({ v, served: true }));
-    if (isFinite(warn) && exh > warn) {
-      for (let k = 1; k < WARN_STATIONS; k++) {
-        marks.push({ v: warn + ((exh - warn) * k) / WARN_STATIONS, served: false });
-      }
-    }
-    marks = marks.filter((m) => m.v > pct).sort((a, b) => a.v - b.v);
-  }
+  const marks = on && th && typeof pct === "number" ? marksAhead(th, pct) : [];
   const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",");
   if (host.dataset.k === stamp) return;
   host.dataset.k = stamp;
@@ -1493,10 +1572,16 @@ function renderDetail(key) {
     ? `<dd>${sc}<small>sample${sc === 1 ? "" : "s"}${since ? " since " + esc(stamp(since)) : ""}</small></dd>`
     : `<dd class="est">no fitted run yet</dd>`;
 
+  /* The words name what is drawn: the ring's arc and white tick under Glass, the bar and the ▲
+     under it in the Matrix terminal, which shows this same text. */
+  const bar = tuiOn();
+  const N = bar
+    ? { gauge: "bar", tick: "The ▲ under the bar sits at ", round: "of the way along", head: "The bar" }
+    : { gauge: "ring", tick: "The white tick sits at ", round: "of the way round", head: "The arc" };
   /* the notch, said in words — the tick teaches itself on first click */
   let marker;
   if (dormant) marker = "No reset window is running, so there is no clock to pace this " + showPct(lim.percent) +
-    "% against. The ring picks up a pace marker on its own once a window starts.";
+    "% against. The " + N.gauge + " picks up a pace marker on its own once a window starts.";
   else if (el === null || !known) marker = "No reset instant, so the pace marker cannot be placed.";
   else {
     const d = lim.percent - el * 100, g = Math.abs(Math.round(d));
@@ -1508,10 +1593,10 @@ function renderDetail(key) {
        publishes one when the fitted rate reaches the cap before this window
        resets, so "coasting" cannot be said next to it — the panel would be
        reassuring the reader out of its own strongest evidence. */
-    marker = (f.hold ? "Frozen at the reading taken " + stamp(Date.parse(S.snap.fetchedAt)) + ": the white tick sits at "
-                     : "The white tick sits at ") +
-      Math.round(el * 100) + "% of the way round — the share of the window " +
-      "the clock " + had + " already burned. The arc " + reaches + " " + showPct(lim.percent) + "%, " +
+    marker = (f.hold ? "Frozen at the reading taken " + stamp(Date.parse(S.snap.fetchedAt)) + ": " + N.tick.charAt(0).toLowerCase() + N.tick.slice(1)
+                     : N.tick) +
+      Math.round(el * 100) + "% " + N.round + " — the share of the window " +
+      "the clock " + had + " already burned. " + N.head + " " + reaches + " " + showPct(lim.percent) + "%, " +
       (d > PACE_DEAD ? g + " points past it" +
            (paceSeverity(lim.percent, el) >= PACE_LOUD ? ", " + paceMultiple(lim.percent, el) + " the clock's own rate" : "") +
            /* attributed, because the very next sentence may be the OTHER
@@ -1536,9 +1621,12 @@ function renderDetail(key) {
      stays the ring and its chart and nothing else. */
   let legend = "";
   if (known && !dormant && el !== null) {
-    legend = " The thin line inside the track spans the arc's head to the tick — that difference as a " +
-      "length: dotted grey while it is headroom, solid and lit in the pace colour once the arc has " +
-      "overrun the clock, thickening with the size of the overrun.";
+    legend = bar
+      ? " The line under the bar runs from the bar's end to the ▲ — that difference as a length: " +
+        "dotted and faint while it is headroom, solid in the pace colour once the bar has overrun the clock."
+      : " The thin line inside the track spans the arc's head to the tick — that difference as a " +
+        "length: dotted and faint while it is headroom, solid and lit in the pace colour once the arc has " +
+        "overrun the clock, thickening with the size of the overrun.";
   }
   /* Mirrors paintThresholds — its `on` flag and its choice of marks, not just the values —
      so the prose never names a mark that was not drawn. */
@@ -1550,21 +1638,25 @@ function renderDetail(key) {
     if (isFinite(c) && c > lim.percent && e - c > 1.5) ahead.push("critical at " + showPct(c) + "%");
     if (e > lim.percent) ahead.push("the cap");
     if (ahead.length) {
-      legend += " The marks still ahead on the track are where the colour changes: " +
+      legend += (bar ? " The marks under the bar, with their numbers, are where the colour changes still ahead: "
+                     : " The marks still ahead on the track are where the colour changes: ") +
         ahead.join(", ") + " at full strength because the API serves them, and the fainter ones" +
         " at the quarter points between, which are colour steps rather than thresholds." +
         (isFinite(c) && e - c <= 1.5
           ? " The served critical cut at " + showPct(c) + "% sits too close to the cap to draw as a place of its own."
           : "");
     } else {
-      legend += " No marks on the track: there is no colour change left ahead of this reading.";
+      legend += " No marks " + (bar ? "under the bar" : "on the track") + ": there is no colour change left ahead of this reading.";
     }
   }
 
   const winSec = num(lim && lim.windowSeconds, FALLBACK_WINDOW[key]);
   /* the chart now lives beside the ring, always drawn; its marks are explained here */
-  legend += " In the chart beside the ring the trace is bright where the burn rate was fitted," +
-    " a dashed upright marks where that run starts, and a dashed ramp runs to the cap when a projection is published.";
+  legend += bar
+    ? " In the chart under the bar the trace is bright where the burn rate was fitted, a dotted upright" +
+      " over \u201cfit\u201d marks where that run starts, and a dotted ramp runs to the cap when a projection is published."
+    : " In the chart beside the ring the trace is bright where the burn rate was fitted," +
+      " a dashed upright marks where that run starts, and a dashed ramp runs to the cap when a projection is published.";
 
   const html =
     `<div class="dhead">
@@ -1654,7 +1746,9 @@ function burnNote(fit) {
   return "burn " + fmtRate(b) + " %/hr" + (se === null ? "" : " ± " + fmtSpread(se));
 }
 
-function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
+/* The readings a chart draws and the axes they fit, shared by the glass chart and the
+   terminal's, so the two can never draw different things. */
+function chartSeries(key, proj) {
   const h = S.hist, idx = HISTORY_KEYS.indexOf(key);
   const raw = h && Array.isArray(h.samples) ? h.samples : [];
   /* The cache keeps a count of readings, not an age. An account switched back to after days
@@ -1667,15 +1761,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   const pts = raw.filter((s) => s && Array.isArray(s.p) && isFinite(s.t) && s.t >= from)
                  .map((s) => ({ t: s.t, v: typeof s.p[idx] === "number" ? s.p[idx] : null }));
   const usable = pts.filter((p) => p.v !== null);
-  if (usable.length < 2) {
-    return `<div class="chartcap"><span>history${presentUnknown ? " · current reading unknown" : ""}</span>
-              <span class="note">${esc(burnNote(fit))}</span></div>
-            <div class="chartempty">${h ? "not enough readings retained yet to draw a line" : "loading history…"}</div>`;
-  }
-
-  const PL = 34, PR = 46, PT = 10, PB = 19;
-  /* advance of one .ax glyph: 10px of a ui-monospace face (~0.6em) plus .04em of tracking */
-  const CHAR_W = 6.4;
+  if (usable.length < 2) return { pts, usable, now };
   let t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, now);
   if (t1 - t0 < 60000) t1 = t0 + 60000;
 
@@ -1687,11 +1773,27 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
      close enough to be worth showing */
   let projX = null;
   if (proj !== null && proj > t1 && proj - t1 <= (t1 - t0) * 2.2) { t1 = proj; ymax = 100; projX = proj; }
+  const gapMs = num(h && h.intervalMs, 60000) * 6;   // the server restarts a run across a gap this long
+  return { pts, usable, now, t0, t1, ymax, projX, gapMs };
+}
+
+function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
+  const h = S.hist, m = chartSeries(key, proj), { pts, usable, now } = m;
+  if (usable.length < 2) {
+    return `<div class="chartcap"><span>history${presentUnknown ? " · current reading unknown" : ""}</span>
+              <span class="note">${esc(burnNote(fit))}</span></div>
+            <div class="chartempty">${h ? "not enough readings retained yet to draw a line" : "loading history…"}</div>`;
+  }
+
+  const PL = 34, PR = 46, PT = 10, PB = 19;
+  /* advance of one .ax glyph: 10px of a ui-monospace face (~0.6em) plus .04em of tracking */
+  const CHAR_W = 6.4;
+  const { t0, t1, ymax, projX } = m;
 
   const X = (t) => PL + ((t - t0) / (t1 - t0)) * (W - PL - PR);
   const Y = (v) => PT + (1 - clamp(v, 0, ymax) / ymax) * (H - PT - PB);
 
-  const gapMs = num(h && h.intervalMs, 60000) * 6;   // the server restarts a run across a gap this long
+  const gapMs = m.gapMs;
   const seg = (filt) => {
     const out = []; let cur = [];
     for (const p of pts) {
@@ -2293,7 +2395,8 @@ function fluidTick(ts) {
    Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
    through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
-  const on = PREFS.fluid;
+  /* the terminal has no fluid, so under it the loop stops too */
+  const on = PREFS.fluid && !tuiOn();
   for (const key of ORDER) {
     if (!FLUIDS[key]) continue;
     const canvas = q(key, "fluid");
@@ -2336,23 +2439,850 @@ function startFluids() {
   }
 }
 
+/* ═════════════════════════ matrix ═════════════════════════
+   The Matrix theme is a terminal. The glass page stays where it is, out
+   of sight, for screen readers and the keyboard, and the terminal reads
+   its words off it, so the two never say different things. What is drawn
+   instead is one grid of character cells shared by two layers. On the
+   lower one, rain: columns of digits, letters and signs falling at a
+   fixed step, as in the film. On the upper one, the page as a text UI —
+   framed boxes, a bar for the limit, a braille chart — every character
+   locked in its cell and set in amber, so it is told from the green rain
+   at a glance. The page is always in front: the rain falls behind it,
+   only a glimmer under its boxes, and never takes a character's place.
+   Whatever is amber is the page; whatever is green is rain.
+   The rain warms with the room: the hotter the limit, the more of the
+   streams coming on screen fall in red. Its own setting, "Rain", off
+   stops it where it stands, and reduced motion holds one still frame. */
+const MX = {
+  font: 15,      // px; a cell is one Fira Code advance wide
+  line: 1.3,     // and this many ems tall
+  hz: 22,        // rain steps a second
+  fade: 0.14,    // share of every glyph's light lost each step, which sets how long a trail is
+  rest: 10,      // the longest a column waits between streams, in seconds, so about four in ten are falling
+  wide: 100,     // the page's widest, in cells
+  glyphs: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:;.,=+-*<>/\\|#%$&@!?^~()[]{}",
+  face: '"Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace',
+};
+/* the rain's inks, by index: a head and a trail, then the same pair warm */
+const MX_RAIN = [[208, 255, 216], [0, 255, 102], [255, 214, 204], [255, 48, 40]];
+/* the page's: amber, from emphasis down to the frames */
+const MX_INK = { hi: "#ffc845", text: "#ffb000", label: "#d69400", dim: "#9c6d00", line: "#7a5500", lit: "#ffe08a" };
+const MX_BACK = "rgb(0 0 0 / .9)";    // behind the page's cells, so the rain under it is only a glimmer
+const mainEl = document.querySelector("main");
+let roomHeat = 0;   // the hottest limit's heat, 0–1, kept by render()
+let matrix = null, matrixBroken = false;
+/* whether the terminal is what is on screen — not the same as Matrix being chosen, if it cannot run */
+const tuiOn = () => document.documentElement.hasAttribute("data-tui");
+
+/* a small seeded generator (mulberry32), so a still frame comes out the same each time */
+function seeded(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* the words an element of the glass page shows, as one line */
+const words = (el) => (el ? el.textContent.replace(/\s+/g, " ").trim() : "");
+const cellsOf = (t) => [...t].length;
+function fitText(t, n) {
+  const g = [...t];
+  return g.length <= n ? t : n < 1 ? "" : g.slice(0, n - 1).join("") + "…";
+}
+function wrapText(t, n) {
+  const out = [];
+  let line = "";
+  for (const w of t.split(" ")) {
+    if (!w) continue;
+    line = !line ? w : cellsOf(line) + 1 + cellsOf(w) <= n ? line + " " + w : (out.push(line), w);
+    while (cellsOf(line) > n) { const g = [...line]; out.push(g.slice(0, n).join("")); line = g.slice(n).join(""); }
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+function makeMatrix(back, front) {
+  const bc = back.getContext("2d"), tc = front.getContext("2d");
+  if (!bc || !tc) return null;
+  const G = [...MX.glyphs];
+  let rand = Math.random;
+  const rnd = (n) => (rand() * n) | 0;
+  const PAD = 3;    // room round each cell of the atlas for a head's glow
+  let W = 0, H = 0, dpr = 0, CW = 9, CH = 20, cols = 0, rows = 0, atlas = null;
+  let streams = [], painted = false, loop = false, raf = 0, lastTs = 0, acc = 0;
+  let still = null, stillHeat = 0;   // while a still frame is drawn: one seeded generator a column
+  /* the page, cell by cell: its character, colour, weight, and whether it is backed */
+  let chs = [], fgs = [], wts = new Uint8Array(0), backs = new Uint8Array(0);
+  let active = false, queued = false, hover = null, regions = [], font = "";
+
+  /* ── the rain ───────────────────────────────────────────────── */
+  /* A column's stream. The first ones start anywhere above the screen, so the rain arrives over
+     a few seconds rather than as one row; each later one waits a moment before it starts.
+     Whether it falls warm is settled as it comes on screen, against the heat of that moment. */
+  function stream(s, first) {
+    s.v = 0.3 + rand() * 0.7;                    // rows a step
+    s.y = first ? -rand() * rows * 0.6 : -1 - rand() * 6;
+    s.row = Math.floor(s.y);
+    s.wait = rnd(MX.hz * MX.rest * (first ? 0.5 : 1));
+    s.u = rand();
+    s.warm = s.u < roomHeat * 0.9;
+    s.g = rnd(G.length);
+    return s;
+  }
+
+  /* every glyph in every ink, drawn once; a step only copies cells out of it */
+  function paintAtlas() {
+    const cw = CW + 2 * PAD, ch = CH + 2 * PAD;
+    const a = document.createElement("canvas");
+    a.width = Math.ceil(G.length * cw * dpr);
+    a.height = Math.ceil(MX_RAIN.length * ch * dpr);
+    const x = a.getContext("2d");
+    x.scale(dpr, dpr);
+    x.font = `${MX.font}px ${MX.face}`;
+    x.textAlign = "center"; x.textBaseline = "middle";
+    MX_RAIN.forEach((ink, k) => {
+      const c = ink.join(" ");
+      x.fillStyle = `rgb(${c})`;
+      x.shadowColor = `rgb(${c} / .8)`;
+      x.shadowBlur = k % 2 ? 0 : 5;               // only a head glows
+      G.forEach((g, i) => x.fillText(g, (i + 0.5) * cw, (k + 0.5) * ch + 1));
+    });
+    atlas = a;
+  }
+  function sprite(ink, g, c, r, alpha) {
+    const cw = CW + 2 * PAD, ch = CH + 2 * PAD;
+    bc.globalAlpha = alpha;
+    bc.drawImage(atlas, g * cw * dpr, ink * ch * dpr, cw * dpr, ch * dpr, c * CW - PAD, r * CH - PAD, cw, ch);
+    bc.globalAlpha = 1;
+  }
+  const clearCell = (c, r) => bc.clearRect(c * CW, r * CH, CW, CH);
+
+  function step() {
+    painted = true;
+    /* everything already drawn loses a little light; that is what makes the trails */
+    bc.globalCompositeOperation = "destination-out";
+    bc.fillStyle = `rgb(0 0 0 / ${MX.fade})`;
+    bc.fillRect(0, 0, W, H);
+    bc.globalCompositeOperation = "source-over";
+    for (let c = 0; c < cols; c++) {
+      if (still) rand = still[c];
+      const s = streams[c];
+      if (s.wait > 0) { s.wait--; continue; }
+      const was = s.row;
+      s.y += s.v;
+      const r = Math.floor(s.y);
+      if (r !== was) {
+        if (was < 0 && r >= 0) s.warm = s.u < roomHeat * 0.9;
+        const ink = s.warm ? 2 : 0;
+        /* the old head stays where it was, in the trail's ink, and fades from there */
+        if (was >= 0 && was < rows) { clearCell(c, was); sprite(ink + 1, s.g, c, was, 1); }
+        s.row = r;
+        s.g = rnd(G.length);
+        if (r >= rows) stream(s, false);
+        else if (r >= 0) sprite(ink, s.g, c, r, 1);
+      } else if (r >= 0 && r < rows && rand() < 0.2) {
+        /* a slow head flickers in place */
+        s.g = rnd(G.length);
+        clearCell(c, r);
+        sprite(s.warm ? 2 : 0, s.g, c, r, 1);
+      }
+    }
+    if (still) return;
+    /* now and then a glyph already in a trail changes, as in the film */
+    for (let k = Math.ceil(cols / 8); k > 0; k--) {
+      const c = rnd(cols), s = streams[c];
+      if (s.wait > 0) continue;
+      const behind = 1 + rnd(10), r = s.row - behind;
+      if (r < 0 || r >= rows) continue;
+      const light = Math.pow(1 - MX.fade, behind / s.v);
+      if (light < 0.1) continue;
+      clearCell(c, r);
+      sprite(s.warm ? 3 : 1, rnd(G.length), c, r, light);
+    }
+  }
+
+  /* A field of rain stopped mid-fall, for reduced motion and the first frame of a paused one.
+     Each column draws from its own seeded generator, so it comes out the same each time it is
+     drawn. A resize does not draw it again: the pixels are carried over (see resize). */
+  function drawStill() {
+    still = Array.from({ length: cols }, (_, c) => seeded(0x5eed + c * 7919));
+    bc.clearRect(0, 0, W, H);
+    streams = streams.map((s, c) => { rand = still[c]; return stream(s, true); });
+    for (let i = 0; i < 150; i++) step();
+    still = null;
+    rand = Math.random;
+    stillHeat = roomHeat;
+  }
+
+  /* ── drawing the page's cells ───────────────────────────────── */
+  /* Box lines and blocks are drawn, not set in type, so they meet edge to edge whatever the
+     face's line height; braille is drawn dot by dot for the same reason. Everything here is in
+     device pixels, from cell edges rounded to whole ones, so two neighbouring cells share an
+     exact edge at any zoom: a bar or a frame drawn cell by cell shows no seams at 125% or 90%. */
+  const BOX = { "─": "lr", "│": "ud", "┌": "rd", "┐": "ld", "└": "ur", "┘": "lu", "┤": "udl", "┴": "lru", "╵": "u",
+                "━": "LR", "┃": "UD", "┏": "RD", "┓": "LD", "┗": "UR", "┛": "LU", "┄": "h", "┆": "v" };
+  function lines(spec, x, y, w, h) {
+    const t = Math.max(1, Math.round(dpr)) * (/[A-Z]/.test(spec) ? 2 : 1), s = spec.toLowerCase();
+    const cx = x + Math.floor((w - t) / 2), cy = y + Math.floor((h - t) / 2);
+    if (s === "h") { const q = Math.floor(w / 2); tc.fillRect(x + 1, cy, q - 2, t); tc.fillRect(x + q + 1, cy, w - q - 2, t); return; }
+    if (s === "v") {
+      for (let k = 0; k < 3; k++) {
+        const a = y + Math.round((k * h) / 3), b = y + Math.round(((k + 1) * h) / 3);
+        tc.fillRect(cx, a + 1, t, b - a - 3);
+      }
+      return;
+    }
+    if (s.includes("l")) tc.fillRect(x, cy, cx - x + t, t);
+    if (s.includes("r")) tc.fillRect(cx, cy, x + w - cx, t);
+    if (s.includes("u")) tc.fillRect(cx, y, t, cy - y + t);
+    if (s.includes("d")) tc.fillRect(cx, cy, t, y + h - cy);
+  }
+  function dots(bits, x, y, w, h) {
+    const d = Math.max(2, Math.round(w / 3));
+    const xs = [x + Math.round(w * 0.3 - d / 2), x + Math.round(w * 0.72 - d / 2)];
+    const map = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
+    for (let b = 0; b < 8; b++) {
+      if (bits & (1 << b)) tc.fillRect(xs[map[b][0]], y + Math.round(h * (0.14 + 0.24 * map[b][1]) - d / 2), d, d);
+    }
+  }
+  function glyph(k, bold, x, y, w, h) {
+    const code = k.charCodeAt(0);
+    if (BOX[k]) return lines(BOX[k], x, y, w, h);
+    if (code >= 0x2800 && code <= 0x28ff) return dots(code - 0x2800, x, y, w, h);
+    /* the bar's blocks sit a little in from the cell's edges, so the row reads as a bar, not a wall */
+    const inset = Math.round(3 * dpr);
+    if (k === "█") return tc.fillRect(x, y + inset, w, h - 2 * inset);
+    if (code >= 0x2589 && code <= 0x258f) return tc.fillRect(x, y + inset, Math.round((w * (0x2590 - code)) / 8), h - 2 * inset);
+    if (k === "░") {
+      const p = Math.max(1, Math.round(1.5 * dpr)), m = Math.round(4 * dpr);
+      for (let yy = y + m, j = 0; yy < y + h - m; yy += 2 * p, j++) {
+        for (let xx = x + (j % 2) * p; xx < x + w - p; xx += 2 * p) tc.fillRect(xx, yy, p, p);
+      }
+      return;
+    }
+    const f = `${bold ? 600 : 400} ${MX.font * dpr}px ${MX.face}`;
+    if (f !== font) { tc.font = f; font = f; }
+    tc.fillText(k, x + w / 2, y + h / 2 + dpr);
+  }
+  /* a cell of the page: its backing, then its character; a cell outside the page is left clear */
+  function drawCell(i) {
+    const c = i % cols, r = (i / cols) | 0;
+    const x = Math.round(c * CW * dpr), y = Math.round(r * CH * dpr);
+    const w = Math.round((c + 1) * CW * dpr) - x, h = Math.round((r + 1) * CH * dpr) - y;
+    tc.setTransform(1, 0, 0, 1, 0, 0);
+    tc.clearRect(x, y, w, h);
+    if (!backs[i]) return;
+    tc.fillStyle = MX_BACK;
+    tc.fillRect(x, y, w, h);
+    const k = chs[i];
+    if (!k || k === " ") return;
+    tc.fillStyle = fgs[i];
+    glyph(k, wts[i], x, y, w, h);
+  }
+
+  /* ── the page, laid out in cells ────────────────────────────── */
+  /* One pass builds the whole page as rows of coloured runs, from the glass page's words and the
+     same readings it draws from. It is built again whenever the glass page changes, and only the
+     cells that come out different are drawn. If it is taller than the window, it gives up the
+     chart's height first, then the cost strip, piece by piece. */
+  function compose(w, level, cutFoot = 0) {
+    const iw = w - 4;                 // inside a box: a frame and a space each side
+    const out = [], regs = [];
+    let gear = null;
+    const row = (back) => { const L = { segs: [], back: back ? [0, w - 1] : null }; out.push(L); return L; };
+    const put = (L, c, text, ink, bold) => { if (text) L.segs.push([c, text, ink, bold ? 1 : 0]); return c + cellsOf(text); };
+
+    /* a framed box: a title on its top edge, a note at the right of it, and its rows inside */
+    function box(title, right, content, o = {}) {
+      const ink = o.lit ? MX_INK.lit : MX_INK.line;
+      const hz = o.lit ? "━" : o.dashed ? "┄" : "─", vt = o.lit ? "┃" : o.dashed ? "┆" : "│";
+      const [tl, tr, bl, br] = o.lit ? ["┏", "┓", "┗", "┛"] : ["┌", "┐", "└", "┘"];
+      const r0 = out.length, T = row(true);
+      const closeTxt = o.close ? "[ close ]" : "";
+      const rightTxt = right ? " " + right + " " : "";
+      const titleTxt = fitText(title, Math.max(0, w - 8 - cellsOf(rightTxt) - cellsOf(closeTxt)));
+      let c = put(T, 0, tl + hz + " ", ink);
+      c = put(T, c, titleTxt, MX_INK.label, true);
+      c = put(T, c, " " + hz.repeat(Math.max(0, w - 6 - cellsOf(titleTxt) - cellsOf(rightTxt) - cellsOf(closeTxt))), ink);
+      if (rightTxt) c = put(T, c, rightTxt, o.rightInk || MX_INK.dim);
+      if (closeTxt) {
+        regs.push({ r0, r1: r0, c0: c, c1: c + cellsOf(closeTxt) - 1, act: o.close.act });
+        c = put(T, c, closeTxt, o.close.lit ? MX_INK.lit : MX_INK.label, o.close.lit);
+      }
+      put(T, c, hz + tr, ink);
+      for (const segs of content) {
+        const L = row(true);
+        put(L, 0, vt, ink);
+        for (const [cc, text, sink, bold] of segs) put(L, 2 + cc, fitText(text, Math.max(0, iw - cc)), sink, bold);
+        put(L, w - 1, vt, ink);
+      }
+      put(row(true), 0, bl + hz.repeat(w - 2) + br, ink);
+      if (o.act) regs.push({ r0, r1: out.length - 1, c0: 0, c1: w - 1, act: o.act });
+    }
+
+    /* the header: the name and plan, the freshness line, and the settings slot */
+    function header() {
+      const plan = words($("plan")), tone = $("fresh").dataset.tone || "wait", fresh = words($("freshText"));
+      const dotInk = { live: "#72ead0", hold: "#e0a52e", down: "#ff5c6c" }[tone] || MX_INK.dim;
+      const textInk = tone === "hold" ? "#ffd27a" : tone === "down" ? "#ff8a96" : MX_INK.text;
+      const gearLit = gearEl.getAttribute("aria-expanded") === "true" || document.activeElement === gearEl;
+      const leftW = 5 + (plan ? 2 + cellsOf(plan) : 0);
+      const L = row(true);
+      let c = put(L, 0, "QUOTA", MX_INK.label, true);
+      if (plan) put(L, c + 2, plan, MX_INK.dim);
+      gear = { r: out.length - 1, c: w - 3 };
+      put(L, w - 3, "[≡]", gearLit ? MX_INK.lit : MX_INK.label, gearLit);
+      const status = "● " + fresh;
+      if (leftW + 2 + cellsOf(status) + 2 + 3 <= w) {
+        put(L, w - 5 - cellsOf(status), "●", dotInk);
+        put(L, w - 3 - cellsOf(status), fresh, textInk);
+      } else {
+        const L2 = row(true), s = fitText(fresh, w - 2);
+        put(L2, 0, "●", dotInk);
+        put(L2, 2, s, textInk);
+      }
+    }
+
+    /* the limit: its number and clock, the bar, the marks under it, the verdicts, the chart */
+    function limitBox(key, chartRows) {
+      const btn = $("ring-" + key), rowEl = $("row-" + key);
+      if (!btn || !rowEl) return;
+      const f = freshness(), lim = limitOf(key);
+      const known = !f.blank && !!lim && typeof lim.percent === "number";
+      const dormant = !!(known && lim.dormant), quiet = btn.dataset.quiet === "1";
+      const pct = known ? lim.percent : null;
+      const el = known && !dormant ? elapsedFrac(lim, paceAt(f)) : null;
+      const band = rowEl.style.getPropertyValue("--band").trim() || "rgb(125 140 163)";
+      const paceInk = btn.style.getPropertyValue("--pace-ink").trim() || MX_INK.dim;
+      const paceMark = btn.style.getPropertyValue("--pace-mark").trim() || "#ffffff";
+      const over = btn.dataset.pace === "over";
+      const T = quiet ? MX_INK.dim : MX_INK.text, HI = quiet ? MX_INK.dim : MX_INK.hi;
+      const content = [];
+
+      const big = known ? showPct(pct) + "%" : "—";
+      const clockEl = q(key, "clock"), clock = words(clockEl);
+      /* "left" only after a real countdown, not after "resetting…" or a dash */
+      const countdown = !clockEl.classList.contains("word") && /\d/.test(clock);
+      content.push([[0, big, HI, 1], [cellsOf(big) + 3, clock + (countdown ? " left" : ""), T, 0]]);
+
+      /* the bar: the share used, in the band's colour, to an eighth of a cell */
+      const bar = [];
+      if (known) {
+        const fill = clamp(pct / 100, 0, 1) * iw, full = Math.floor(fill), eighths = Math.round((fill - full) * 8);
+        const s = "█".repeat(full) + (eighths > 0 && full < iw ? "▏▎▍▌▋▊▉█"[eighths - 1] : "");
+        bar.push([0, s, band, 0]);
+        if (cellsOf(s) < iw) bar.push([cellsOf(s), "░".repeat(iw - cellsOf(s)), MX_INK.line, 0]);
+      } else bar.push([0, "░".repeat(iw), MX_INK.line, 0]);
+      content.push(bar);
+
+      /* Under it, first the colour changes still ahead: the served ones, the cap first, each with
+         its number where there is room and always with its tick, then the fainter quarter-point
+         stations where they fit — so every change the detail names is on the row. Then the pace
+         tick, where an even burn would be by now, which wins its own cell, and the span from the
+         bar's end to it in whatever cells are left: solid in the pace colour once the bar has
+         overrun the clock, dotted while it is headroom. Its word goes where there is room. */
+      const mk = new Array(iw).fill(null);
+      const free = (p, n) => p >= 0 && p + n <= iw && mk.slice(p, p + n).every((x) => !x);
+      const place = (p, text, ink, gap = 0) => {
+        const g = [...text];
+        if (!free(Math.max(0, p - gap), Math.min(iw, p + g.length + gap) - Math.max(0, p - gap)) || !free(p, g.length)) return false;
+        g.forEach((ch, k) => { mk[p + k] = [ch, ink]; });
+        return true;
+      };
+      const at = (v) => Math.min(iw - 1, Math.max(0, Math.round((v / 100) * (iw - 1))));
+      const th = S.snap ? S.snap.thresholds : null;
+      if (known && !quiet && th) {
+        const ahead = marksAhead(th, pct);
+        for (const m of [...ahead.filter((x) => x.served).reverse(), ...ahead.filter((x) => !x.served)]) {
+          const p = at(m.v), rgb = rampOf(m.v, th, bandOf(m.v, th)).rgb, n = String(Math.round(m.v));
+          if (!m.served) { place(p, "╵", rgbCss(rgb.map((c) => Math.round(c * 0.5)))); continue; }
+          const ink = rgbCss(rgb);
+          if (!(place(p, "╵" + n, ink, 1) || place(p - n.length, n + "╵", ink, 1) ||
+                place(p, "╵" + n, ink) || place(p - n.length, n + "╵", ink))) mk[p] = ["╵", ink];
+        }
+      }
+      if (el !== null) {
+        const pp = at(el * 100), hp = at(pct);
+        for (let k = Math.min(pp, hp) + 1; k < Math.max(pp, hp); k++) {
+          if (!mk[k]) mk[k] = over ? ["━", paceMark] : ["┄", MX_INK.line];
+        }
+        mk[pp] = ["▲", paceMark];
+        /* the word away from the span first; with no room either side, the ▲ says it alone */
+        const left = () => place(pp - 5, "pace ", MX_INK.dim), right = () => place(pp + 1, " pace", MX_INK.dim);
+        if (over) left() || right(); else right() || left();
+      }
+      const marks = [];
+      for (let k = 0; k < iw; k++) {
+        if (!mk[k]) continue;
+        const last = marks[marks.length - 1];
+        if (last && last[2] === mk[k][1] && last[0] + cellsOf(last[1]) === k) last[1] += mk[k][0];
+        else marks.push([k, mk[k][0], mk[k][1], 0]);
+      }
+      content.push(marks);
+
+      const paceTxt = words(q(key, "pace")).replace(/^([▲▼◆])\s*/, "$1 ");
+      if (paceTxt) content.push([[0, paceTxt, over ? paceInk : MX_INK.dim, btn.dataset.hot === "1"]]);
+      const etaEl = q(key, "eta"), eta = words(etaEl);
+      if (eta && etaEl.dataset.on === "1" && eta.startsWith("cap")) content.push([[0, "cap", band, 1], [3, eta.slice(3), T, 0]]);
+      else if (eta) content.push([[0, eta, MX_INK.dim, 0]]);
+
+      if (chartRows > 0) {
+        content.push([]);
+        const cap = rowEl.querySelector(".chartcap");
+        const capL = cap ? words(cap.firstElementChild).toUpperCase() : "", capR = cap ? words(cap.querySelector(".note")) : "";
+        content.push([[0, fitText(capL, Math.max(0, iw - cellsOf(capR) - 2)), MX_INK.label, 0], [Math.max(0, iw - cellsOf(capR)), capR, MX_INK.dim, 0]]);
+        content.push(...chartRowsOf(key, iw, chartRows, band));
+      }
+
+      const lit = hover === "toggle:" + key || document.activeElement === btn;
+      box(words(q(key, "label")).toUpperCase(),
+          fmtWindow(num(lim && lim.windowSeconds, FALLBACK_WINDOW[key])).toUpperCase() + " WINDOW",
+          content, { act: "toggle:" + key, lit, dashed: document.body.dataset.hold === "1" });
+    }
+
+    /* the history, in braille: two dots across and four down a cell */
+    function chartRowsOf(key, iw, ph, band) {
+      const fit = fitFor(key);
+      const proj = fit && typeof fit.projectedAt === "number" && isFinite(fit.projectedAt) ? fit.projectedAt : null;
+      const m = chartSeries(key, proj);
+      if (m.usable.length < 2) {
+        return [[[0, S.hist ? "not enough readings retained yet to draw a line" : "loading history…", MX_INK.dim, 0]]];
+      }
+      const LW = 4, pw = Math.max(4, iw - LW), DW = pw * 2, DH = ph * 4;
+      const bits = new Uint8Array(pw * ph), lvl = new Uint8Array(pw * ph);
+      const BR = [[0x01, 0x02, 0x04, 0x40], [0x08, 0x10, 0x20, 0x80]];
+      const X = (t) => Math.round(((t - m.t0) / (m.t1 - m.t0)) * (DW - 1));
+      const Y = (v) => Math.round((1 - clamp(v, 0, m.ymax) / m.ymax) * (DH - 1));
+      const dot = (x, y, l) => {
+        if (x < 0 || y < 0 || x >= DW || y >= DH) return;
+        const i = (y >> 2) * pw + (x >> 1);
+        bits[i] |= BR[x & 1][y & 3];
+        if (l > lvl[i]) lvl[i] = l;
+      };
+      const seg = (x0, y0, x1, y1, l, dashed) => {
+        const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let e = dx + dy, n = 0;
+        for (;;) {
+          if (!dashed || n++ % 3 !== 2) dot(x0, y0, l);
+          if (x0 === x1 && y0 === y1) break;
+          const e2 = 2 * e;
+          if (e2 >= dy) { e += dy; x0 += sx; }
+          if (e2 <= dx) { e += dx; y0 += sy; }
+        }
+      };
+      const th = S.snap ? S.snap.thresholds : null;
+      const warn = num(th && th.warningFloorPercent, NaN);
+      if (isFinite(warn) && warn <= m.ymax) for (let x = 0; x < DW; x += 3) dot(x, Y(warn), 1);
+      /* the series, broken where the server would break a run; the fitted run in the band's colour */
+      const since = fit && typeof fit.sinceT === "number" && isFinite(fit.sinceT) ? fit.sinceT : null;
+      const inRun = (t) => since !== null && t >= since;
+      /* Where the fitted run starts — the readings the burn rate and the cap time are fitted on
+         lie to the right of it — a dotted upright, as the glass chart's dashed one, and "fit"
+         under the axis. Drawn first, so the readings keep their colour where they cross it. */
+      const sinceX = since !== null && since > m.t0 && since < m.t1 ? X(since) : -1;
+      if (sinceX >= 0) for (let y = 0; y < DH; y += 2) dot(sinceX, y, 1);
+      let prev = null;
+      for (const p of m.pts) {
+        if (p.v === null) { prev = null; continue; }
+        if (prev && p.t - prev.t <= m.gapMs) seg(X(prev.t), Y(prev.v), X(p.t), Y(p.v), inRun(prev.t) ? 3 : 2);
+        else dot(X(p.t), Y(p.v), inRun(p.t) ? 3 : 2);
+        prev = p;
+      }
+      if (m.projX !== null) {
+        const last = m.usable[m.usable.length - 1];
+        seg(X(last.t), Y(last.v), X(m.projX), Y(100), 3, true);
+      }
+      const inks = [MX_INK.dim, MX_INK.line, MX_INK.dim, band];
+      /* each label on the row its value is plotted in; the warning floor gets one too, in its
+         colour, where its row is free — the dotted line is otherwise easy to read as the middle */
+      const rowOf = (v) => Y(v) >> 2, half = rowOf(m.ymax / 2);
+      const warnRow = isFinite(warn) && warn <= m.ymax ? rowOf(warn) : -1;
+      const warnInk = getComputedStyle(document.documentElement).getPropertyValue("--warning").trim() || MX_INK.label;
+      const out_ = [];
+      for (let r = 0; r < ph; r++) {
+        let label = r === 0 ? String(m.ymax) : r === ph - 1 ? "0" : r === half ? String(m.ymax / 2) : "", labelInk = MX_INK.dim;
+        if (!label && r === warnRow) { label = String(Math.round(warn)); labelInk = warnInk; }
+        const segs = [[0, label.padStart(3), labelInk, 0], [3, label ? "┤" : "│", MX_INK.dim, 0]];
+        let run = "", ink = null, start = LW;
+        for (let c = 0; c < pw; c++) {
+          const i = r * pw + c, k = inks[lvl[i]];
+          if (k !== ink && run) { segs.push([start, run, ink, 0]); start = LW + c; run = ""; }
+          ink = k;
+          run += bits[i] ? String.fromCharCode(0x2800 + bits[i]) : " ";
+        }
+        if (run.trim()) segs.push([start, run, ink, 0]);
+        out_.push(segs);
+      }
+      /* Under the axis: the first reading's time and the right end's, then a tick and "fit" where
+         the fitted run starts, and — when a projection runs the axis on past the present — a tick
+         and "now" where the readings stop and the ramp begins. A label that would crowd one
+         already placed is left out; the tick still shows where it is. */
+      const axis = [..."   └" + "─".repeat(pw)];
+      const tl = stamp(m.t0), tr = m.projX !== null ? stamp(m.t1) : "now";
+      const times = [];
+      const label = (c, text, ink) => {
+        const end = c + cellsOf(text);
+        if (c < LW || end > LW + pw + 1) return;
+        if (times.some(([c0, t]) => c < c0 + cellsOf(t) + 1 && end + 1 > c0)) return;
+        times.push([c, text, ink, 0]);
+      };
+      label(LW, tl, MX_INK.dim);
+      label(Math.max(LW + cellsOf(tl) + 1, LW + pw - cellsOf(tr)), tr, MX_INK.dim);
+      const tick = (x, word, ink) => {
+        const c = LW + (x >> 1);
+        if (c <= LW || c >= LW + pw - 1) return;
+        axis[c] = "┴";
+        label(c - 1, word, ink);
+      };
+      if (sinceX >= 0) tick(sinceX, "fit", band);
+      if (m.projX !== null) tick(X(m.now), "now", MX_INK.label);
+      out_.push([[0, axis.join(""), MX_INK.dim, 0]]);
+      out_.push(times.sort((a, b) => a[0] - b[0]));
+      return out_;
+    }
+
+    /* the detail, under its limit, when that limit is open */
+    function detailBox(key, cutFoot) {
+      const d = $("detail");
+      if (S.open !== key || !d.querySelector(".dhead")) return;
+      const bandEl = d.querySelector(".dband");
+      const ros = [...d.querySelectorAll(".ro")].map((ro) => {
+        const dd = ro.querySelector("dd"), small = dd && dd.querySelector("small");
+        const value = dd ? [...dd.childNodes].filter((n) => n !== small).map((n) => n.textContent).join("").replace(/\s+/g, " ").trim() : "";
+        /* a readout that carries its own colour (the pace tile, in the pace channel's) keeps it */
+        const ink = (dd && dd.style.color) || MX_INK.hi, bold = !!dd && Number(dd.style.fontWeight) >= 600;
+        return { label: words(ro.querySelector("dt")).toUpperCase(), value, note: words(small), ink, bold };
+      });
+      const n = iw >= 76 ? 4 : 2, cw = Math.floor((iw - (n - 1) * 2) / n);
+      const content = [];
+      for (let k = 0; k < ros.length; k += n) {
+        const group = ros.slice(k, k + n), notes = group.map((g) => {
+          /* two lines at most; a note cut short says so */
+          const ls = wrapText(g.note, cw);
+          if (ls.length > 2) ls.splice(1, ls.length - 1, fitText(ls.slice(1).join(" "), cw));
+          return ls;
+        });
+        content.push(group.map((g, j) => [j * (cw + 2), fitText(g.label, cw), MX_INK.dim, 0]));
+        content.push(group.map((g, j) => [j * (cw + 2), fitText(g.value, cw), g.ink, g.bold]));
+        for (let r = 0; r < Math.max(0, ...notes.map((a) => a.length)); r++) {
+          content.push(group.map((g, j) => [j * (cw + 2), notes[j][r] || "", MX_INK.dim, 0]));
+        }
+        content.push([]);
+      }
+      const foot = wrapText(words(d.querySelector(".dfoot")), iw);
+      if (cutFoot > 0 && foot.length) {
+        foot.length = Math.max(1, foot.length - cutFoot);
+        const last = foot[foot.length - 1];
+        foot[foot.length - 1] = cellsOf(last) + 2 <= iw ? last + " …" : fitText(last + " …", iw);
+      }
+      for (const l of foot) content.push([[0, l, MX_INK.dim, 0]]);
+      const closeEl = $("dclose");
+      box(words(d.querySelector(".dtitle")).toUpperCase(), words(bandEl).toUpperCase(), content, {
+        rightInk: (bandEl && bandEl.style.color) || MX_INK.text,
+        close: { act: "toggle:" + key + ":close", lit: hover === "toggle:" + key + ":close" || document.activeElement === closeEl },
+      });
+    }
+
+    /* the cost strip, a different instrument: its own colours, below its own rule */
+    function costBox(level) {
+      const tag = words(document.querySelector(".rule .tag"));
+      const side = Math.max(2, Math.floor((w - cellsOf(tag) - 2) / 2));
+      const rule = row(true);
+      put(rule, 0, "─".repeat(side), MX_INK.line);
+      put(rule, side + 1, tag, MX_INK.dim);
+      put(rule, side + 2 + cellsOf(tag), "─".repeat(Math.max(0, w - side - cellsOf(tag) - 2)), MX_INK.line);
+      row(false);
+      const warnP = document.querySelector(".cwarn"), lead = words(warnP && warnP.querySelector("b"));
+      const content = [];
+      if (level < 2) {
+        wrapText(words(warnP), iw).forEach((l, k) => {
+          if (k === 0 && lead && l.startsWith(lead)) content.push([[0, lead, MX_INK.hi, 1], [cellsOf(lead), l.slice(lead.length), MX_INK.text, 0]]);
+          else content.push([[0, l, MX_INK.text, 0]]);
+        });
+      } else if (lead) content.push([[0, lead, MX_INK.hi, 1]]);
+      content.push([]);
+      const total = words($("costTotal")), key = words($("costKey")).toUpperCase();
+      content.push([[0, total, "#b6bee0", 1], [cellsOf(total) + 3, key, MX_INK.dim, 0]]);
+      const parts = [...$("costBar").children].map((s) => [parseFloat(s.style.width) || 0, s.style.backgroundColor || "#9aa4dc"]);
+      if (parts.length) {
+        /* each model its own share, rounded where the running total falls, and the rest left as track */
+        const segs = [];
+        let x = 0, sum = 0;
+        for (const [p, ink] of parts) {
+          sum += p;
+          const end = Math.min(iw, Math.round((sum / 100) * iw));
+          if (end > x) { segs.push([x, "█".repeat(end - x), ink, 0]); x = end; }
+        }
+        if (x < iw) segs.push([x, "░".repeat(iw - x), MX_INK.line, 0]);
+        content.push(segs);
+      }
+      if (level < 3) {
+        const c3 = 6, c2 = 12, c1 = iw - c2 - c3 - 2;
+        content.push([[0, "MODEL", MX_INK.dim, 0], [c1 + c2 - 4, "COST", MX_INK.dim, 0], [iw - 5, "SHARE", MX_INK.dim, 0]]);
+        for (const tr of $("costRows").children) {
+          const tds = [...tr.children];
+          if (tds.length < 3) { content.push([[0, words(tr), MX_INK.dim, 0]]); continue; }
+          const sw = tds[0].querySelector(".sw"), cost = words(tds[1]), share = words(tds[2]);
+          content.push([[0, "■", (sw && sw.style.backgroundColor) || MX_INK.dim, 0], [2, fitText(words(tds[0]), c1 - 2), MX_INK.text, 0],
+                        [c1 + c2 - cellsOf(cost), cost, MX_INK.text, 0], [iw - cellsOf(share), share, MX_INK.text, 0]]);
+        }
+      }
+      const noteEl = $("costNote"), note = words(noteEl), err = noteEl.querySelector("span[style]");
+      if (note) {
+        /* two lines at most; a note cut short says so */
+        const ls = wrapText(note, iw);
+        if (ls.length > 2) ls.splice(1, ls.length - 1, fitText(ls.slice(1).join(" "), iw));
+        for (const l of ls) content.push([[0, l, err ? "#ff8a96" : MX_INK.dim, 0]]);
+      }
+      box(words(document.querySelector(".chead h2")).toUpperCase(), "", content);
+    }
+
+    header();
+    row(false);
+    for (const key of ORDER) {
+      limitBox(key, [7, 5, 3, 3, 3, 0][level]);
+      detailBox(key, cutFoot);
+    }
+    if (level < 4) { row(false); costBox(level); }
+    return { rows: out, regions: regs, gear };
+  }
+
+  function build() {
+    queued = false;
+    if (!active || !cols || !rows) return;
+    const w = cols < 30 ? cols : Math.min(cols - 2, MX.wide);
+    /* the page fits the rows wholly on screen; a half-shown last row would cut a frame off */
+    const fit = Math.max(1, Math.floor(H / CH));
+    let doc = null;
+    for (let level = 0; level <= 5; level++) { doc = compose(w, level); if (doc.rows.length <= fit) break; }
+    /* still too tall with the chart and the cost strip given up: the detail's explanation gives up
+       its last lines, and says so, rather than running off the bottom */
+    if (doc.rows.length > fit) doc = compose(w, 5, doc.rows.length - fit);
+    const n = cols * rows, x0 = Math.max(0, Math.floor((cols - w) / 2)), y0 = Math.max(0, Math.floor((fit - doc.rows.length) / 2));
+    const C = new Array(n).fill(""), F = new Array(n).fill(""), K = new Uint8Array(n), B = new Uint8Array(n);
+    doc.rows.forEach((L, k) => {
+      const r = y0 + k;
+      if (r >= rows) return;
+      if (L.back) for (let c = Math.max(0, x0 + L.back[0]); c <= Math.min(cols - 1, x0 + L.back[1]); c++) B[r * cols + c] = 1;
+      for (const [c0, text, ink, bold] of L.segs) {
+        let c = x0 + c0;
+        for (const g of text) {
+          if (c >= 0 && c < cols) { const i = r * cols + c; C[i] = g; F[i] = ink; K[i] = bold; B[i] = 1; }
+          c++;
+        }
+      }
+    });
+    regions = doc.regions.map((g) => ({ r0: g.r0 + y0, r1: g.r1 + y0, c0: g.c0 + x0, c1: g.c1 + x0, act: g.act }));
+    for (let i = 0; i < n; i++) {
+      if (C[i] === chs[i] && F[i] === fgs[i] && K[i] === wts[i] && B[i] === backs[i]) continue;
+      chs[i] = C[i]; fgs[i] = F[i]; wts[i] = K[i]; backs[i] = B[i];
+      drawCell(i);
+    }
+    placeGear(doc.gear ? { r: doc.gear.r + y0, c: doc.gear.c + x0 } : null);
+  }
+  function schedule() {
+    if (queued || !active) return;
+    queued = true;
+    requestAnimationFrame(build);
+  }
+
+  /* The settings gear is still the glass page's button: it is moved over the terminal's [≡] and
+     made invisible there, so the click, the focus and the panel it opens are the real ones. */
+  function placeGear(g) {
+    const st = prefsEl.style, vals = g ? [g.c * CW, g.r * CH, 3 * CW, CH].map((v) => v + "px") : ["", "", "", ""];
+    ["--mx-x", "--mx-y", "--mx-w", "--mx-h"].forEach((k, j) => {
+      if (st.getPropertyValue(k) === vals[j]) return;
+      if (vals[j]) st.setProperty(k, vals[j]); else st.removeProperty(k);
+    });
+  }
+
+  /* ── pointer and focus ──────────────────────────────────────── */
+  const hit = (e) => {
+    const c = Math.floor(e.clientX / CW), r = Math.floor(e.clientY / CH);
+    for (let k = regions.length - 1; k >= 0; k--) {
+      const g = regions[k];
+      if (r >= g.r0 && r <= g.r1 && c >= g.c0 && c <= g.c1) return g;
+    }
+    return null;
+  };
+  front.addEventListener("click", (e) => {
+    const g = hit(e);
+    if (g && g.act.startsWith("toggle:")) $("ring-" + g.act.split(":")[1]).click();
+  });
+  front.addEventListener("pointermove", (e) => {
+    const g = hit(e), h = g ? g.act : null;
+    front.style.cursor = g ? "pointer" : "";
+    if (h !== hover) { hover = h; schedule(); }
+  });
+  front.addEventListener("pointerleave", () => { if (hover) { hover = null; schedule(); } });
+  /* the glass page's focus is the terminal's: a focused control lights its box */
+  document.addEventListener("focusin", schedule);
+  document.addEventListener("focusout", schedule);
+  /* anything the glass page changes, the terminal follows; the settings panel is its own */
+  const mo = new MutationObserver((recs) => { if (!recs.every((r) => prefsEl.contains(r.target))) schedule(); });
+
+  /* ── the canvases and the loop ────────────────────────────────── */
+  /* Sized to their own box, in whole cells of the face as it is now. A new size carries the
+     rain over pixel for pixel when the cells are the same, so a stopped rain stays stopped; only
+     one the window has outgrown by a real margin is drawn afresh. */
+  const scratch = document.createElement("canvas");
+  function resize() {
+    const d = Math.min(window.devicePixelRatio || 1, 2), w = back.clientWidth, h = back.clientHeight;
+    tc.font = `${MX.font}px ${MX.face}`;
+    font = "";
+    const cw = Math.max(6, Math.round(tc.measureText("0").width || MX.font * 0.6)), ch = Math.round(MX.font * MX.line);
+    if (w === W && h === H && d === dpr && cw === CW && ch === CH) return false;
+    const keep = painted && back.width > 0 && back.height > 0 && cw === CW && ch === CH && (loop || W * H >= 0.9 * w * h), was = dpr;
+    if (keep) {
+      scratch.width = back.width;
+      scratch.height = back.height;
+      scratch.getContext("2d").drawImage(back, 0, 0);
+    }
+    const newAtlas = d !== dpr || cw !== CW || ch !== CH || !atlas;
+    W = w; H = h; dpr = d; CW = cw; CH = ch;
+    for (const cv of [back, front]) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    if (keep) {
+      bc.drawImage(scratch, 0, 0, (scratch.width * dpr) / was, (scratch.height * dpr) / was);
+      scratch.width = scratch.height = 0;
+    }
+    bc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    tc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    tc.textAlign = "center"; tc.textBaseline = "middle";
+    font = "";
+    cols = Math.ceil(W / CW);
+    rows = Math.ceil(H / CH);
+    if (newAtlas) paintAtlas();
+    /* the streams carry on from where they were; only new columns start afresh */
+    streams = Array.from({ length: cols }, (_, c) => streams[c] || stream({}, true));
+    chs = []; fgs = []; wts = new Uint8Array(cols * rows); backs = new Uint8Array(cols * rows);
+    painted = keep;
+    build();
+    return true;
+  }
+
+  /* Fira Code has arrived. If its cells come out a different size, everything is redone anyway;
+     if not (on a Mac the fallback rounds to the same width), the rain's glyphs and every cell of
+     the page are still redrawn in it. */
+  function refont() {
+    if (!active) return;
+    if (resize()) { matrixMotion(); return; }
+    font = "";
+    paintAtlas();
+    chs = [];
+    build();
+    if (!loop && painted) drawStill();
+  }
+
+  function tick(ts) {
+    if (!loop) return;
+    raf = requestAnimationFrame(tick);
+    acc += lastTs ? Math.min(0.25, (ts - lastTs) / 1000) : 1 / MX.hz;
+    lastTs = ts;
+    if (acc < 1 / MX.hz) return;
+    /* one step a frame at most: a tab that was away resumes rather than racing to catch up */
+    acc = Math.min(acc - 1 / MX.hz, 1 / MX.hz);
+    step();
+  }
+  function play(on) {
+    if (on === loop) return;
+    loop = on;
+    if (on) { lastTs = 0; acc = 0; raf = requestAnimationFrame(tick); }
+    else { cancelAnimationFrame(raf); stillHeat = roomHeat; }
+  }
+
+  /* a scrollbar coming or going changes the canvases' box with no resize of the window, and a
+     move to a screen of another scale changes the pixels behind it without changing it at all */
+  if (typeof ResizeObserver === "function") new ResizeObserver(() => matrixMotion()).observe(back);
+  (function watchScale() {
+    const mq = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+    if (mq.addEventListener) mq.addEventListener("change", () => { matrixMotion(); watchScale(); }, { once: true });
+  })();
+
+  return {
+    get painted() { return painted; },
+    play, still: drawStill,
+    /* on: the observers, the face, the size and the page; idempotent */
+    start() {
+      if (!active) {
+        active = true;
+        mo.observe(mainEl, { childList: true, subtree: true, characterData: true, attributes: true,
+                             attributeFilter: ["aria-expanded", "class", "style", "data-tone", "data-on", "data-pace", "data-band", "data-hot", "data-quiet", "data-state"] });
+        mo.observe(document.body, { attributes: true, attributeFilter: ["data-hold"] });
+        /* the cells are measured in Fira Code; until it has come, a fallback face stands in */
+        if (document.fonts && document.fonts.load) {
+          document.fonts.load(`${MX.font}px "Fira Code"`).then(refont, () => {});
+        }
+      }
+      if (!resize()) schedule();
+    },
+    /* off: everything stops, and the canvases' memory goes back */
+    stop() {
+      if (!active) return;
+      active = false;
+      play(false);
+      mo.disconnect();
+      hover = null;
+      front.style.cursor = "";
+      for (const cv of [back, front]) { cv.width = 0; cv.height = 0; }
+      W = H = 0;
+      painted = false;
+      placeGear(null);
+    },
+    /* A frame that is standing still shows the heat it was drawn with; once a reading moves the
+       heat on, it is drawn again, as the fluid's still frame follows its ring. */
+    heat() { if (active && !loop && painted && Math.abs(roomHeat - stillHeat) > 0.1) drawStill(); },
+  };
+}
+
+/* What the terminal should be doing now: nothing outside the Matrix theme; rain falling behind
+   the page while the background may move; otherwise one still frame of it. */
+function matrixMotion() {
+  const on = PREFS.theme === "matrix";
+  /* like a fluid that cannot start, a terminal that cannot is left out; the glass page stands */
+  if (on && !matrix && !matrixBroken) {
+    try { matrix = makeMatrix($("rain"), $("tui")); } catch (_) { matrix = null; }
+    matrixBroken = !matrix;
+  }
+  const root = document.documentElement;
+  if (!matrix) { root.removeAttribute("data-tui"); return; }
+  if (!on) { matrix.stop(); root.removeAttribute("data-tui"); return; }
+  /* the glass page is put out of sight only once there is a terminal to stand in for it */
+  root.setAttribute("data-tui", "");
+  matrix.start();
+  const moving = PREFS.rain && !REDUCE.matches;
+  matrix.play(moving);
+  if (!moving && !matrix.painted) matrix.still();
+}
+
 /* ═════════════════════════ settings ═════════════════════════
-   How the page looks, never what it measures: the fluid, its speed,
-   the shake, the drifting sky and the typeface. Kept in this browser,
-   applied before the ring is first drawn so a chosen face never
-   flashes in the default one, and followed in other open tabs. Only
-   choices that differ from the defaults are stored, so a later change
-   of default reaches everyone who never picked otherwise. The system's
-   reduced-motion setting still stills everything, whatever these say. */
+   How the page looks, never what it measures: the theme, and each
+   theme's own — Glass's fluid, its speed, the shake, the moving
+   background and the typeface; the Matrix terminal's rain. The panel
+   lists only the settings of the theme on screen. Kept
+   in this browser, applied before the ring is first drawn so a
+   chosen look never flashes in the default one, and followed in other
+   open tabs. Only choices that differ from the defaults are stored, so
+   a later change of default reaches everyone who never picked
+   otherwise. The system's reduced-motion setting still stills
+   everything, whatever these say.                                    */
 const PREFS_KEY = "ccquota.prefs";
-const PREF_DEFAULTS = { fluid: true, speed: FLUID.speed, shake: true, sky: true, font: "system" };
+const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true, font: "system" };
+/* key, label, and the glyphs on its swatch */
+const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
 /* key, label, and the stylesheet variable holding its stack */
 const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source Serif 4", "--font-serif"],
                ["noto-sans", "Noto Sans", "--font-noto"], ["fira-code", "Fira Code", "--font-code"]];
-const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring"],
-                  ["shake", "Vibration", "The ring shakes while over pace"],
-                  ["sky", "Animated background", "The colour drifting behind the glass"]];
+/* key, label, hint, and the theme it belongs to */
+const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "glass"],
+                  ["shake", "Vibration", "The ring shakes while over pace", "glass"],
+                  ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
+                  ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"]];
+/* the face in force: Matrix sets its own, and the reader's choice waits for the theme to change back */
+const faceOf = (p) => (p.theme === "matrix" ? "fira-code" : p.font);
 
 /* Never trusts the stored copy further than it can be checked: a stale or hand-edited entry
    falls back to the default one key at a time instead of breaking the page. */
@@ -2364,6 +3294,7 @@ function loadPrefs() {
   for (const [k] of SWITCHES) if (typeof saved[k] === "boolean") p[k] = saved[k];
   if (SPEEDS.some(([v]) => v === saved.speed)) p.speed = saved.speed;
   if (FONTS.some(([k]) => k === saved.font)) p.font = saved.font;
+  if (THEMES.some(([k]) => k === saved.theme)) p.theme = saved.theme;
   return p;
 }
 let PREFS = loadPrefs();
@@ -2377,29 +3308,35 @@ function savePrefs() {
 }
 
 function buildPrefs() {
-  const sw = ([name, label, hint]) => `
-      <label class="prow">
+  const sw = ([name, label, hint, theme]) => `
+      <label class="prow" data-for="${theme}">
         <span class="ptext"><span class="pname">${label}</span><span class="phint">${hint}</span></span>
         <input class="switch" type="checkbox" role="switch" name="${name}">
       </label>`;
   $("prefsPanel").innerHTML = `
     <div class="ptitle">Settings</div>
+    <div class="psec" role="group" aria-labelledby="ph-theme">
+      <div class="phead" id="ph-theme">Theme</div>
+      <div class="picks" role="radiogroup" aria-labelledby="ph-theme">${THEMES.map(([k, label, sample]) =>
+        `<label class="pick" data-pick="${k}"><input type="radio" name="theme" value="${k}"><span class="swatch" aria-hidden="true">${sample}</span><span class="fn">${label}</span></label>`).join("")}</div>
+    </div>
     <div class="psec" role="group" aria-labelledby="ph-motion">
       <div class="phead" id="ph-motion">Motion</div>
       ${sw(SWITCHES[0])}
-      <div class="prow sub">
+      <div class="prow sub" id="prefsSpeed" data-for="glass">
         <span class="pname" id="pn-speed">Speed</span>
         <div class="seg" role="radiogroup" aria-labelledby="pn-speed">${SPEEDS.map(([v, label]) =>
           `<label><input type="radio" name="speed" value="${v}"><span>${label}</span></label>`).join("")}</div>
       </div>
       ${sw(SWITCHES[1])}
       ${sw(SWITCHES[2])}
+      ${sw(SWITCHES[3])}
       <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-font">
+    <div class="psec" role="group" aria-labelledby="ph-font" data-for="glass">
       <div class="phead" id="ph-font">Typeface</div>
-      <div class="fonts" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
-        `<label class="font"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
+      <div class="picks" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
+        `<label class="pick"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
     <div class="pfoot"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
 
@@ -2408,6 +3345,7 @@ function buildPrefs() {
     if (SWITCHES.some(([k]) => k === t.name)) PREFS[t.name] = t.checked;
     else if (t.name === "speed") PREFS.speed = Number(t.value);
     else if (t.name === "font") PREFS.font = t.value;
+    else if (t.name === "theme") PREFS.theme = t.value;
     else return;
     savePrefs();
     showPrefs();
@@ -2424,21 +3362,32 @@ function buildPrefs() {
 /* the controls show what is in force, whoever changed it — this tab, another one, or a reset */
 function syncPrefs() {
   const panel = $("prefsPanel");
+  panel.querySelectorAll('input[name="theme"]').forEach((r) => { r.checked = r.value === PREFS.theme; });
   for (const [k] of SWITCHES) panel.querySelector(`input[name="${k}"]`).checked = PREFS[k];
-  panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; r.disabled = !PREFS.fluid; });
+  panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; });
   panel.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === PREFS.font; });
+  /* Only the settings of the theme on screen are listed — the glass page's when the terminal
+     cannot run, whatever was chosen — and the speed only while there is a fluid to speed up. */
+  const shown = tuiOn() ? "matrix" : "glass";
+  panel.querySelectorAll("[data-for]").forEach((el) => { el.hidden = el.dataset.for !== shown; });
+  if (!PREFS.fluid) $("prefsSpeed").hidden = true;
   $("prefsStill").hidden = !REDUCE.matches;
   $("prefsReset").disabled = Object.keys(PREF_DEFAULTS).every((k) => PREFS[k] === PREF_DEFAULTS[k]);
 }
 
 function applyPrefs() {
   const root = document.documentElement;
-  root.dataset.font = PREFS.font;
+  root.dataset.theme = PREFS.theme;
+  root.dataset.font = faceOf(PREFS);
   root.dataset.shake = PREFS.shake ? "on" : "off";
   root.dataset.sky = PREFS.sky ? "on" : "off";
   FLUID.speed = PREFS.speed;
-  if (PREFS.fluid) startFluids();
+  /* the terminal first: whether it runs decides the fluid, the wording and the controls */
+  matrixMotion();
+  if (PREFS.fluid && !tuiOn()) startFluids();
   fluidMotion();
+  /* the cost strip points at the gauge above it, which is a bar in the terminal */
+  $("cwGauge").textContent = tuiOn() ? "bar" : "ring";
   syncPrefs();
 }
 
@@ -2448,6 +3397,7 @@ function showPrefs() {
   applyPrefs();
   S.chartsDirty = true;
   render();
+  renderCost();   // its note names the gauge, which the theme decides
 }
 
 const prefsEl = $("prefs"), gearEl = $("gear");
@@ -2470,7 +3420,7 @@ addEventListener("storage", (e) => {
   PREFS = loadPrefs();
   showPrefs();
 });
-if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); syncPrefs(); });
+if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); syncPrefs(); });
 
 /* ═════════════════════════ cost ═════════════════════════
    A different data source with a different meaning, in a colour
@@ -2505,7 +3455,7 @@ function renderCost() {
       : `<tr><td class="mn" colspan="3" style="color:var(--ink-4)">ccusage reports no local usage in the last seven days</td></tr>`;
 
   if (c.error) {
-    $("costNote").innerHTML = `<span style="color:#f0b9c4">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota ring above is unaffected.`;
+    $("costNote").innerHTML = `<span style="color:#f0b9c4">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota ${tuiOn() ? "bar" : "ring"} above is unaffected.`;
   } else if (c.stale) {
     $("costNote").textContent = "Cached copy while a refresh runs. Recomputed at most every 5 minutes.";
   } else {
@@ -2578,8 +3528,8 @@ setInterval(loadCost, 300000);
    from resetsAt on the client — nothing here re-polls anything. */
 setInterval(render, 1000);
 
-/* charts are drawn to their measured width and the fluids to their pixel size, so both
-   follow a resize — once per frame at most, however fast the events come */
+/* charts are drawn to their measured width, and the fluids and the rain to their pixel size,
+   so all of them follow a resize — once per frame at most, however fast the events come */
 let resizeQueued = false;
 addEventListener("resize", () => {
   if (resizeQueued) return;
@@ -2588,6 +3538,7 @@ addEventListener("resize", () => {
     resizeQueued = false;
     renderCharts();
     for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].resize();
+    matrixMotion();
     placeSeam();
   });
 });
