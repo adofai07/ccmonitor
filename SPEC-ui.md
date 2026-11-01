@@ -57,11 +57,15 @@ window is one grid of character cells in Fira Code, shared by two layers.
   carry a colour keep it (the bar's band, the pace channel, the hold and error tones, the cost
   strip's own family).
 - **The rain** falls on the layer below: columns of digits, letters and signs at a fixed 22
-  steps a second whatever the display's rate, in **green**, with a brighter head; about four
-  columns in ten are falling at any moment.
+  steps a second whatever the display's rate, in **green**, with a head of the same colour lit
+  most of the way to white (less of the way for a dark colour, so a dark rain stays dark); about
+  four columns in ten are falling at any moment, whatever the window's height. All three are
+  settings: *Speed* scales the steps, *Amount* sets the share of columns falling, and
+  *Colour #1* is the green.
 - **The page is always in front.** It is drawn over the rain and never gives way to it: the rain
   shows at full strength in the gaps and only as a glimmer under the boxes. Whatever is amber is
   the page; whatever is green is rain, so a falling digit is never read as part of a reading.
+  The amber is not a setting; the rain's colours are, and a rain set in amber gives this up.
 - **The same words.** The glass page is still there, out of sight, and the terminal reads its
   words off it, so the two themes never say different things; the detail panel's explanation
   names the bar and the ▲ under Matrix, the ring and the tick under Glass. Screen readers and
@@ -73,9 +77,10 @@ window is one grid of character cells in Fira Code, shared by two layers.
   in a small window its explanation gives up its last lines and ends in "…". When the freshness
   line does not fit beside the name, the header splits over two lines.
 - The rain warms with the room: the hotter the weekly limit runs, the more of the streams coming
-  on screen fall in red, as the gradient warms in Glass.
+  on screen fall in red (*Colour #2*), as the gradient warms in Glass.
 - *Rain*, the terminal's own setting, off stops the rain where it stands, and
-  `prefers-reduced-motion` shows one still frame of it; a still frame is drawn again when a new
+  `prefers-reduced-motion` shows one still frame of it: the rain as it is once settled, at its
+  amount. A still frame is drawn again when the rain's amount or colours change, and when a new
   reading moves the room's heat, so it never shows a calm room at the cap.
 - The terminal has no fluid, no shake and no choice of face, so Settings does not list those
   while it is on. A browser that cannot draw it keeps the glass page, and its settings.
@@ -205,12 +210,17 @@ greyed out.
 | Glass | Animated background | on / off — off pauses the drifting sky where it stands | on |
 | Glass | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
 | Matrix | Rain | on / off — off stops the rain where it stands | on |
+| Matrix | Amount | slider, 5–100% of the columns falling at once — listed only while the rain is on | 40% |
+| Matrix | Speed | slider, 0.25×–2.5× of 22 steps a second — listed only while the rain is on | 1× |
+| Matrix | Colour #1 | any colour — the rain; its heads are the colour lit toward white, less so the darker it is | green `#00ff66` |
+| Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
 
 Settings change how the page looks, never what it measures or how it judges a reading:
 switching the shake off leaves the over-pace verdict in the tick, the caption and the halo.
 They are kept in this browser (only the ones that differ from the default), applied before the
-ring is first drawn, and followed in other open tabs. The system's reduced-motion setting
-still stills everything, and the panel says so while it is on.
+ring is first drawn, and followed in other open tabs. A slider or a colour is followed on screen
+as it moves, and kept once it is let go. The system's reduced-motion setting still stills
+everything, and the panel says so while it is on.
 
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
 font service. Fira Code also takes over the figures, which are otherwise set in the system's

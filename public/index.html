@@ -235,7 +235,8 @@ main {
 .ptext { min-width: 0; }
 .pname { display: block; font-size: 13px; line-height: 1.35; color: var(--ink); }
 .phint { display: block; font-size: 11px; line-height: 1.35; color: var(--ink-4); }
-/* the speed belongs to the fluid, so it sits under it, and is there only while the fluid is on */
+/* a setting's own settings sit under it, and are there only while it is on: the fluid's speed,
+   the rain's amount and speed */
 .prow.sub { cursor: default; padding: 0 0 6px 12px; }
 .prow.sub .pname { font-size: 12px; color: var(--ink-2); }
 
@@ -266,6 +267,34 @@ main {
 .seg input:checked + span { background: rgb(var(--tint) / .13); color: var(--ink); }
 .seg input:focus-visible + span { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 1px; }
 
+/* The rain's sliders and colours are listed only while the terminal runs, so they are drawn square
+   from the start. A slider: its name, its track, filled up to the thumb (--fill, set by the
+   script), and the value it is at. Each engine's parts get rules of their own: a selector one
+   engine does not know would drop the whole rule in it. */
+.prow.slide { display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px; gap: 10px; }
+.range { appearance: none; -webkit-appearance: none; width: 100%; height: 18px; margin: 0; background: none; cursor: pointer; }
+.range::-webkit-slider-runnable-track {
+  height: 4px; background: linear-gradient(to right, rgb(var(--ink-rgb) / .5) var(--fill, 0%), rgb(var(--tint) / .12) var(--fill, 0%));
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 12px; height: 12px; margin-top: -4px; border: 0;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.45);
+}
+.range::-moz-range-track { height: 4px; background: rgb(var(--tint) / .12); }
+.range::-moz-range-progress { height: 4px; background: rgb(var(--ink-rgb) / .5); }
+.range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
+.pval { font-size: 11.5px; color: var(--ink-2); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* a colour: the browser's own picker, shown as a patch of the colour it holds */
+.pcolour {
+  appearance: none; -webkit-appearance: none; flex: none; width: 34px; height: 20px; margin: 0; padding: 0;
+  border: 1px solid rgb(var(--tint) / .3); background: none; cursor: pointer;
+}
+.pcolour::-webkit-color-swatch-wrapper { padding: 2px; }
+.pcolour::-webkit-color-swatch { border: 0; border-radius: 0; }
+.pcolour::-moz-color-swatch { border: 0; border-radius: 0; }
+.range:focus, .pcolour:focus { outline: none; }
+.range:focus-visible, .pcolour:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
+
 .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px 0 2px; }
 .pick {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -292,9 +321,19 @@ main {
   background: #000; color: #34ff7f; font: 13px/24px var(--font-code); letter-spacing: .32em; text-align: center;
   text-shadow: 0 0 6px rgb(0 255 102 / .7);
 }
+/* the terminal's falls in the rain's own colour, Colour #1, which the script sets as --rain. A
+   declaration holding var() always parses, so it would hide the fixed green above even where
+   color-mix() is unknown; it goes in only where color-mix() is known. */
+@supports (color: color-mix(in srgb, red, blue)) {
+  .pick[data-pick="matrix"] .swatch {
+    color: color-mix(in srgb, var(--rain, #00ff66), #fff 20%);
+    text-shadow: 0 0 6px color-mix(in srgb, var(--rain, #00ff66) 70%, transparent);
+  }
+}
 
 .pnote { margin: 2px 0 6px; font-size: 11px; line-height: 1.45; color: #f4dfb2; }
-/* the panel lists only what applies: another theme's settings, or the speed with no fluid, are left out */
+/* the panel lists only what applies: another theme's settings, the fluid's speed with no fluid and
+   the rain's sliders with no rain are left out, whatever display their rows have of their own */
 .panel [hidden] { display: none !important; }
 .pfoot {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -2453,20 +2492,26 @@ function startFluids() {
    only a glimmer under its boxes, and never takes a character's place.
    Whatever is amber is the page; whatever is green is rain.
    The rain warms with the room: the hotter the limit, the more of the
-   streams coming on screen fall in red. Its own setting, "Rain", off
-   stops it where it stands, and reduced motion holds one still frame. */
+   streams coming on screen fall in red. Its own settings: "Rain", off
+   stops it where it stands, and reduced motion holds one still frame;
+   its amount and speed; and its two colours, the green and the red. */
 const MX = {
   font: 15,      // px; a cell is one Fira Code advance wide
   line: 1.3,     // and this many ems tall
-  hz: 22,        // rain steps a second
+  hz: 22,        // rain steps a second at Speed 1×
   fade: 0.14,    // share of every glyph's light lost each step, which sets how long a trail is
-  rest: 10,      // the longest a column waits between streams, in seconds, so about four in ten are falling
   wide: 100,     // the page's widest, in cells
   glyphs: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:;.,=+-*<>/\\|#%$&@!?^~()[]{}",
   face: '"Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace',
 };
-/* the rain's inks, by index: a head and a trail, then the same pair warm */
-const MX_RAIN = [[208, 255, 216], [0, 255, 102], [255, 214, 204], [255, 48, 40]];
+/* The rain's inks, by index: a head and a trail in Colour #1, then the same pair in Colour #2, the
+   warm one. A trail is the colour itself, and its head the colour lit toward white: most of the
+   way for a bright colour, less for a dark one, so a dark rain stays dark and a black one unseen. */
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rainInks = (p) => [p.rain1, p.rain2].flatMap((h) => {
+  const c = hexRgb(h);
+  return [mix(c, [255, 255, 255], (0.78 * Math.max(...c)) / 255), c];
+});
 /* the page's: amber, from emphasis down to the frames */
 const MX_INK = { hi: "#ffc845", text: "#ffb000", label: "#d69400", dim: "#9c6d00", line: "#7a5500", lit: "#ffe08a" };
 const MX_BACK = "rgb(0 0 0 / .9)";    // behind the page's cells, so the rain under it is only a glimmer
@@ -2521,13 +2566,17 @@ function makeMatrix(back, front) {
 
   /* ── the rain ───────────────────────────────────────────────── */
   /* A column's stream. The first ones start anywhere above the screen, so the rain arrives over
-     a few seconds rather than as one row; each later one waits a moment before it starts.
-     Whether it falls warm is settled as it comes on screen, against the heat of that moment. */
+     a few seconds rather than as one row; each later one waits a moment before it starts. The
+     wait is drawn against the stream's own fall — n steps of falling, then on average
+     n·(1 − a)/a of waiting — so the share of columns falling at once is the Amount setting, a,
+     whatever the window's height and the speed. Whether it falls warm is settled as it comes on
+     screen, against the heat of that moment. */
   function stream(s, first) {
     s.v = 0.3 + rand() * 0.7;                    // rows a step
     s.y = first ? -rand() * rows * 0.6 : -1 - rand() * 6;
     s.row = Math.floor(s.y);
-    s.wait = rnd(MX.hz * MX.rest * (first ? 0.5 : 1));
+    const a = PREFS.rainAmount / 100, fall = (rows - s.y) / s.v;
+    s.wait = rnd(fall * ((1 - a) / a) * (first ? 1 : 2));
     s.u = rand();
     s.warm = s.u < roomHeat * 0.9;
     s.g = rnd(G.length);
@@ -2535,16 +2584,18 @@ function makeMatrix(back, front) {
   }
 
   /* every glyph in every ink, drawn once; a step only copies cells out of it */
+  let inkKey = "";   // the two colours the atlas holds
   function paintAtlas() {
-    const cw = CW + 2 * PAD, ch = CH + 2 * PAD;
+    const cw = CW + 2 * PAD, ch = CH + 2 * PAD, inks = rainInks(PREFS);
+    inkKey = PREFS.rain1 + PREFS.rain2;
     const a = document.createElement("canvas");
     a.width = Math.ceil(G.length * cw * dpr);
-    a.height = Math.ceil(MX_RAIN.length * ch * dpr);
+    a.height = Math.ceil(inks.length * ch * dpr);
     const x = a.getContext("2d");
     x.scale(dpr, dpr);
     x.font = `${MX.font}px ${MX.face}`;
     x.textAlign = "center"; x.textBaseline = "middle";
-    MX_RAIN.forEach((ink, k) => {
+    inks.forEach((ink, k) => {
       const c = ink.join(" ");
       x.fillStyle = `rgb(${c})`;
       x.shadowColor = `rgb(${c} / .8)`;
@@ -2605,14 +2656,23 @@ function makeMatrix(back, front) {
     }
   }
 
-  /* A field of rain stopped mid-fall, for reduced motion and the first frame of a paused one.
-     Each column draws from its own seeded generator, so it comes out the same each time it is
-     drawn. A resize does not draw it again: the pixels are carried over (see resize). */
+  /* A field of rain stopped mid-fall, for reduced motion and the first frame of a paused one. It
+     is the rain once it has settled, not as it arrives: each column is falling with the chance
+     the Amount sets, its head anywhere on its way down, and the rest are waiting; a few dozen
+     steps from there lay the trails down behind the heads. Each column draws from its own seeded
+     generator, so it comes out the same each time it is drawn. A resize does not draw it again:
+     the pixels are carried over (see resize). */
   function drawStill() {
     still = Array.from({ length: cols }, (_, c) => seeded(0x5eed + c * 7919));
     bc.clearRect(0, 0, W, H);
-    streams = streams.map((s, c) => { rand = still[c]; return stream(s, true); });
-    for (let i = 0; i < 150; i++) step();
+    const a = PREFS.rainAmount / 100;
+    streams = streams.map((s, c) => {
+      rand = still[c];
+      stream(s, false);
+      if (rand() < a) { s.wait = 0; s.y = -1 + rand() * (rows + 1); s.row = Math.floor(s.y); }
+      return s;
+    });
+    for (let i = 0; i < 30; i++) step();
     still = null;
     rand = Math.random;
     stillHeat = roomHeat;
@@ -3180,12 +3240,28 @@ function makeMatrix(back, front) {
   function tick(ts) {
     if (!loop) return;
     raf = requestAnimationFrame(tick);
-    acc += lastTs ? Math.min(0.25, (ts - lastTs) / 1000) : 1 / MX.hz;
+    const per = 1 / (MX.hz * PREFS.rainSpeed);   // seconds a step, at the speed set
+    acc += lastTs ? Math.min(0.25, (ts - lastTs) / 1000) : per;
     lastTs = ts;
-    if (acc < 1 / MX.hz) return;
-    /* one step a frame at most: a tab that was away resumes rather than racing to catch up */
-    acc = Math.min(acc - 1 / MX.hz, 1 / MX.hz);
-    step();
+    /* every step that is due, so a fast rain keeps its speed on a display with fewer frames than
+       it has steps; but three a frame at most, so a tab that was away resumes rather than racing
+       to catch up */
+    for (let n = 0; acc >= per && n < 3; n++) { acc -= per; step(); }
+    acc = Math.min(acc, per);
+  }
+
+  /* Settings moved the rain on. Another pair of colours is painted into the atlas; another amount
+     starts the streams still waiting over as the first ones start, so the rain thickens or thins
+     at once, while those already falling finish their fall. A rain standing still is drawn
+     again as the still frame of the new settings: the field it stopped on cannot be repainted,
+     so the seeded one takes its place. The speed needs nothing: each frame reads it. */
+  let amount = PREFS.rainAmount;
+  function retune() {
+    const recolour = PREFS.rain1 + PREFS.rain2 !== inkKey, reamount = PREFS.rainAmount !== amount;
+    amount = PREFS.rainAmount;
+    if (recolour) paintAtlas();
+    if (reamount) for (const s of streams) if (s.wait > 0) stream(s, true);
+    if ((recolour || reamount) && !loop && painted) drawStill();
   }
   function play(on) {
     if (on === loop) return;
@@ -3218,6 +3294,7 @@ function makeMatrix(back, front) {
         }
       }
       if (!resize()) schedule();
+      retune();
     },
     /* off: everything stops, and the canvases' memory goes back */
     stop() {
@@ -3261,7 +3338,8 @@ function matrixMotion() {
 /* ═════════════════════════ settings ═════════════════════════
    How the page looks, never what it measures: the theme, and each
    theme's own — Glass's fluid, its speed, the shake, the moving
-   background and the typeface; the Matrix terminal's rain. The panel
+   background and the typeface; the Matrix terminal's rain, how much
+   of it falls, how fast, and its two colours. The panel
    lists only the settings of the theme on screen. Kept
    in this browser, applied before the ring is first drawn so a
    chosen look never flashes in the default one, and followed in other
@@ -3270,7 +3348,8 @@ function matrixMotion() {
    otherwise. The system's reduced-motion setting still stills
    everything, whatever these say.                                    */
 const PREFS_KEY = "ccquota.prefs";
-const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true, font: "system" };
+const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true,
+                        rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", font: "system" };
 /* key, label, and the glyphs on its swatch */
 const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
@@ -3282,6 +3361,16 @@ const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "g
                   ["shake", "Vibration", "The ring shakes while over pace", "glass"],
                   ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
                   ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"]];
+/* The rain's sliders: key, label, the least, the most and the step, then its value as shown and as
+   read aloud. Amount is the share of the columns falling at once; Speed, of MX.hz steps a second. */
+const SLIDERS = [["rainAmount", "Amount", 5, 100, 5, (v) => v + "%", (v) => v + " percent of the columns falling"],
+                 ["rainSpeed", "Speed", 0.25, 2.5, 0.05, (v) => v + "×", (v) => v + " times the usual speed"]];
+/* the rain's colours: key, label and hint */
+const COLOURS = [["rain1", "Colour #1", "The rain"],
+                 ["rain2", "Colour #2", "The warm rain: the hotter the limit runs, the more of it"]];
+const isHex = (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+/* a slider's value put on its steps, without the dust of binary fractions */
+const onStep = (v, lo, hi, step) => Number((lo + Math.round((clamp(v, lo, hi) - lo) / step) * step).toFixed(2));
 /* the face in force: Matrix sets its own, and the reader's choice waits for the theme to change back */
 const faceOf = (p) => (p.theme === "matrix" ? "fira-code" : p.font);
 
@@ -3294,6 +3383,10 @@ function loadPrefs() {
   if (!saved || typeof saved !== "object") return p;
   for (const [k] of SWITCHES) if (typeof saved[k] === "boolean") p[k] = saved[k];
   if (SPEEDS.some(([v]) => v === saved.speed)) p.speed = saved.speed;
+  for (const [k, , lo, hi, step] of SLIDERS) {
+    if (typeof saved[k] === "number" && saved[k] >= lo && saved[k] <= hi) p[k] = onStep(saved[k], lo, hi, step);
+  }
+  for (const [k] of COLOURS) if (isHex(saved[k])) p[k] = saved[k].toLowerCase();
   if (FONTS.some(([k]) => k === saved.font)) p.font = saved.font;
   if (THEMES.some(([k]) => k === saved.theme)) p.theme = saved.theme;
   return p;
@@ -3314,6 +3407,17 @@ function buildPrefs() {
         <span class="ptext"><span class="pname">${label}</span><span class="phint">${hint}</span></span>
         <input class="switch" type="checkbox" role="switch" name="${name}">
       </label>`;
+  const slider = ([name, label, lo, hi, step]) => `
+      <div class="prow sub slide" data-for="matrix" data-rain>
+        <label class="pname" for="pr-${name}">${label}</label>
+        <input class="range" type="range" id="pr-${name}" name="${name}" min="${lo}" max="${hi}" step="${step}">
+        <span class="pval" id="pv-${name}" aria-hidden="true"></span>
+      </div>`;
+  const colour = ([name, label, hint]) => `
+      <label class="prow" data-for="matrix">
+        <span class="ptext"><span class="pname">${label}</span><span class="phint">${hint}</span></span>
+        <input class="pcolour" type="color" name="${name}">
+      </label>`;
   $("prefsPanel").innerHTML = `
     <div class="ptitle">Settings</div>
     <div class="psec" role="group" aria-labelledby="ph-theme">
@@ -3332,7 +3436,12 @@ function buildPrefs() {
       ${sw(SWITCHES[1])}
       ${sw(SWITCHES[2])}
       ${sw(SWITCHES[3])}
+      ${SLIDERS.map(slider).join("")}
       <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
+    </div>
+    <div class="psec" role="group" aria-labelledby="ph-colour" data-for="matrix">
+      <div class="phead" id="ph-colour">Colours</div>
+      ${COLOURS.map(colour).join("")}
     </div>
     <div class="psec" role="group" aria-labelledby="ph-font" data-for="glass">
       <div class="phead" id="ph-font">Typeface</div>
@@ -3341,15 +3450,29 @@ function buildPrefs() {
     </div>
     <div class="pfoot"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
 
+  /* a slider or a colour, read into the settings: put on its steps, or refused if it is no colour;
+     false for any other control */
+  const knob = (t) => {
+    const s = SLIDERS.find(([k]) => k === t.name);
+    if (s) { PREFS[t.name] = onStep(Number(t.value), s[2], s[3], s[4]); return true; }
+    if (COLOURS.some(([k]) => k === t.name) && isHex(t.value)) { PREFS[t.name] = t.value.toLowerCase(); return true; }
+    return false;
+  };
   $("prefsPanel").addEventListener("change", (e) => {
     const t = e.target;
     if (SWITCHES.some(([k]) => k === t.name)) PREFS[t.name] = t.checked;
     else if (t.name === "speed") PREFS.speed = Number(t.value);
     else if (t.name === "font") PREFS.font = t.value;
     else if (t.name === "theme") PREFS.theme = t.value;
-    else return;
+    else if (!knob(t)) return;
     savePrefs();
     showPrefs();
+  });
+  /* the rain follows a slider or a colour as it moves; it is saved, and other tabs follow, once let go */
+  $("prefsPanel").addEventListener("input", (e) => {
+    if (!knob(e.target)) return;
+    matrixMotion();
+    syncPrefs();
   });
   $("prefsReset").addEventListener("click", () => {
     PREFS = { ...PREF_DEFAULTS };
@@ -3367,11 +3490,27 @@ function syncPrefs() {
   for (const [k] of SWITCHES) panel.querySelector(`input[name="${k}"]`).checked = PREFS[k];
   panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; });
   panel.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === PREFS.font; });
+  /* a value is written only when it differs, so a slider being dragged or an open picker is left alone */
+  for (const [k, , lo, hi, , show, say] of SLIDERS) {
+    const r = panel.querySelector(`input[name="${k}"]`), v = String(PREFS[k]);
+    if (r.value !== v) r.value = v;
+    r.style.setProperty("--fill", ((PREFS[k] - lo) / (hi - lo)) * 100 + "%");
+    r.setAttribute("aria-valuetext", say(PREFS[k]));
+    $("pv-" + k).textContent = show(PREFS[k]);
+  }
+  for (const [k] of COLOURS) {
+    const c = panel.querySelector(`input[name="${k}"]`);
+    if (c.value !== PREFS[k]) c.value = PREFS[k];
+  }
+  /* the theme's patch of itself falls in the rain's own colour */
+  panel.querySelector('.pick[data-pick="matrix"] .swatch').style.setProperty("--rain", PREFS.rain1);
   /* Only the settings of the theme on screen are listed — the glass page's when the terminal
-     cannot run, whatever was chosen — and the speed only while there is a fluid to speed up. */
+     cannot run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
+     and the rain's amount and speed only while the rain is on. */
   const shown = tuiOn() ? "matrix" : "glass";
   panel.querySelectorAll("[data-for]").forEach((el) => { el.hidden = el.dataset.for !== shown; });
   if (!PREFS.fluid) $("prefsSpeed").hidden = true;
+  if (!PREFS.rain) panel.querySelectorAll("[data-rain]").forEach((el) => { el.hidden = true; });
   $("prefsStill").hidden = !REDUCE.matches;
   $("prefsReset").disabled = Object.keys(PREF_DEFAULTS).every((k) => PREFS[k] === PREF_DEFAULTS[k]);
 }
