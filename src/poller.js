@@ -1,9 +1,10 @@
 import { EventEmitter } from 'node:events';
-import { appendFileSync, closeSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { appendFileSync, closeSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { accountKey } from './credentials.js';
-import { getQuota, emptyQuota, secondsUntil, THRESHOLDS } from './usage.js';
+import { cacheDir } from './paths.js';
+import { FRESH_MS, readReport, reportPrefix } from './statusline.js';
+import { getQuota, emptyQuota, secondsUntil, withHeld, withReport, reportConflicts, FUTURE_SLACK_MS, ROUNDING, THRESHOLDS } from './usage.js';
 
 // MEASURED, not guessed. At 60s this endpoint answered exactly 5 polls and refused the
 // 6th, 47 times in a row, then needed ~6 minutes of silence to recover — a sustained
@@ -30,6 +31,22 @@ const RATE_LIMIT_BACKOFF_MS = 300_000;
 // a stale badge and one wasted request.
 const RATE_LIMIT_MAX_MS = 900_000;
 
+// Claude Code's status line (src/statusline.js) files a reading after every reply, read from
+// the rate-limit headers of its own requests: fresher than a poll, and free. A report younger
+// than this stands in for a poll, so the endpoint is asked only once at start (and once after an
+// account switch), for what reports do not carry; again once Claude Code has been quiet this
+// long — on claude.ai, say; and when a window passes its reset, which only a poll brings in.
+const REPORT_FRESH_MS = FRESH_MS;
+// The windows a report carries. Claude Code drops one from its readings once it resets.
+const REPORTED_KEYS = ['session', 'weekly'];
+// How often the report files are looked at: a listing and a stat each, and a read only of one
+// that changed.
+const REPORT_CHECK_MS = 2_000;
+// A session's report file outlives the session by this long, longer than any window, so a
+// session idle that long and then re-run still finds what it filed. Swept once an hour.
+const REPORT_KEEP_MS = 8 * 24 * 3_600_000;
+const REPORT_SWEEP_MS = 3_600_000;
+
 // 12 hours at the base interval — the span the sparkline draws.
 export const HISTORY_CAPACITY = 360;
 const HISTORY_KEYS = ['session', 'weekly', 'fable'];
@@ -51,11 +68,19 @@ const GAP_INTERVALS = 6;
 // Two points define a line exactly and say nothing about whether it is the right one.
 const MIN_SAMPLES = 3;
 
+// The smallest fall that is a window reset rather than rounding: polls come in whole points and
+// status line reports in tenths, and one usage read both ways differs by under a point.
+const RESET_DROP = ROUNDING;
+
 // The variance of rounding to the nearest integer, and the reason the segmentation below
 // needs no tuned thresholds: a percent is delivered rounded, so this noise level is KNOWN
 // rather than something to estimate from the data. Used as a known sigma-squared it makes a
 // tread-split unable to repay its parameters (a staircase already sits at this level, so
 // carving one up buys nothing) while still letting a genuine level shift pay for itself.
+//
+// Status line reports come in tenths, whose rounding noise is a hundredth of that, so for a run
+// of them this is an upper bound rather than the known level: it errs towards fewer splits and a
+// wider standard error, never towards a trend the data cannot support.
 //
 // Estimating the variance instead was subtly wrong: when both the one-line and two-line
 // models sat at the floor their likelihoods tied, BIC took the cheaper one, and a real stop
@@ -132,11 +157,22 @@ export class QuotaPoller extends EventEmitter {
       this.staleSince = new Date(penalty.since ?? Date.now()).toISOString();
     }
     this.samples = loadHistory(this.historyPath, capacity);
+    // The status line's reports: the newest one taken, the state of each session's file when
+    // last read, the timer for the moment the newest stops covering, and whether this account
+    // has had its one poll yet (for what reports do not carry).
+    this.report = null;
+    this.reportSeen = new Map();
+    this.sweptAt = 0;
+    this.reportTimer = null;
+    this.coverTimer = null;
+    this.polledOnce = false;
+    this.source = null;
   }
 
   start() {
     if (this.running) return this;
     this.running = true;
+    this.watchReports();
     this.tick();
     return this;
   }
@@ -145,6 +181,126 @@ export class QuotaPoller extends EventEmitter {
     this.running = false;
     clearTimeout(this.timer);
     this.timer = null;
+    clearInterval(this.reportTimer);
+    this.reportTimer = null;
+    clearTimeout(this.coverTimer);
+    this.coverTimer = null;
+  }
+
+  /** Look for the status line's reports from now on. Part of start(); callable alone. */
+  watchReports() {
+    if (this.reportTimer) return;
+    this.checkReport();
+    this.reportTimer = setInterval(() => this.checkReport(), REPORT_CHECK_MS);
+    this.reportTimer.unref?.();
+  }
+
+  /** True while the newest status line report is recent enough to stand in for a poll. */
+  reportFresh(now = Date.now()) {
+    if (this.report === null) return false;
+    const age = now - this.report.at;
+    // A report dated ahead of this clock is from before it stepped back: no reading of now.
+    return age < REPORT_FRESH_MS && age > -FUTURE_SLACK_MS;
+  }
+
+  /**
+   * True while the reports can stand in for polls: one is fresh, and no window the reading
+   * holds has passed its reset. Claude Code drops a window from its readings the moment it
+   * resets, so a report cannot bring the new window in; only a poll can.
+   */
+  reportCovers(now = Date.now()) {
+    if (!this.reportFresh(now)) return false;
+    return !(this.last?.limits ?? []).some((l) =>
+      REPORTED_KEYS.includes(l.key) && Number.isFinite(l.percent) && Date.parse(l.resetsAt ?? '') <= now);
+  }
+
+  /*
+   * Every few seconds, a listing of the cache directory and a stat of each of this account's
+   * report files — one per Claude Code session — and a read only of one that changed. A file's
+   * state is remembered only once a read succeeds: a report caught mid-write is torn, and the
+   * same mtime must not then hide the finished one. The newest report wins in ingest(), whatever
+   * order the files are listed in. Files of sessions long gone are swept now and then.
+   */
+  checkReport() {
+    try {
+      // The account is followed by tick(), not here: that reads Claude Code's whole config,
+      // and an account switch can wait an interval where a stat every two seconds cannot.
+      const dir = cacheDir();
+      const prefix = reportPrefix(this.account);
+      let names;
+      try { names = readdirSync(dir); } catch { return; }
+      const now = Date.now();
+      const sweep = now - this.sweptAt > REPORT_SWEEP_MS;
+      if (sweep) this.sweptAt = now;
+      for (const name of names) {
+        if (!name.startsWith(prefix) || !name.endsWith('.json')) continue;
+        const path = join(dir, name);
+        let st;
+        try { st = statSync(path); } catch { continue; }
+        if (sweep && now - st.mtimeMs > REPORT_KEEP_MS) {
+          try { unlinkSync(path); } catch { /* already gone */ }
+          this.reportSeen.delete(name);
+          continue;
+        }
+        const seen = `${st.mtimeMs}:${st.size}`;
+        if (this.reportSeen.get(name) === seen) continue;
+        const report = readReport(path);
+        if (!report) continue;
+        this.reportSeen.set(name, seen);
+        this.ingest(report, now);
+      }
+    } catch (err) {
+      process.emitWarning(err); // a timer must never throw; the next check tries again
+    }
+  }
+
+  /**
+   * Take a report as the reading. An old one says nothing about now, one older than what is
+   * held adds nothing, and one dated ahead of the clock was filed before it stepped back.
+   * withReport() decides each window: one window, settle() (within a point the higher, else the
+   * newer); two, the later window. The trace keeps its cadence — a report is sampled at most
+   * once an interval — so a busy session does not crowd twelve hours of history into one.
+   */
+  ingest(report, now = Date.now()) {
+    if (report.at - now > FUTURE_SLACK_MS) return;
+    // One held from before a step back must not outrank what comes now either.
+    if (this.report && this.report.at - now > FUTURE_SLACK_MS) this.report = null;
+    if (now - report.at >= REPORT_FRESH_MS) return;
+    if (this.report && report.at <= this.report.at) return;
+    // One that would bring the reading down with no fall its session saw is no reading of now:
+    // left out, numbers and freshness both, so the next tick polls and settles it.
+    if (reportConflicts(this.last, report, now)) return;
+    this.report = report;
+    this.last = withReport(this.last, report, now);
+    // A poll's failure is kept, not cleared: snapshot() sets it aside while the reports cover,
+    // and it is what the reading is held with once they stop.
+    this.source = 'statusline';
+    const lastSample = this.samples[this.samples.length - 1];
+    if (!lastSample || report.at - lastSample.t >= this.intervalMs) this.record(this.last, report.at);
+    this.armCoverEnd(now);
+    try {
+      this.emit('update', this.snapshot());
+    } catch (err) {
+      process.emitWarning(err);
+    }
+  }
+
+  /*
+   * When the newest report stops covering beside a failing poll, the snapshot turns stale with
+   * no tick to say so — the next one may be a whole backoff away — so say it then.
+   */
+  armCoverEnd(now = Date.now()) {
+    clearTimeout(this.coverTimer);
+    this.coverTimer = setTimeout(() => {
+      this.coverTimer = null;
+      if (this.staleSince === null) return; // polling is healthy: the next tick asks, and says
+      try {
+        this.emit('update', this.snapshot());
+      } catch (err) {
+        process.emitWarning(err);
+      }
+    }, Math.max(0, this.report.at + REPORT_FRESH_MS - now) + 50);
+    this.coverTimer.unref?.();
   }
 
   /** Longest silence that still counts as one contiguous series. */
@@ -162,23 +318,34 @@ export class QuotaPoller extends EventEmitter {
    */
   snapshot(now = Date.now()) {
     const quota = this.last ?? emptyQuota(now);
+    // While reports stand in for polls, a poll that failed beside them does not make the
+    // reading stale: the reports are the reading. Once they stop, it is stale from then on.
+    const covered = this.reportCovers(now);
+    let staleSince = covered ? null : this.staleSince;
+    if (staleSince !== null && this.report !== null) {
+      const coverEnd = Math.min(now, this.report.at + REPORT_FRESH_MS);
+      if (coverEnd > Date.parse(staleSince)) staleSince = new Date(coverEnd).toISOString();
+    }
     // Before the first poll there is no staleSince, so age against the boot instant.
-    const since = this.staleSince ?? (this.last === null ? this.bootedAt : null);
+    const since = staleSince ?? (this.last === null ? this.bootedAt : null);
     return {
       ...quota,
       limits: quota.limits.map((limit) => ({
         ...limit,
         resetsInSeconds: secondsUntil(limit.resetsAt, now),
       })),
-      stale: this.last === null || this.staleSince !== null,
+      // where the newest reading came from: 'poll' (the usage endpoint), 'statusline'
+      // (Claude Code's status line, src/statusline.js), or null before either
+      source: this.last === null ? null : this.source,
+      stale: this.last === null || staleSince !== null,
       // stale:true with staleSince:null and lastError:null used to be the only signal that
       // the first poll had not landed yet — indistinguishable from a broken poller. These
       // two say which it is, and give the UI an age to show either way.
       hasData: this.last !== null,
       bootedAt: this.bootedAt,
-      staleSince: this.staleSince,
+      staleSince,
       staleSeconds: since === null ? null : Math.max(0, Math.round((now - Date.parse(since)) / 1000)),
-      lastError: this.lastError,
+      lastError: covered ? null : this.lastError,
     };
   }
 
@@ -326,6 +493,14 @@ export class QuotaPoller extends EventEmitter {
     this.historyPath = historyPath(key);
     this.penaltyPath = join(dirname(this.historyPath), `backoff-${key}.json`);
     this.samples = loadHistory(this.historyPath, this.capacity); // the other account's trace, or empty
+    // the other account's reports are its own; this one's are read from its own file, and
+    // its first poll is still to come — for the plan, the thresholds and Fable, which no
+    // report carries
+    this.report = null;
+    this.reportSeen = new Map();
+    clearTimeout(this.coverTimer);
+    this.coverTimer = null;
+    this.polledOnce = false;
     if (!keepLast) {
       this.last = null; // the held numbers belong to the account we just left
       this.staleSince = null;
@@ -341,25 +516,49 @@ export class QuotaPoller extends EventEmitter {
     let event;
     try {
       this.followAccount();
-      for (let wait = this.claimSlot(); wait > 0; wait = this.claimSlot()) await sleep(wait);
+      // While Claude Code's status line keeps reporting, its readings are the fresher ones and
+      // cost nothing: no request, no rate limit. Checked again after the wait for a slot, which
+      // can be long enough for the first report of a session to arrive. But a failed poll whose
+      // backoff has run out is retried all the same, reports or not: left alone, its reason
+      // would come back word for word, maybe hours old, the moment they stopped.
+      const reported = () => this.polledOnce && this.reportCovers()
+        && !(this.staleSince !== null && this.penaltyUntil <= Date.now());
+      if (!reported()) {
+        for (let wait = this.claimSlot(); wait > 0 && !reported(); wait = this.claimSlot()) await sleep(wait);
+      }
+      if (reported()) {
+        delay = jitter(this.intervalMs);
+        // No request, but still a frame: the reading's age moves on, and `watch` and any page
+        // older than the server's ping keep their once-an-interval line.
+        event = ['update', this.snapshot()];
+        return;
+      }
       const fetched = await this.fetchOnce();
       // Checked again AFTER the fetch, because the account that owns a reading is the one
       // that answered it. A switch landing between the pre-fetch check and the response
       // filed the new account's first sample into the old account's trace — observed live.
       // `keepLast` because this reading belongs to the account we just moved to.
-      this.followAccount({ keepLast: true });
-      this.last = fetched;
+      const switched = this.followAccount({ keepLast: true });
+      // The poll is the newest reading but not always the highest (withHeld), unless the
+      // reading it would be held to belongs to the account just left. A report that came while
+      // the request was out may hold a newer number still.
+      let next = switched ? fetched : withHeld(fetched, this.last);
+      if (this.reportFresh()) next = withReport(next, this.report);
+      this.last = next;
       this.staleSince = null;
       this.lastError = null;
       this.failures = 0;
       this.penaltyUntil = 0;
+      this.polledOnce = true;
+      this.source = 'poll';
       clearPenalty(this.penaltyPath); // one good answer ends it for every process
       this.record(this.last); // successful polls only: a failure must not flatten the trace
       delay = jitter(this.intervalMs);
       event = ['update', this.snapshot()];
     } catch (err) {
-      this.staleSince ??= new Date().toISOString();
       const code = err.code ?? 'EUNKNOWN';
+      // Kept even beside fresh reports: snapshot() sets it aside while they cover.
+      this.staleSince ??= new Date().toISOString();
       this.lastError = { code, message: PUBLIC_MESSAGES[code] ?? PUBLIC_MESSAGES.EUNKNOWN };
       this.failures += 1;
       delay = code === 'ERATE'
@@ -369,8 +568,8 @@ export class QuotaPoller extends EventEmitter {
       savePenalty(this.penaltyPath, {
         until: this.penaltyUntil,
         failures: this.failures,
-        error: this.lastError,
-        since: Date.parse(this.staleSince),
+        error: { code, message: PUBLIC_MESSAGES[code] ?? PUBLIC_MESSAGES.EUNKNOWN },
+        since: Date.parse(this.staleSince ?? new Date().toISOString()),
       });
       event = ['error', err, this.snapshot()];
     } finally {
@@ -380,7 +579,7 @@ export class QuotaPoller extends EventEmitter {
       // silently while the server kept serving an ever-staler number. Hence the guarded
       // emit and the reschedule in `finally`.
       try {
-        this.emit(...event);
+        if (event) this.emit(...event);
       } catch (err) {
         process.emitWarning(err); // a broken listener is loud, but it is not ours to fix
       }
@@ -400,9 +599,9 @@ export class QuotaPoller extends EventEmitter {
     }
   }
 
-  record(quota) {
+  record(quota, t = Date.now()) {
     const sample = {
-      t: Date.now(),
+      t,
       p: HISTORY_KEYS.map((key) => quota.limits.find((l) => l.key === key)?.percent ?? null),
     };
     this.samples.push(sample);
@@ -413,12 +612,15 @@ export class QuotaPoller extends EventEmitter {
   /**
    * One key's readable points back to the last break in the trace.
    *
-   * Two things break it. A percent only ever drops on a window reset, so a downward step is
-   * one. A silence longer than `maxGapMs` is the other: a reset inside a gap is invisible
-   * when the new window's first reading is already above the old window's last, and fitting
-   * across it reports a trend that never happened.
+   * Two things break it. A percent falls at a window reset, a refill or a re-scaled plan, and a
+   * new run starts there whichever it was — at a step of a point or more: the endpoint gives
+   * whole points and the status line tenths, and the same usage read both ways can differ by
+   * less than one. A silence longer than
+   * `maxGapMs` is the other: a reset inside a gap is invisible when the new window's first
+   * reading is already above the old window's last, and fitting across it reports a trend that
+   * never happened.
    */
-  /** The contiguous run, cut only at a window reset and at a poller-off gap. */
+  /** The contiguous run, cut only at a fall (a reset, a refill, a re-scale) and at a poller-off gap. */
   rawSeries(key) {
     const i = HISTORY_KEYS.indexOf(key);
     if (i < 0) return [];
@@ -427,7 +629,7 @@ export class QuotaPoller extends EventEmitter {
       const p = s.p[i];
       if (!Number.isFinite(p)) continue;
       const prev = points[points.length - 1];
-      if (prev && (p < prev.p || s.t - prev.t > this.maxGapMs)) points = [];
+      if (prev && (prev.p - p >= RESET_DROP || s.t - prev.t > this.maxGapMs)) points = [];
       points.push({ t: s.t, p });
     }
     return points;
@@ -563,8 +765,7 @@ function fitOf(points) {
 }
 
 function historyPath(account = 'default') {
-  const cache = process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
-  return join(cache, 'ccusageviz', `history-${account}.jsonl`);
+  return join(cacheDir(), `history-${account}.jsonl`);
 }
 
 /**

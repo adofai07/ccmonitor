@@ -63,17 +63,23 @@ shows `EAUTH`. It recovers by itself within milliseconds of your next prompt. Tr
 ## Run
 
 ```sh
-node bin/ccquota.js json     # one-shot JSON
-node bin/ccquota.js watch    # one line per poll
-node bin/ccquota.js serve    # http://127.0.0.1:8787
-npm start                    # same as serve
+node bin/ccquota.js json         # one-shot JSON
+node bin/ccquota.js watch        # one line per reading
+node bin/ccquota.js serve        # http://127.0.0.1:8787
+npm start                        # same as serve
+node bin/ccquota.js statusline   # Claude Code's status line (see below); reads JSON on stdin
 ```
 
 No dependencies, no install step. Node >= 20.
 
-Environment: `PORT` (default 8787), `CLAUDE_CONFIG_DIR`, `CCQUOTA_CREDENTIALS_PATH`,
-`XDG_CACHE_HOME` (history cache, default `~/.cache`), `CCQUOTA_INTERVAL_MS` (poll interval,
-default 120000) and `CCQUOTA_RAW=1`, which adds the raw
+Environment: `PORT` (default 8787), `CLAUDE_CONFIG_DIR` (Claude Code's config directory: its
+credentials, and the `settings.json` the status line is set in), `CCQUOTA_CREDENTIALS_PATH`,
+`XDG_CACHE_HOME` (the history and the status line's reports, default `~/.cache`; the
+directory `serve` uses is written into the status line command, so the reports land where the
+server looks), `XDG_STATE_HOME` (where a status line you took out is remembered, default
+`~/.local/state`), `CCQUOTA_INTERVAL_MS` (poll interval, default 120000),
+`CCQUOTA_STATUSLINE=off` (never touch Claude Code's status line setting) and
+`CCQUOTA_RAW=1`, which adds the raw
 upstream body to `ccquota json`. `raw` is absent by default so the whole body is not in every
 response and SSE frame; `serve` inherits the variable like any process would, so it is meant
 for a one-shot `json`.
@@ -119,9 +125,120 @@ hard and neither guard is worth much on its own:
 `watch` sidesteps the problem entirely: if a `serve` is already listening it follows that
 server's SSE feed instead of starting a second poller.
 
+### Claude Code's status line
+
+The better answer to a rate-limited endpoint is to ask it less. Claude Code passes a custom
+status line command its session as JSON on stdin, and for Pro, Max and Ultra subscribers that
+JSON carries `rate_limits.seven_day` and `rate_limits.five_hour`: `used_percentage` (0-100, in
+tenths) and `resets_at` (epoch seconds), from the rate-limit headers of Claude Code's own
+requests. The status line runs after every reply, so that is a reading that costs no request at
+all, taken the moment the reply came in.
+
+The input never says when its numbers were read, though. The status line also runs when nothing
+new has been — on a mode, model or effort change, a vim toggle, `/clear`, a change to the
+command itself, and on Claude Code's timers at a prompt cache's expiry and a window's reset —
+and a reply's own run can come late: a permission dialog holds it back until it is answered,
+and a newly set command runs at once in every open session on whatever that session last read.
+Filed as of the run, those would pass an old reading off as a fresh one and hold polling off on
+the strength of it. So a run is filed only when it follows a reply: when `prompt_cache.requests`,
+the session's count of the main-conversation requests it has recorded, has moved since that
+session last filed. Re-runs and background queries (a recap, a memory pass) do not move it.
+Without the count the session has had no reply yet (a fresh start, or just after `/clear`) and
+the numbers are the process's old ones, so nothing is filed. The reading is dated by the request
+it came from — `prompt_cache.expires_at` less its TTL is when the main conversation last sent
+one, or touched its cache — so a run held back by a dialog usually files an old reading as old,
+which the poller passes over. A session's first sighting is filed as a baseline the poller
+ignores, whatever its date: a newly set command runs at once on whatever an open session last
+read. Claude Code before 2.1.251 sends no `prompt_cache`; there the session's API time
+(`cost.total_api_duration_ms`) stands in for the count. One reading is news whatever the count:
+in a session with replies of its own, a window it had below 100% now at 100% — the refused
+request (a 429) that comes when you hit a limit. It moves no count, and its run follows it at
+once.
+
+None of this is airtight, and cannot be: the input carries no time for its numbers. A request
+interrupted with Esc moves the count but brings no reading, and Claude Code's cache keepalive,
+where it is on, moves `expires_at` every 30 s. So the merge below has one more rule, which holds
+whatever got through: a report never brings the reading down by a point or more unless its own
+session saw that fall (the report marks such a window `fell`) — a refill reaches every session
+that way. A report that would bring it down otherwise is an old reading come late: it changes
+nothing, and it does not stand in for polls, so the next poll settles it.
+
+`ccquota statusline` is that command. It files each reading in
+`${XDG_CACHE_HOME:-~/.cache}/ccusageviz/statusline-<account>-<session>.json` — one file per
+session, so two sessions filing at once cannot undo each other — and prints a short line: the
+model and the week, e.g. `Opus 4.7 · week 41% · 5d 11h left`. The poller looks at those files
+every 2 s, takes the newest report as the reading, which reaches the page over SSE at once, and
+sweeps files a session has not touched for 8 days. The page says `via Claude Code` while that
+is where its numbers come from. While a report is under 5 minutes old the poller does not poll
+at all, except for one request at start (and after an account switch) for what reports do not
+carry: the plan, its thresholds, Fable. It polls again once Claude Code has been quiet for 5
+minutes — when you are on claude.ai, say — when a window passes its reset, since Claude Code
+drops a window from its readings the moment it resets and only a poll brings the new one in,
+and to retry a failed poll once its backoff is over.
+
+Reports and polls replace each other only when they are a point or more apart. The endpoint
+gives whole points and the status line tenths, so the poll that resumes after a run of reports
+can say 41 for the usage the last report called 41.2; within one window, two readings less than
+a point apart are the same usage, and the higher stands, so the trace does not step down for it.
+Further apart, the newer reading wins — though a report wins downwards only with `fell`, as
+above: a percent only falls within a window when usage is given back — Claude Code's
+`/limit-reset` refills a limit and leaves its reset day as it was — or a plan change re-scales
+it, and holding the higher number would pin it there until the window reset. Where the two
+describe different windows, the later window wins; a report's window that is past its reset is
+dropped. A report older than 5 minutes, torn mid-write or from the future is ignored, and a busy
+session's reports are sampled into the history at most once per interval, so its twelve hours
+keep their shape.
+
+A poll that fails while reports are fresh does not mark the reading stale — the reports are the
+reading — but it is kept, and retried once its backoff is over: once the reports stop, the
+reading is stale from that moment, with the poll's reason, even if the next poll is a backoff
+away.
+
+`ccquota serve` sets the status line in Claude Code's user settings
+(`$CLAUDE_CONFIG_DIR/settings.json`, default `~/.claude/settings.json`) **only when it is
+unset**, and says so on start:
+
+- a status line of your own is never touched. *Ours* is exactly the command it writes — an
+  `XDG_CACHE_HOME=` naming the server's cache directory, a node, a `bin/ccquota.js`, `statusline`
+  and nothing else (or a bare `ccquota statusline`); a command that merely mentions it, such as
+  a pipeline, is yours. The poller polls for you, unless your line runs ours too (below): serve
+  recognises that when it is in the command itself, not inside a script it runs;
+- one that is ours but points at another copy, another node or another cache directory is
+  pointed at this one. The cache directory is always written into the command, so the reports
+  land where the server reads them whatever Claude Code's own environment says;
+- once ours is there, that is remembered (`statusline-installed.json` in
+  `${XDG_STATE_HOME:-~/.local/state}/ccusageviz`, not the cache, so clearing a cache cannot undo
+  it): if you take it out, it stays out, and `ccquota statusline install` puts it back;
+- the file is written to a temp file, synced, and renamed over it, with its permissions, and
+  only if nothing else wrote it meanwhile; a symlinked settings.json is written through, never
+  replaced; invalid JSON is left alone, and a write that fails says why (`EACCES`, …);
+- `CCQUOTA_STATUSLINE=off` turns all of it off, and on Windows it is not set at all: Claude Code
+  runs status lines there through PowerShell unless it finds Git Bash, and the command is a
+  POSIX one.
+
+Claude Code watches its settings and runs a new status line command at once, in sessions already
+open too; a session opened on an older Claude Code may not pick it up until it is restarted
+(`claude --continue` picks the conversation back up). The status line only runs in a folder
+whose workspace trust you have accepted, not under `disableAllHooks` (serve says so when it is in
+the same settings) or a managed `allowManagedHooksOnly`, and a project or local `statusLine`
+takes precedence over the user one.
+And `rate_limits` is only sent to Pro, Max and Ultra plans: on others the line shows just the
+model and the dashboard polls as before.
+
+To keep a status line of your own and still feed the dashboard, hand the session JSON to both,
+naming the server's cache directory the way ours does:
+
+```sh
+input=$(cat); printf '%s' "$input" | XDG_CACHE_HOME=~/.cache node /path/to/ccmonitor/bin/ccquota.js statusline >/dev/null; printf '%s' "$input" | ~/.claude/my-statusline.sh
+```
+
+With a custom status line, Claude Code stops showing some footer hints (`esc to interrupt`,
+`? for shortcuts`); that is Claude Code's behaviour for any status line.
+
 ### History cache
 
-Successful polls are appended to `${XDG_CACHE_HOME:-~/.cache}/ccusageviz/history-<account>.jsonl`,
+Successful polls, and status line reports at most once an interval, are appended to
+`${XDG_CACHE_HOME:-~/.cache}/ccusageviz/history-<account>.jsonl`,
 one JSON object per line, and reloaded at startup so a restart does not blank the sparkline. The
 last 360 (12 h at the base interval) are kept, and the file is compacted to that on load,
 which is what bounds it. Failed polls are never recorded — a failure must not flatten the
@@ -167,6 +284,7 @@ burst acceptable to the endpoint.
     }
   },
   "extraUsage": { "enabled": false, "disabledReason": null },
+  "source": "poll",
   "stale": false,
   "hasData": true,
   "bootedAt": "2026-09-04T08:54:58.703Z",
@@ -183,6 +301,11 @@ the countdown ticks between polls and stays correct while the poller is stale.
 from "we had data and it went stale" — both set `stale: true`, and before this they were
 indistinguishable. `staleSeconds` is the age of whichever condition applies, measured from
 `staleSince`, or from `bootedAt` when there has never been a reading. It is `null` when fresh.
+
+`source` says where the newest reading came from: `"poll"` (the usage endpoint),
+`"statusline"` (a Claude Code status line report, see above), or `null` before either. While a
+fresh report stands in for polls, a failed poll does not set `stale`, `staleSince` or
+`lastError`; once the reports stop, they say so from that moment.
 
 `limits` is **always** exactly three entries in the order `session`, `weekly`, `fable`. A
 limit the API omits comes back with `percent: null` and `state: "unknown"` rather than
@@ -206,8 +329,11 @@ because `state` cannot carry this: `state` is pace-derived, so everything from 0
 `criticalPercent` is the `default` (95), so read it from the snapshot in hand rather than
 caching the first one seen.
 
-`GET /api/stream` — SSE. One `data:` frame with the same object on connect, one per poller
-update or failure, and a `: ping` comment every 15 s.
+`GET /api/stream` — SSE. One `data:` frame with the same object on connect, and one per poller
+update or failure: a poll, a status line report, or a tick that stood aside for one. Every 15 s
+there is an `event: ping` with no reading in it — a named event rather than a comment, so a
+client can see it: long quiet stretches are normal while reports stand in for polls, and the
+page tells a live link from a dead one by its frames.
 
 `GET /api/history` — the sparkline series, plus the fit, so no client has to redo it.
 
@@ -236,8 +362,10 @@ and `etaUncertaintySeconds` the spread that propagates to the projection, so a c
 sample (`null` when there is no run) and `sampleCount` its length, so a client can clip the
 sparkline to the fitted span.
 
-The run restarts at any downward step, since a percent only ever drops on a window reset, and
-also at any gap longer than six poll intervals — a reset inside a gap is invisible when the new
+The run restarts at any downward step of a point or more, since a percent only falls at a
+window reset, a refill or a re-scaled plan, and a new run starts there whichever it was — a
+smaller dip is the same usage read in whole points by the endpoint and in tenths by the status
+line — and also at any gap longer than six poll intervals — a reset inside a gap is invisible when the new
 window's first reading is already above the old window's last, and fitting across it reports a
 trend that never happened.
 
@@ -262,7 +390,10 @@ nearest integer. Scoring against a known sigma-squared is what lets a genuine le
 its parameters while a split that merely carves up a staircase tread cannot — a staircase
 already sits at exactly that noise level, so dividing one buys nothing. Quantization, which is
 what makes a slow series look flat between steps and defeated several earlier attempts at this,
-is exactly what makes the criterion work unaided.
+is exactly what makes the criterion work unaided. Status line reports come in tenths, whose
+rounding noise is a hundredth of that; for a run of them 1/12 is an upper bound rather than the
+known level, which errs towards fewer splits and a wider standard error, never towards a trend
+the data cannot support.
 
 Estimating the variance from the data instead was subtly wrong, and the symptom was precise:
 when both the one-line and two-line models sat at the floor their likelihoods tied, BIC took the
@@ -301,8 +432,8 @@ proxy for *is this trend resolved yet*, asked in a unit the reader does not care
 standard error asks it directly, and unlike a gate it can be shown: `± 6 min` on the session
 window and `± 34 min` on the weekly one say what a bare `?` could not.
 
-A well-sampled flat run is still distinguishable from an absent one. A percent only ever drops
-on a reset and the run is cut there, so a flat run reports a real `0.00 %/hr` with a small
+A well-sampled flat run is still distinguishable from an absent one. A percent only falls at a
+reset, a refill or a re-scale, and the run is cut there, so a flat run reports a real `0.00 %/hr` with a small
 standard error, while too little data to fit reports `null` and the UI says "measuring".
 
 `projectedAt` is the epoch ms at which the limit reaches 100% at that rate. Beyond the gates it
@@ -394,8 +525,10 @@ src/credentials.js   read the token from disk, redact it everywhere else
 src/usage.js         fetch, normalize, thresholds, typed errors
 src/poller.js        interval + backoff + last-good cache + sample history, EventEmitter
 src/server.js        http, SSE, static, loopback guard
+src/statusline.js    Claude Code's status line: file its usage reports; set it if unset
+src/paths.js         the cache and Claude Code directories
 src/cost.js          ccusage subprocess, cached — the footer number, not quota
-bin/ccquota.js       json | watch | serve
+bin/ccquota.js       json | watch | serve | statusline
 public/index.html    the dashboard: one page, inline style and script
 public/fonts/        bundled typefaces for Settings, with their licences and provenance
 ```

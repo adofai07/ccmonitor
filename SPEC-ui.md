@@ -231,7 +231,12 @@ It goes in the footer, visually separated from the ring, never blended into it.
 
 ## Live updates
 
-Server-sent events push every poll. A quiet freshness indicator shows last-update age.
+Server-sent events push every poll, and every reading Claude Code's status line files (see the
+README) — those come after every reply and cost no request, so while Claude Code is in use the
+page moves within seconds and the endpoint is left alone. A quiet freshness indicator shows
+last-update age, and says "via Claude Code" while that is where the numbers come from.
+The server sends a heartbeat event every 15 s, so a quiet stretch between readings is not
+mistaken for a dead link: "lost the live feed" means no frame of any kind for 150 s.
 When the backend goes stale (expired token, network down) the ring holds its last known
 value, drops to a muted treatment, and the header states why. The dashboard never shows a
 confident number it cannot currently verify.

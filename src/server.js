@@ -167,7 +167,11 @@ function openStream(req, res, poller, streams) {
   const push = () => res.write(`data: ${JSON.stringify(poller.snapshot())}\n\n`);
   push(); // clients get the current value immediately, not on the next poll
 
-  const heartbeat = setInterval(() => res.write(': ping\n\n'), HEARTBEAT_MS);
+  // A named event rather than an SSE comment: the page tells a live link from a dead one by
+  // its frames, and a comment never reaches it. Long quiet stretches are normal — Claude Code's
+  // reports stand in for polls, and a backoff can last minutes — so the link needs a sign of
+  // life of its own. `watch` skips it.
+  const heartbeat = setInterval(() => res.write('event: ping\ndata: {}\n\n'), HEARTBEAT_MS);
   poller.on('update', push);
   poller.on('error', push);
   streams.add(res);

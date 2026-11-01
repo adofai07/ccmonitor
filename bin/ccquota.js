@@ -1,33 +1,73 @@
 #!/usr/bin/env node
-import { getQuota } from '../src/usage.js';
-import { QuotaPoller } from '../src/poller.js';
-import { serve } from '../src/server.js';
+// Each command loads only what it uses: Claude Code runs `statusline` after every reply, and
+// it should not pay for the server, the poller and the cost reader just to print one line.
 
 const HELP = `ccquota — live Claude Code subscription quota
 
-  ccquota json     print the current quota as JSON and exit
-  ccquota watch    print a one-line status on every poll
-  ccquota serve    run the local HTTP + SSE server (default port 8787)
+  ccquota json        print the current quota as JSON and exit
+  ccquota watch       print a one-line status as each reading comes in
+  ccquota serve       run the local HTTP + SSE server (default port 8787); sets Claude Code's
+                      status line to the command below if it is unset
+  ccquota statusline  Claude Code's status line: reads the session JSON on stdin, files the
+                      usage it carries for the dashboard, prints a short line
+  ccquota statusline install
+                      set it in Claude Code's settings even if it was taken out before
+                      (never over a status line of your own)
 
 Options
   --help           this message
 
 Environment
   PORT                       server port (default 8787, loopback only)
-  CLAUDE_CONFIG_DIR          directory holding .credentials.json (default ~/.claude)
+  CLAUDE_CONFIG_DIR          Claude Code's config directory: its .credentials.json, and the
+                             settings.json serve sets the status line in (default ~/.claude)
   CCQUOTA_CREDENTIALS_PATH   full path to the credentials file, overrides the above
-  XDG_CACHE_HOME             where the sample history is kept (default ~/.cache)
+  XDG_CACHE_HOME             where the sample history and the status line's reports are kept
+                             (default ~/.cache); set for serve, it goes into the status line
+  XDG_STATE_HOME             where a status line you took out is remembered (default
+                             ~/.local/state)
   CCQUOTA_INTERVAL_MS        poll interval (default 120000; the endpoint refuses
                              sustained rates much above 0.83 req/min)
   CCQUOTA_RAW=1              add the raw upstream body to \`json\` output (debug)
+  CCQUOTA_STATUSLINE=off     never touch Claude Code's status line setting
 `;
 
-const [command = '--help'] = process.argv.slice(2);
+/* what serve says about Claude Code's status line, once, at start, and `statusline install` says */
+const STATUSLINE_SAYS = {
+  installed: 'set Claude Code\'s status line (it was unset) — the dashboard now updates after every Claude Code reply; a session opened on an older Claude Code may need a restart to pick it up',
+  updated: 'pointed Claude Code\'s status line at this copy of ccquota and its cache directory',
+  present: 'Claude Code\'s status line is ccquota\'s',
+  theirs: 'Claude Code has a status line of your own, left as it is — the dashboard takes its readings if it runs `ccquota statusline`, and polls the endpoint otherwise',
+  feeds: 'Claude Code has a status line of your own that also runs ccquota\'s, left as it is',
+  removed: 'left out of Claude Code\'s status line, as you took it out — `ccquota statusline install` puts it back',
+  invalid: 'Claude Code\'s settings.json is not valid JSON, so it was left alone — polling the endpoint instead',
+  busy: 'Claude Code\'s settings.json changed while being updated; trying again next start',
+  failed: 'could not update Claude Code\'s settings.json',
+  off: 'CCQUOTA_STATUSLINE is off, so Claude Code\'s settings were left alone',
+  'no-claude': 'found no Claude Code config directory (CLAUDE_CONFIG_DIR, or ~/.claude) to set it in',
+  unsupported: 'not set on Windows, where Claude Code may run it through PowerShell — polling the endpoint instead',
+};
+// serve keeps quiet about these: nothing was asked of it, and nothing was done
+const QUIET = new Set(['off', 'no-claude']);
+const SET = new Set(['installed', 'updated', 'present', 'feeds']);
+
+function said({ outcome, code, hooksOff }) {
+  const text = STATUSLINE_SAYS[outcome] ?? outcome;
+  if (outcome === 'failed' && code) return `${text} (${code})`;
+  if (hooksOff) {
+    const what = outcome === 'installed' ? 'set Claude Code\'s status line (it was unset)' : 'Claude Code\'s status line is ccquota\'s';
+    return `${what}, but disableAllHooks is on in those settings, and with it Claude Code runs no status line of yours — polling the endpoint instead`;
+  }
+  return text;
+}
+
+const [command = '--help', sub] = process.argv.slice(2);
 
 try {
   if (command === 'json') await cmdJson();
   else if (command === 'watch') await cmdWatch();
   else if (command === 'serve') await cmdServe();
+  else if (command === 'statusline') await cmdStatusline(sub);
   else if (command === '--help' || command === '-h' || command === 'help') process.stdout.write(HELP);
   else fail(`unknown command: ${command}\n\n${HELP}`);
 } catch (err) {
@@ -35,6 +75,7 @@ try {
 }
 
 async function cmdJson() {
+  const { getQuota } = await import('../src/usage.js');
   const quota = await getQuota();
   process.stdout.write(`${JSON.stringify(quota, null, 2)}\n`);
 }
@@ -45,6 +86,7 @@ async function cmdWatch() {
   // rate, and the terminal shows exactly what the dashboard shows.
   const url = `http://127.0.0.1:${process.env.PORT ?? 8787}`;
   if (await streamFrom(url)) return;
+  const { QuotaPoller } = await import('../src/poller.js');
   const poller = new QuotaPoller();
   poller.on('update', (snapshot) => console.log(line(snapshot)));
   poller.on('error', (err, snapshot) => console.log(`${line(snapshot)}  [${err.code}: ${err.message}]`));
@@ -64,11 +106,13 @@ async function streamFrom(url) {
   let buffer = '';
   for await (const chunk of res.body) {
     buffer += Buffer.from(chunk).toString('utf8');
-    // SSE frames are separated by a blank line; comments (": ping") carry no data field.
+    // SSE frames are separated by a blank line; the server's heartbeat is a named `ping`
+    // event with no reading in it.
     let cut;
     while ((cut = buffer.indexOf('\n\n')) !== -1) {
       const frame = buffer.slice(0, cut);
       buffer = buffer.slice(cut + 2);
+      if (frame.split('\n').some((l) => l.startsWith('event:') && l.slice(6).trim() !== 'message')) continue;
       const data = frame.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim()).join('');
       if (!data) continue;
       try { console.log(line(JSON.parse(data))); } catch { /* a truncated frame is not worth a crash */ }
@@ -79,9 +123,25 @@ async function streamFrom(url) {
 }
 
 async function cmdServe() {
+  const { serve } = await import('../src/server.js');
   const { url } = await serve();
   console.log(`ccquota serving on ${url}`);
   console.log('  /api/quota  /api/stream  /api/history  /api/cost  /healthz');
+  const { ensureStatusLine } = await import('../src/statusline.js');
+  const result = ensureStatusLine();
+  if (!QUIET.has(result.outcome)) console.log(`  status line: ${said(result)}`);
+}
+
+async function cmdStatusline(sub) {
+  const { ensureStatusLine, statusline } = await import('../src/statusline.js');
+  if (sub === 'install') {
+    const result = ensureStatusLine({ force: true });
+    console.log(said(result));
+    if (!SET.has(result.outcome)) process.exitCode = 1;
+    return;
+  }
+  if (sub !== undefined) fail(`unknown statusline command: ${sub} (\`ccquota statusline install\`, or none)`);
+  await statusline();
 }
 
 function line(snapshot) {

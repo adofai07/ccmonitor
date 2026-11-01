@@ -1235,7 +1235,8 @@ function freshness() {
     text: "holding the reading from " + age + (s.lastError ? " — " + s.lastError.message : "") };
   if (linkBad) return { tone: "hold", hold: true,
     text: "lost the live feed — holding the reading from " + age };
-  return { tone: "live", text: "live · updated " + age };
+  /* while Claude Code's status line is what keeps it fresh, say so: no poll is behind it */
+  return { tone: "live", text: "live · updated " + age + (s.source === "statusline" ? " · via Claude Code" : "") };
 }
 
 /* ═════════════════════════ render ═════════════════════════ */
@@ -3490,8 +3491,11 @@ function connect() {
   try { es = new EventSource("/api/stream"); }
   catch (_) { S.link = "down"; render(); return; }
   es.onopen = () => { S.link = "live"; render(); };
+  /* the server's heartbeat: no reading in it, only proof the link is up, so a quiet
+     stretch (Claude Code's reports standing in for polls, a backoff) is not a dead feed */
+  es.addEventListener("ping", () => { S.link = "live"; S.lastFrame = Date.now(); });
   es.onmessage = (e) => {
-    if (!e.data) return;                       // ': ping' keep-alives never reach here, but be safe
+    if (!e.data) return;                       // pings arrive as their own event, never here
     let parsed = null;
     try { parsed = JSON.parse(e.data); } catch (_) { return; }
     S.link = "live"; S.lastFrame = Date.now();

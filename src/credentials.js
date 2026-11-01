@@ -126,7 +126,10 @@ export function readCredentials() {
  */
 export function accountKey() {
   try {
-    const dir = process.env.CLAUDE_CONFIG_DIR ? join(process.env.CLAUDE_CONFIG_DIR, '..') : homedir();
+    // Where Claude Code keeps it: in CLAUDE_CONFIG_DIR when that is set, in the home directory
+    // otherwise. This runs inside every Claude Code session as well — the status line files each
+    // reading under the key — so it has to name that session's account, not a neighbour's.
+    const dir = process.env.CLAUDE_CONFIG_DIR || homedir();
     const uuid = JSON.parse(readFileSync(join(dir, '.claude.json'), 'utf8'))?.oauthAccount?.accountUuid;
     if (typeof uuid !== 'string' || !uuid) return 'default';
     return createHash('sha256').update(uuid).digest('hex').slice(0, 12);

@@ -241,6 +241,140 @@ export function emptyQuota(now = Date.now()) {
   return normalize(null, { subscriptionType: null, rateLimitTier: null }, now);
 }
 
+// Two reset instants this close are the same window; distinct windows are hours apart.
+const SAME_WINDOW_MS = 30 * 60_000;
+
+// Two readings of one window this close are the same usage read two ways — the endpoint gives
+// whole points, the status line tenths — and differ by rounding, not by anything that happened.
+export const ROUNDING = 1;
+
+// A reading dated further ahead than this is from before the clock stepped back.
+export const FUTURE_SLACK_MS = 60_000;
+
+/*
+ * One window's percent from two readings of it. Within one window a percent rises but for a
+ * refill or a re-scale, so where they are within ROUNDING of each other the higher stands,
+ * whichever was read last: a
+ * poll's 41 for a report's 41.2 is the same usage, and a trace that falls reads as a reset.
+ * Further apart, the newer reading is the news — a refill (Claude Code's /limit-reset gives
+ * usage back with the reset day unchanged) or a re-scaled plan — and holding the higher would
+ * pin it there until the window reset, a week for the weekly one.
+ */
+function settle(newer, older) {
+  return Math.abs(newer - older) < ROUNDING ? Math.max(newer, older) : newer;
+}
+
+/**
+ * A reading from Claude Code's status line (src/statusline.js) folded into a snapshot.
+ *
+ * The status line carries the 5-hour and 7-day windows' percent and reset, from the rate-limit
+ * headers of Claude Code's own requests, so it is usually newer than the last poll — but not
+ * always: usage on claude.ai reaches only the endpoint. Neither can simply win. Where the two
+ * describe one window, settle() decides, the newer of the two being whichever was read later;
+ * where they describe different windows the later window wins. A report's window that is past
+ * its reset is from before it — Claude Code drops a window once it resets — and is left out.
+ * Everything the status line does not carry (Fable, the plan, the thresholds) stays as the
+ * snapshot had it.
+ *
+ * But a report never brings the reading down by a point or more unless its own session saw it
+ * fall (`fell`, set by src/statusline.js when the session's previous filing was that much
+ * higher): a refill reaches a session as a fall. Anything else lower is an old reading come
+ * late — Claude Code's input never says when its numbers were read, and every way of telling
+ * has its exceptions — and the snapshot's stands. See reportConflicts().
+ */
+export function withReport(quota, report, now = Date.now()) {
+  const base = quota ?? emptyQuota(now);
+  const baseAt = snapshotAt(quota, now);
+  const limits = base.limits.map((limit) => {
+    const r = report.limits[limit.key];
+    if (!r || Date.parse(r.resetsAt ?? '') <= now) return limit;
+    let percent = r.percent, resetsAt = r.resetsAt ?? limit.resetsAt;
+    if (Number.isFinite(limit.percent)) {
+      const ours = Date.parse(limit.resetsAt ?? ''), theirs = Date.parse(r.resetsAt ?? '');
+      const comparable = Number.isFinite(ours) && Number.isFinite(theirs);
+      if (comparable && ours - theirs > SAME_WINDOW_MS) return limit;            // the snapshot's window is the later one
+      if (!comparable || Math.abs(ours - theirs) <= SAME_WINDOW_MS) {
+        if (limit.percent - r.percent >= ROUNDING && !r.fell) return limit;     // lower, and not seen falling: late
+        percent = report.at >= baseAt ? settle(r.percent, limit.percent) : settle(limit.percent, r.percent);
+        resetsAt = limit.resetsAt ?? r.resetsAt;
+      }
+    }
+    return {
+      ...limit,
+      percent,
+      state: computeState({ key: limit.key, percent, resetsAt, rateLimitTier: base.plan?.rateLimitTier ?? null, now }),
+      dormant: resetsAt === null && limit.isActive !== true,
+      resetsAt,
+      resetsInSeconds: secondsUntil(resetsAt, now),
+    };
+  });
+  // With nothing held before it, the report's own time is the reading's: an empty base is
+  // stamped with now, and a reading must not come out younger than it is.
+  const fetched = quota ? Math.max(baseAt, report.at) : report.at;
+  return { ...base, fetchedAt: new Date(fetched).toISOString(), limits };
+}
+
+/*
+ * The snapshot's time, for telling which of two readings is newer. One dated ahead of the clock
+ * was taken before it stepped back, and must not outrank everything that comes after.
+ */
+function snapshotAt(quota, now) {
+  if (!quota) return -Infinity;
+  const at = Date.parse(quota.fetchedAt ?? '') || 0;
+  return at - now > FUTURE_SLACK_MS ? -Infinity : at;
+}
+
+/**
+ * True when a report would bring one of the snapshot's windows down by a point or more with no
+ * fall seen by its session: an old reading, or news the snapshot is behind on. Either way it is
+ * no reading to stand in for polls — the next poll settles which.
+ */
+export function reportConflicts(quota, report, now = Date.now()) {
+  if (!quota) return false;
+  return quota.limits.some((limit) => {
+    const r = report.limits[limit.key];
+    if (!r || r.fell || !Number.isFinite(limit.percent) || Date.parse(r.resetsAt ?? '') <= now) return false;
+    const ours = Date.parse(limit.resetsAt ?? ''), theirs = Date.parse(r.resetsAt ?? '');
+    const same = !(Number.isFinite(ours) && Number.isFinite(theirs)) || Math.abs(ours - theirs) <= SAME_WINDOW_MS;
+    return same && limit.percent - r.percent >= ROUNDING;
+  });
+}
+
+// The windows Claude Code's status line reports, and so the ones a report can have raised.
+const REPORTED = new Set(['session', 'weekly']);
+
+/**
+ * A fresh poll folded over the reading it replaces, so that rounding cannot step the trace down.
+ *
+ * The poll that resumes after a run of reports can say 41 for the usage the last report called
+ * 41.2; settle() keeps the 41.2, with the poll as the newer reading. Where the two describe
+ * different windows the later one wins, even the held one — a reset Claude Code has already
+ * seen may not have reached the endpoint yet. A poll without a reset instant says its window is
+ * dormant, and is taken as it is. Everything but those two windows' numbers is the poll's.
+ */
+export function withHeld(quota, held, now = Date.now()) {
+  if (!held) return quota;
+  const limits = quota.limits.map((limit) => {
+    const h = held.limits?.find((l) => l.key === limit.key);
+    if (!REPORTED.has(limit.key) || !h || !Number.isFinite(h.percent) || !Number.isFinite(limit.percent)) return limit;
+    const ours = Date.parse(limit.resetsAt ?? ''), theirs = Date.parse(h.resetsAt ?? '');
+    if (!Number.isFinite(ours) || !Number.isFinite(theirs) || ours - theirs > SAME_WINDOW_MS || theirs <= now) return limit;
+    const later = theirs - ours > SAME_WINDOW_MS; // the held window is the later one
+    const percent = later ? h.percent : settle(limit.percent, h.percent);
+    if (percent === limit.percent && !later) return limit;
+    const resetsAt = later ? h.resetsAt : limit.resetsAt;
+    return {
+      ...limit,
+      percent,
+      state: computeState({ key: limit.key, percent, resetsAt, rateLimitTier: quota.plan?.rateLimitTier ?? null, now }),
+      dormant: false,
+      resetsAt,
+      resetsInSeconds: secondsUntil(resetsAt, now),
+    };
+  });
+  return { ...quota, limits };
+}
+
 export function computeState({ key, percent, resetsAt, rateLimitTier, now = Date.now() }) {
   if (!Number.isFinite(percent)) return 'unknown';
   if (percent >= THRESHOLDS.exhaustedPercent) return 'exhausted';
