@@ -13,33 +13,30 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 - Backdrop: 3–4 large soft color blobs drifting on a ~30s loop, deep charcoal base.
 - Panels: `backdrop-filter: blur(24px)`, white ~8% fill, 1px light top edge, soft outer shadow.
-- Motion is confined to the backdrop, the rings' interiors (see *Ring interior* below) and
-  one alarm, the shake of a ring that is over pace (see *Over pace*). Arcs, ticks and charts
-  otherwise only move when the data moves. Each of the three can be switched off in
+- Motion is confined to the backdrop, the ring's interior (see *Ring interior* below) and
+  one alarm, the shake of the ring while it is over pace (see *Over pace*). The arc, tick and
+  chart otherwise only move when the data moves. Each of the three can be switched off in
   *Settings*.
-- `prefers-reduced-motion` freezes the gradient, holds each ring's fluid as a still frame and
+- `prefers-reduced-motion` freezes the gradient, holds the ring's fluid as a still frame and
   stops the shake.
 
-## Primary view — three rows, each a ring and its chart
+## Primary view — the weekly limit, a ring and its chart
 
 ```
-  ◜◞   SESSION              │ ▁▁▁▁▁▂▃▅▆▇  ┊ burn +9.2 %/hr
- (1%)  4h 22m               │             ┊
-       ▼ 3 pts under pace   │ 03:17          now
-  ─────────────────────────────────────────────────
-  ◜◞   WEEKLY  …            │ …
-  ─────────────────────────────────────────────────
-  ◜◞   FABLE   dormant      │ …
+  ◜◞   CURRENT WEEK         │ ▁▁▁▁▁▂▃▅▆▇  ┊ burn +0.40 %/hr
+ (41%) 5d 11h               │             ┊
+       ▲ 6 pts over pace    │ 03:17          now
 ```
 
-Fixed order, top to bottom: **session, weekly, Fable.** The order never changes and no row is
-ever dropped, so the layout cannot reflow under you. Every limit's history chart is drawn at
-rest, beside its ring — no click needed to see a trace. A chart covers at most the last 12
-hours, the span the history cache is sized for, so an account switched back to after days away
-starts a fresh trace instead of redrawing its old window. Below ~680px the chart drops under
-its ring at full width.
+One row: **the weekly limit**. Anthropic has removed the five-hour session limit, and Fable is
+not used here, so neither is drawn. The backend still reports all three (see the README) and
+the history still records all three, so a ring could come back by adding its key to the
+page's `ORDER`. The history chart is drawn at rest, beside the ring — no click needed to see
+the trace. It covers at most the last 12 hours, the span the history cache is sized for, so
+an account switched back to after days away starts a fresh trace instead of redrawing its old
+window. Below ~680px the chart drops under the ring at full width.
 
-Each ring:
+The ring:
 
 | element | meaning |
 | --- | --- |
@@ -53,8 +50,7 @@ The pace marker is the whole point of the color rule: a ring can read 9% and sti
 trouble if only 3% of the window has elapsed. Arc **behind** the tick = coasting.
 Arc **past** the tick = burning hot, will hit the cap before the window resets.
 
-The session ring's pace marker is the useful one day-to-day; the weekly ring's marker is
-what catches a Monday-morning spree.
+The pace marker is what catches a Monday-morning spree.
 
 ### Over pace
 
@@ -62,16 +58,15 @@ A ring whose verdict is *over pace* shakes, continuously, for as long as it stay
 beat and no rest. The motion goes every way: a fast jitter and a slower sway, both in two
 dimensions, with a twist on top, in loops of unrelated lengths so it never visibly repeats.
 How hard it shakes follows the pace severity — the same score that heats the tick and the
-caption — so a two-point overrun trembles and a 3× burn rattles. Only rings that are over pace
-move, and each shakes on its own rather than in step with another. A held reading keeps
-shaking, like every other severity channel. A ring at the cap does not: the flooded well
+caption — so a two-point overrun trembles and a 3× burn rattles. Only a ring that is over pace
+moves. A held reading keeps shaking, like every other severity channel. A ring at the cap does not: the flooded well
 already says it, and there is no pace left to warn about.
 
 ### Ring interior
 
-The well inside each ring is a small **WebGL fluid simulation** (stable fluids: advection,
-vorticity confinement, pressure projection), one per ring. It is the look, not a reading, so
-it borrows its meaning instead of adding any:
+The well inside the ring is a small **WebGL fluid simulation** (stable fluids: advection,
+vorticity confinement, pressure projection). It is the look, not a reading, so it borrows its
+meaning instead of adding any:
 
 - the dye is the arc's own band colour, saturated, with a little hue play around it;
 - how hard it is stirred follows the same heat that warms the backdrop — calm limits drift,
@@ -103,17 +98,17 @@ marker carries the same warning independent of color.
 
 ## Dormant limits
 
-Fable currently returns 0% with a `null` reset time. A limit in that state renders
-**dimmed at low opacity** with the word `dormant` where the countdown goes. It still occupies
-its slot at full size. When Fable usage starts, the ring comes up to full strength on its own —
-the visual wake-up is the signal.
+A limit the API returns at 0% with a `null` reset time is dormant: no window is running. It
+renders **dimmed at low opacity** with the word `dormant` where the countdown goes, still at
+full size in its slot, and comes up to full strength on its own when usage starts — the visual
+wake-up is the signal. (Fable, before it was dropped, was the case this was written for.)
 
 Same treatment for any limit the API returns as null or inactive.
 
 ## Detail on click
 
-At rest the page shows the three rings and their charts. Clicking a ring expands a detail
-panel directly under that ring's row:
+At rest the page shows the ring and its chart. Clicking the ring expands a detail panel
+directly under its row:
 
 ```
 ┌───────────────────────────────────────────────────┐
@@ -129,8 +124,8 @@ panel directly under that ring's row:
   if the window resets first
 - **pace** and **fitted run** — the over/under-pace verdict and the span the fit was taken over
 
-The history chart is not repeated here; it is already beside the ring. One panel open at a
-time. Clicking the open ring collapses it.
+The history chart is not repeated here; it is already beside the ring. Clicking the ring again
+collapses it.
 
 ## Settings
 
@@ -149,7 +144,7 @@ changes. The gear again, Escape, a click elsewhere or focus moving away closes i
 Settings change how the page looks, never what it measures or how it judges a reading:
 switching the shake off leaves the over-pace verdict in the tick, the caption and the halo.
 They are kept in this browser (only the ones that differ from the default), applied before the
-rings are first drawn, and followed in other open tabs. The system's reduced-motion setting
+ring is first drawn, and followed in other open tabs. The system's reduced-motion setting
 still stills everything, and the panel says so while it is on.
 
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
@@ -166,13 +161,13 @@ ccusage · 7d $2,289 · opus $1,869 · fable $415
 
 This is a **different data source with different meaning** and the UI must say so. It is
 local token accounting priced at API list rates — not what your subscription meters against.
-It goes in the footer, visually separated from the rings, never blended into a quota ring.
+It goes in the footer, visually separated from the ring, never blended into it.
 
 ## Live updates
 
 Server-sent events push every poll. A quiet freshness indicator shows last-update age.
-When the backend goes stale (expired token, network down) the rings hold their last known
-values, drop to a muted treatment, and the header states why. The dashboard never shows a
+When the backend goes stale (expired token, network down) the ring holds its last known
+value, drops to a muted treatment, and the header states why. The dashboard never shows a
 confident number it cannot currently verify.
 
 ## Backend work this spec implies

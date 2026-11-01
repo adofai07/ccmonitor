@@ -340,7 +340,8 @@ this package; without it the footer just says so.
 Static files are the dashboard page, `public/index.html`, and the typefaces its Settings panel
 offers, in `public/fonts/` with their licences. Only those exact files are served — an
 allowlist in `src/server.js`, not the directory — and the page's CSP lets it load fonts from
-this server alone.
+this server alone. The page draws the weekly limit alone — the session limit is gone upstream
+and Fable is not used — while the API above keeps reporting all three.
 
 ### Access
 

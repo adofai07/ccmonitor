@@ -10,13 +10,13 @@
 /* ══════════════════════════════════════════════════════════════════
    ccquota — dark glass over a living gradient.
 
-   One piece of glass holds the three limits as rows, each ring with
-   its history chart beside it, so every trace is visible at rest.
-   Clicking a ring opens its detail directly beneath that row. Motion
-   belongs to the backdrop and to the rings' interiors: the sky drifts
-   on a ~30s loop and warms when the hottest limit heats up, and each
-   ring holds a small fluid stirred by its own heat. The arcs, ticks
-   and charts move only when data moves.
+   One piece of glass holds the weekly limit: its ring, with its
+   history chart beside it, so the trace is visible at rest. Clicking
+   the ring opens its detail directly beneath. Motion belongs to the
+   backdrop and to the ring's interior: the sky drifts on a ~30s loop
+   and warms when the limit heats up, and the ring holds a small fluid
+   stirred by the same heat. The arc, tick and chart move only when
+   data moves.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -304,9 +304,9 @@ main {
   background: radial-gradient(120% 88% at 10% -14%, rgba(255,255,255,.085), rgba(255,255,255,0) 56%);
 }
 
-/* ── rows: one limit each, ring on the left, its chart beside it ──
-   Stacking the limits vertically gives every chart the full width
-   that is left beside its ring, instead of a third of the panel. */
+/* ── a row per limit, ring on the left, its chart beside it ──────
+   One row now, the weekly limit's, and its chart takes the full
+   width that is left beside the ring. */
 .rings { position: relative; display: flex; flex-direction: column; padding: 6px 0; }
 
 .lrow {
@@ -402,21 +402,18 @@ main {
    fast jitter and a slower sway, both in two dimensions, and a twist — so
    the ring is knocked every way and the motion never visibly repeats.
    How hard it shakes is --psev, so a two-point overrun trembles and a 3×
-   burn rattles. Only a ring that is over pace runs the loops, and each
-   ring enters them at its own offset, so two rings over pace at once do
-   not move as one. The parts move rather than the .art box, so anything
-   that measures the ring (the detail panel's seam) finds it at rest. A
+   burn rattles. Only a ring that is over pace runs the loops. The parts
+   move rather than the .art box, so anything that measures the ring
+   (the detail panel's seam) finds it at rest. A
    held reading keeps shaking, like every other severity channel; at the
    cap it stops, since the flooded well already says so and there is no
    pace left to warn about. Reduced motion stills it with everything else. */
-.ring[data-key="weekly"] { --shake-in: -.31s; }
-.ring[data-key="fable"]  { --shake-in: -.67s; }
 .ring[data-pace="over"]:not([data-band="exhausted"]) .art > * {
   --amp: calc(1.5px + 3px * var(--psev));
   --tilt: calc(.6deg + 1.4deg * var(--psev));
-  animation: jitter .683s ease-in-out var(--shake-in, 0s) infinite,
-             sway 1.297s ease-in-out var(--shake-in, 0s) infinite,
-             twist .887s ease-in-out var(--shake-in, 0s) infinite;
+  animation: jitter .683s ease-in-out infinite,
+             sway 1.297s ease-in-out infinite,
+             twist .887s ease-in-out infinite;
 }
 @keyframes jitter {
   0%, 100% { translate: 0 0; }
@@ -750,7 +747,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
     <div class="chead">
       <h2 id="costh">Local token accounting <span class="sl">/ ccusage</span></h2>
       <p class="cwarn"><b>Not your quota.</b> Tokens counted from local transcripts and priced at public
-        API list rates. The subscription does not meter against these dollars — the rings above are the
+        API list rates. The subscription does not meter against these dollars — the ring above is the
         only thing that does, and the two can never be added together.</p>
       <div class="ctot">
         <div class="v" id="costTotal">—</div>
@@ -777,10 +774,15 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 (() => {
 
 /* ═════════════════════════════════════════════════════════════════
-   The three limits, in the one order they are ever drawn.
-   Never reordered, never dropped — the layout cannot reflow.
+   The limits drawn, in the order they are drawn: the weekly one only.
+   Anthropic has removed the five-hour session limit, and Fable is not
+   used here, so neither gets a ring. The backend still reports all
+   three, and every history sample still carries all three, in the
+   backend's own fixed order — HISTORY_KEYS, which is not this one.
    ═════════════════════════════════════════════════════════════════ */
-const ORDER = ["session", "weekly", "fable"];
+const ORDER = ["weekly"];
+const HISTORY_KEYS = ["session", "weekly", "fable"];   // the columns of a sample's p, as the poller writes them
+/* kept for every key a history sample carries, so a ring comes back by adding its key to ORDER */
 const SHORT = { session: "Session", weekly: "Week", fable: "Fable" };
 const FALLBACK_WINDOW = { session: 18000, weekly: 604800, fable: 604800 };
 
@@ -1531,7 +1533,7 @@ function renderDetail(key) {
      the sentence above. The overshoot span and the printed cut points
      were explained nowhere on the page. They are explained here, in
      the panel whose job is to teach the ring, so the resting page
-     stays three rings and nothing else. */
+     stays the ring and its chart and nothing else. */
   let legend = "";
   if (known && !dormant && el !== null) {
     legend = " The thin line inside the track spans the arc's head to the tick — that difference as a " +
@@ -1653,7 +1655,7 @@ function burnNote(fit) {
 }
 
 function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
-  const h = S.hist, idx = ORDER.indexOf(key);
+  const h = S.hist, idx = HISTORY_KEYS.indexOf(key);
   const raw = h && Array.isArray(h.samples) ? h.samples : [];
   /* The cache keeps a count of readings, not an age. An account switched back to after days
      away still holds the last ones it took, and drawn as given they stretch the axis back to
@@ -2287,7 +2289,7 @@ function fluidTick(ts) {
   for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].frame(dt);
   fluidRaf = requestAnimationFrame(fluidTick);
 }
-/* One animation loop for all three; requestAnimationFrame already stops in a hidden tab.
+/* One animation loop for every ring; requestAnimationFrame already stops in a hidden tab.
    Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
    through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
@@ -2337,7 +2339,7 @@ function startFluids() {
 /* ═════════════════════════ settings ═════════════════════════
    How the page looks, never what it measures: the fluid, its speed,
    the shake, the drifting sky and the typeface. Kept in this browser,
-   applied before the rings are first drawn so a chosen face never
+   applied before the ring is first drawn so a chosen face never
    flashes in the default one, and followed in other open tabs. Only
    choices that differ from the defaults are stored, so a later change
    of default reaches everyone who never picked otherwise. The system's
@@ -2348,8 +2350,8 @@ const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
 /* key, label, and the stylesheet variable holding its stack */
 const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source Serif 4", "--font-serif"],
                ["noto-sans", "Noto Sans", "--font-noto"], ["fira-code", "Fira Code", "--font-code"]];
-const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside each ring"],
-                  ["shake", "Vibration", "A ring over pace shakes"],
+const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring"],
+                  ["shake", "Vibration", "The ring shakes while over pace"],
                   ["sky", "Animated background", "The colour drifting behind the glass"]];
 
 /* Never trusts the stored copy further than it can be checked: a stale or hand-edited entry
@@ -2503,7 +2505,7 @@ function renderCost() {
       : `<tr><td class="mn" colspan="3" style="color:var(--ink-4)">ccusage reports no local usage in the last seven days</td></tr>`;
 
   if (c.error) {
-    $("costNote").innerHTML = `<span style="color:#f0b9c4">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota rings above are unaffected.`;
+    $("costNote").innerHTML = `<span style="color:#f0b9c4">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota ring above is unaffected.`;
   } else if (c.stale) {
     $("costNote").textContent = "Cached copy while a refresh runs. Recomputed at most every 5 minutes.";
   } else {
