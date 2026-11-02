@@ -935,7 +935,10 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-train] .ro dd small { display: block; margin-left: 0; }
 /* the numeral steps down with a ring too small for it; a container query, as the ring is the measure */
 @container (max-width: 130px) { :root[data-train] .num { font-size: 40px; } }
-:root[data-train] .meta { width: clamp(150px, 19vw, 250px); }
+/* the pace and cap lines wrap, so the column needs only the widest thing that cannot, the limit's
+   name, and the chart takes the rest of the row */
+:root[data-train] .meta { width: clamp(150px, 20vw, 198px); }
+@media (min-width: 681px) { :root[data-train] .lrow { gap: 16px; } }
 :root[data-train] .mpace .tri { font-size: 10px; }
 
 /* flat plates with stepped corners: four offset shadows draw the border and leave each corner a
