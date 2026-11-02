@@ -1421,7 +1421,8 @@ function paintRing(key, th, f) {
  *
  * Every cut point used to be drawn at once, so past 70% the only mark sat behind the arc —
  * covered, and answering a question already settled. Now the marks all sit ahead: the ring
- * shows where it is going.
+ * shows where it is going. The terminal draws every one, passed or not: its marks have a row
+ * of their own above the bar, where nothing covers them, and there they are the bar's scale.
  *
  * Two kinds, told apart by weight. A SERVED mark is a threshold the API publishes, drawn
  * full strength. A STATION is a quarter point of the warning band, drawn lighter — the
@@ -1429,9 +1430,8 @@ function paintRing(key, th, f) {
  * Anchors closer together than they can be drawn apart collapse to the higher of them, which
  * on this tier folds the 99.75 critical cut into the cap.
  */
-/* the colour changes still ahead of a reading: served cut points, then the stations between,
-   shared by the ring's marks and the terminal's */
-function marksAhead(th, pct) {
+/* the colour changes on the way to the cap: served cut points, then the stations between */
+function colourMarks(th) {
   const warn = num(th.warningFloorPercent, NaN);
   const crit = num(th.criticalPercent, NaN);
   const exh = num(th.exhaustedPercent, 100);
@@ -1445,7 +1445,11 @@ function marksAhead(th, pct) {
       marks.push({ v: warn + ((exh - warn) * k) / WARN_STATIONS, served: false });
     }
   }
-  return marks.filter((m) => m.v > pct).sort((a, b) => a.v - b.v);
+  return marks.sort((a, b) => a.v - b.v);
+}
+/* the ones still ahead of a reading, which are all the ring draws */
+function marksAhead(th, pct) {
+  return colourMarks(th).filter((m) => m.v > pct);
 }
 
 function paintThresholds(key, th, on, pct) {
@@ -1668,25 +1672,27 @@ function renderDetail(key) {
         "length: dotted and faint while it is headroom, solid and lit in the pace colour once the arc has " +
         "overrun the clock, thickening with the size of the overrun.";
   }
-  /* Mirrors paintThresholds — its `on` flag and its choice of marks, not just the values —
-     so the prose never names a mark that was not drawn. */
+  /* Mirrors the marks as drawn — the ring's as paintThresholds draws them (its `on` flag and its
+     choice of marks, not just the values), the terminal's every one — so the prose never names
+     a mark that was not drawn. */
   if (known && !quiet && typeof lim.percent === "number") {
     const w = num(th && th.warningFloorPercent, NaN), e = num(th && th.exhaustedPercent, 100);
     const c = num(th && th.criticalPercent, NaN);
-    const ahead = [];
-    if (isFinite(w) && w > lim.percent) ahead.push("the warning floor at " + showPct(w) + "%");
-    if (isFinite(c) && c > lim.percent && e - c > 1.5) ahead.push("critical at " + showPct(c) + "%");
-    if (e > lim.percent) ahead.push("the cap");
-    if (ahead.length) {
-      legend += (bar ? " The marks under the bar, with their numbers, are where the colour changes still ahead: "
+    const shown = (v) => bar || v > lim.percent;   // the ring leaves out what the arc has passed
+    const named = [];
+    if (isFinite(w) && shown(w)) named.push("the warning floor at " + showPct(w) + "%");
+    if (isFinite(c) && shown(c) && e - c > 1.5) named.push("critical at " + showPct(c) + "%");
+    if (shown(e)) named.push("the cap");
+    if (named.length) {
+      legend += (bar ? " The marks above the bar, with their numbers, are where the colour changes, passed or still ahead: "
                      : " The marks still ahead on the track are where the colour changes: ") +
-        ahead.join(", ") + " at full strength because the API serves them, and the fainter ones" +
+        named.join(", ") + " at full strength because the API serves them, and the fainter ones" +
         " at the quarter points between, which are colour steps rather than thresholds." +
         (isFinite(c) && e - c <= 1.5
           ? " The served critical cut at " + showPct(c) + "% sits too close to the cap to draw as a place of its own."
           : "");
     } else {
-      legend += " No marks " + (bar ? "under the bar" : "on the track") + ": there is no colour change left ahead of this reading.";
+      legend += " No marks on the track: there is no colour change left ahead of this reading.";
     }
   }
 
@@ -2683,7 +2689,7 @@ function makeMatrix(back, front) {
      face's line height; braille is drawn dot by dot for the same reason. Everything here is in
      device pixels, from cell edges rounded to whole ones, so two neighbouring cells share an
      exact edge at any zoom: a bar or a frame drawn cell by cell shows no seams at 125% or 90%. */
-  const BOX = { "─": "lr", "│": "ud", "┌": "rd", "┐": "ld", "└": "ur", "┘": "lu", "┤": "udl", "┴": "lru", "╵": "u",
+  const BOX = { "─": "lr", "│": "ud", "┌": "rd", "┐": "ld", "└": "ur", "┘": "lu", "┤": "udl", "┴": "lru", "╷": "d",
                 "━": "LR", "┃": "UD", "┏": "RD", "┓": "LD", "┗": "UR", "┛": "LU", "┄": "h", "┆": "v" };
   function lines(spec, x, y, w, h) {
     const t = Math.max(1, Math.round(dpr)) * (/[A-Z]/.test(spec) ? 2 : 1), s = spec.toLowerCase();
@@ -2807,7 +2813,8 @@ function makeMatrix(back, front) {
       }
     }
 
-    /* the limit: its number and clock, the bar, the marks under it, the verdicts, the chart */
+    /* the limit: its number and clock, the marks above the bar, the bar, the pace under it, the
+       verdicts, the chart */
     function limitBox(key, chartRows) {
       const btn = $("ring-" + key), rowEl = $("row-" + key);
       if (!btn || !rowEl) return;
@@ -2829,6 +2836,49 @@ function makeMatrix(back, front) {
       const countdown = !clockEl.classList.contains("word") && /\d/.test(clock);
       content.push([[0, big, HI, 1], [cellsOf(big) + 3, clock + (countdown ? " left" : ""), T, 0]]);
 
+      /* a row of cells beside the bar, filled in turn: a run goes in only where its cells, and
+         `gap` more either side, are free; then it is read off as runs of one ink */
+      const lane = () => {
+        const mk = new Array(iw).fill(null);
+        const free = (p, n) => p >= 0 && p + n <= iw && mk.slice(p, p + n).every((x) => !x);
+        const place = (p, text, ink, gap = 0) => {
+          const g = [...text];
+          if (!free(Math.max(0, p - gap), Math.min(iw, p + g.length + gap) - Math.max(0, p - gap)) || !free(p, g.length)) return false;
+          g.forEach((ch, k) => { mk[p + k] = [ch, ink]; });
+          return true;
+        };
+        const runs = () => {
+          const out = [];
+          for (let k = 0; k < iw; k++) {
+            if (!mk[k]) continue;
+            const last = out[out.length - 1];
+            if (last && last[2] === mk[k][1] && last[0] + cellsOf(last[1]) === k) last[1] += mk[k][0];
+            else out.push([k, mk[k][0], mk[k][1], 0]);
+          }
+          return out;
+        };
+        return { mk, place, runs };
+      };
+      const at = (v) => Math.min(iw - 1, Math.max(0, Math.round((v / 100) * (iw - 1))));
+
+      /* Above the bar, every colour change on the way to the cap, the ones it has passed too: the
+         served ones, the cap first, each with its number where there is room and always with its
+         tick, then the fainter quarter-point stations where they fit — so every change the detail
+         names is on the row. The row is theirs alone, so neither the bar's fill nor the pace under
+         it ever covers one, and it reads as the bar's scale. */
+      const above = lane(), th = S.snap ? S.snap.thresholds : null;
+      if (known && !quiet && th) {
+        const all = colourMarks(th);
+        for (const m of [...all.filter((x) => x.served).reverse(), ...all.filter((x) => !x.served)]) {
+          const p = at(m.v), rgb = rampOf(m.v, th, bandOf(m.v, th)).rgb, n = String(Math.round(m.v));
+          if (!m.served) { above.place(p, "╷", rgbCss(rgb.map((c) => Math.round(c * 0.5)))); continue; }
+          const ink = rgbCss(rgb);
+          if (!(above.place(p, "╷" + n, ink, 1) || above.place(p - n.length, n + "╷", ink, 1) ||
+                above.place(p, "╷" + n, ink) || above.place(p - n.length, n + "╷", ink))) above.mk[p] = ["╷", ink];
+        }
+      }
+      content.push(above.runs());
+
       /* the bar: the share used, in the band's colour, to an eighth of a cell */
       const bar = [];
       if (known) {
@@ -2839,50 +2889,19 @@ function makeMatrix(back, front) {
       } else bar.push([0, "░".repeat(iw), MX_INK.line, 0]);
       content.push(bar);
 
-      /* Under it, first the colour changes still ahead: the served ones, the cap first, each with
-         its number where there is room and always with its tick, then the fainter quarter-point
-         stations where they fit — so every change the detail names is on the row. Then the pace
-         tick, where an even burn would be by now, which wins its own cell, and the span from the
-         bar's end to it in whatever cells are left: solid in the pace colour once the bar has
-         overrun the clock, dotted while it is headroom. Its word goes where there is room. */
-      const mk = new Array(iw).fill(null);
-      const free = (p, n) => p >= 0 && p + n <= iw && mk.slice(p, p + n).every((x) => !x);
-      const place = (p, text, ink, gap = 0) => {
-        const g = [...text];
-        if (!free(Math.max(0, p - gap), Math.min(iw, p + g.length + gap) - Math.max(0, p - gap)) || !free(p, g.length)) return false;
-        g.forEach((ch, k) => { mk[p + k] = [ch, ink]; });
-        return true;
-      };
-      const at = (v) => Math.min(iw - 1, Math.max(0, Math.round((v / 100) * (iw - 1))));
-      const th = S.snap ? S.snap.thresholds : null;
-      if (known && !quiet && th) {
-        const ahead = marksAhead(th, pct);
-        for (const m of [...ahead.filter((x) => x.served).reverse(), ...ahead.filter((x) => !x.served)]) {
-          const p = at(m.v), rgb = rampOf(m.v, th, bandOf(m.v, th)).rgb, n = String(Math.round(m.v));
-          if (!m.served) { place(p, "╵", rgbCss(rgb.map((c) => Math.round(c * 0.5)))); continue; }
-          const ink = rgbCss(rgb);
-          if (!(place(p, "╵" + n, ink, 1) || place(p - n.length, n + "╵", ink, 1) ||
-                place(p, "╵" + n, ink) || place(p - n.length, n + "╵", ink))) mk[p] = ["╵", ink];
-        }
-      }
+      /* Under it, the pace tick, where an even burn would be by now, and the span from the bar's
+         end to it: solid in the pace colour once the bar has overrun the clock, dotted while it
+         is headroom. Its word goes where there is room. */
+      const below = lane();
       if (el !== null) {
         const pp = at(el * 100), hp = at(pct);
-        for (let k = Math.min(pp, hp) + 1; k < Math.max(pp, hp); k++) {
-          if (!mk[k]) mk[k] = over ? ["━", paceMark] : ["┄", MX_INK.line];
-        }
-        mk[pp] = ["▲", paceMark];
+        for (let k = Math.min(pp, hp) + 1; k < Math.max(pp, hp); k++) below.mk[k] = over ? ["━", paceMark] : ["┄", MX_INK.line];
+        below.mk[pp] = ["▲", paceMark];
         /* the word away from the span first; with no room either side, the ▲ says it alone */
-        const left = () => place(pp - 5, "pace ", MX_INK.dim), right = () => place(pp + 1, " pace", MX_INK.dim);
+        const left = () => below.place(pp - 5, "pace ", MX_INK.dim), right = () => below.place(pp + 1, " pace", MX_INK.dim);
         if (over) left() || right(); else right() || left();
       }
-      const marks = [];
-      for (let k = 0; k < iw; k++) {
-        if (!mk[k]) continue;
-        const last = marks[marks.length - 1];
-        if (last && last[2] === mk[k][1] && last[0] + cellsOf(last[1]) === k) last[1] += mk[k][0];
-        else marks.push([k, mk[k][0], mk[k][1], 0]);
-      }
-      content.push(marks);
+      content.push(below.runs());
 
       const paceTxt = words(q(key, "pace")).replace(/^([▲▼◆])\s*/, "$1 ");
       if (paceTxt) content.push([[0, paceTxt, over ? paceInk : MX_INK.dim, btn.dataset.hot === "1"]]);

@@ -31,8 +31,9 @@ window is one grid of character cells in Fira Code, shared by two layers.
  QUOTA  MAX · 20×                            ● live · updated 13s ago  [≡]
 ┌─ CURRENT WEEK (ALL MODELS) ───────────────────────────── 7 DAYS WINDOW ─┐
 │ 41%   5d 11h 59m left                                                   │
-│ ██████████████████████████▌░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│            pace ▲━━━━━━━━━━━━━              ╵70     ╵85   ╵  ╵    100╵ │
+│                                                  ╷70  ╷     ╷    ╷ 100╷ │
+│ █████████████████████████████▏░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│           pace ▲━━━━━━━━━━━━━                                           │
 │ ▲ 20 pts over pace · 1.9× clock                                         │
 │ cap ~Wed 05:55 · in 3d 12h                                              │
 │                                                                         │
@@ -46,16 +47,16 @@ window is one grid of character cells in Fira Code, shared by two layers.
 ```
 
 - **The page** is a text UI: framed boxes, the limit as a bar in its band's colour (to an eighth
-  of a cell), the pace ▲ under the bar with the span to the bar's end (solid in the pace colour
-  when over, dotted while it is headroom), the colour changes still ahead as marks (every served
-  one, numbered where there is room; the quarter-point stations fainter), the verdict and cap
-  lines, and the history as a braille chart: bright in the band's colour where the burn rate was
+  of a cell), the colour changes as marks on the row above the bar, the ones it has passed
+  included (every served one, numbered where there is room; the quarter-point stations fainter),
+  the pace ▲ on the row under it with the span to the bar's end (solid in the pace colour when
+  over, dotted while it is headroom), so the ▲ never lands on a mark, the verdict and cap lines,
+  and the history as a braille chart: bright in the band's colour where the burn rate was
   fitted, with a dotted upright over "fit" where that run starts, the warning floor labelled,
   and, when a projection is published, a dotted ramp to the cap and a "now" tick where the
-  readings stop. Every character is locked in its
-  cell and set in **amber**, so the page is told from the rain at a glance; the readings that
-  carry a colour keep it (the bar's band, the pace channel, the hold and error tones, the cost
-  strip's own family).
+  readings stop. Every character is locked in its cell and set in **amber**, so the page is told
+  from the rain at a glance; the readings that carry a colour keep it (the bar's band, the pace
+  channel, the hold and error tones, the cost strip's own family).
 - **The rain** falls on the layer below: columns of digits, letters and signs at a fixed 22
   steps a second whatever the display's rate, in **green**, with a head of the same colour lit
   most of the way to white (less of the way for a dark colour, so a dark rain stays dark); about

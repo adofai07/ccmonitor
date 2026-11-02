@@ -554,4 +554,6 @@ Marks on the track are all *ahead* of the arc; drawing the ones behind it answer
 already settled. A **served** cut point is drawn full strength, a **station** — a quarter point
 of the band, where the colour steps but nothing official happens — is drawn lighter. Marks
 closer together than they can be drawn apart collapse to the higher, which folds the 99.75 cut
-into the cap. At 100% nothing is drawn, because nothing is ahead.
+into the cap. At 100% nothing is drawn, because nothing is ahead. The Matrix terminal draws
+every mark, the passed ones too: they have a row of their own above its bar, where nothing
+covers them, and read as the bar's scale.
