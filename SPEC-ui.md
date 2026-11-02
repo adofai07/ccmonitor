@@ -9,7 +9,8 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 ## Theme
 
-Two themes, chosen in *Settings*: **Glass**, the default, and **Matrix**, a terminal.
+Three themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, and **Train**,
+a pixel scene.
 
 **Glass: dark glass over an animated gradient.**
 
@@ -18,7 +19,7 @@ Two themes, chosen in *Settings*: **Glass**, the default, and **Matrix**, a term
 - Motion is confined to the backdrop, the ring's interior (see *Ring interior* below) and
   one alarm, the shake of the ring while it is over pace (see *Over pace*). The arc, tick and
   chart otherwise only move when the data moves. Each of the three can be switched off in
-  *Settings*. (Matrix is a terminal with motion of its own; see below.)
+  *Settings*. (Matrix and Train have motion of their own; see below.)
 - `prefers-reduced-motion` freezes the gradient, holds the ring's fluid as a still frame and
   stops the shake.
 
@@ -85,6 +86,69 @@ window is one grid of character cells in Fira Code, shared by two layers.
   reading moves the room's heat, so it never shows a calm room at the cap.
 - The terminal has no fluid, no shake and no choice of face, so Settings does not list those
   while it is on. A browser that cannot draw it keeps the glass page, and its settings.
+
+### Train
+
+A steam train runs through a village, and the window is the view from alongside it. The camera
+keeps up with the train, so the train stands on screen with its wheels turning and the world goes
+past it in layers. The scene is drawn small on one canvas and enlarged with hard pixels, from the
+sprite sheet in `public/sprites/train.png` (its sources are in `art/`).
+
+The page is the same page as Glass, so it says the same things and the keyboard and screen readers
+work the same way. It is reset as flat plates with stepped corners, in the bitmap face Jersey 10,
+at the top of the window so that the train has its lane below; in a short window the page scrolls
+over the scene. The ring and the chart's marks are coarsened onto a 3px grid.
+
+**The sky is the accent.** The sky's middle band is the colour the ring would have, teal by day,
+amber at the warning floor and redder to the cap, and everything on the page that carries the
+ring's colour carries the sky's instead: the arc, the chart, the plates' borders, the headings.
+The bands above it run to the deep of the sky and those below to the light at the horizon.
+
+The story turns on the served cut points, so it lands on the marks the ring prints:
+
+| reading | scene |
+| --- | --- |
+| under the warning floor (70%) | day. The sun crosses the sky with the reading |
+| at the warning floor | evening comes: the sun is carried down, the sky turns amber from the horizon up, and windows and lamps light |
+| from there to the band's third quarter point (92.5%) | the sun sinks to the hills and the sky reddens with the reading |
+| past the third quarter point | the land scorches, the village gives out into ruins, and a horned beast's mouth swallows the train. It comes out at the far end, in hell |
+| at the cap (100%) | once through, the only station in the world comes into sight, the burnt-out terminus at the end of the line, and the train brakes to a stand at its platform. Its smoke stops; the fire goes on burning around it |
+
+**No change happens at once.** Nothing in the scene follows a reading directly. The scene keeps its
+own reading, which walks after the real one at a fixed pace, and evening, hell and the train's
+speed walk after that, each in its own time: day to evening takes 50 s, the fall into hell 40 s and
+the brake 30 s. However far a reading jumps, the scene passes through everything between, in order.
+The land changes by scrolling in, thinning from green to dry to ash a tile at a time; a change of
+biome is never painted over land already on screen. The clouds are the one exception, being so
+slow to leave: white and black ones are both always up there, and the walk fades one set into the
+other.
+
+- **There are no other stations.** The terminus is placed out of sight ahead as the train starts to
+  brake, where the brake will bring it to rest to within a couple of pixels, so it slides into view
+  as the train slows. It is never moved or replaced in view: if the reading leaves the cap and
+  comes back, the train brakes for it if it is still ahead, stops up to 24 scene pixels past it if
+  it has only just left, and otherwise lets it go by and stops at the next. It carries no sign and
+  no lettering; its clock has stopped with both hands at twelve.
+- **Going back.** A reading that falls, as one does when the week resets, walks back the same way:
+  the train pulls away from the terminus, leaves hell through the beast (it comes out of the mouth this time), and
+  the sky cools. A long fall back into the day does not walk the sun back the way it came: it goes
+  on down, waits under the land while hell lasts, and comes up in the east on a new morning.
+- **The accent lags the reading by design.** The number is always the reading, at once. The ring's
+  colour is the sky's, so for the length of a walk it shows where the sky has got to, not where
+  the reading is.
+- **The first reading is where the scene starts,** however late it comes, as there is nothing yet
+  to walk from: no scene is drawn before it, and it fades up already in that state, so a page
+  opened at 95% is simply in hell. A held reading is walked to like any other, and a reading lost
+  later on leaves the sky as it was rather than calling it morning.
+- *Moving scene*, the theme's own setting, off stops it where it stands, and
+  `prefers-reduced-motion` shows one still frame. A still frame cannot walk, so it dissolves into
+  the next one over 4 s when a reading moves it, and the accent eases across with it. It stays on
+  the same stretch of land unless hell, the scorching or the terminus has come or gone.
+- A hidden tab stops the scene, and the walk picks up where it was: a reading that landed
+  meanwhile still has to be walked to when the tab comes back.
+- The scene has no fluid, no shake and no choice of face, so Settings does not list those while it
+  runs. A browser that cannot draw it, or a sheet that will not load, keeps the glass page, its
+  settings and the reader's own typeface.
 
 ## Primary view — the weekly limit, a ring and its chart
 
@@ -204,7 +268,7 @@ greyed out.
 
 | theme | setting | choices | default |
 | --- | --- | --- | --- |
-| both | Theme | Glass, Matrix | Glass |
+| all | Theme | Glass, Matrix, Train | Glass |
 | Glass | Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
 | Glass | Speed | slow / normal / fast (0.25×, 0.5×, 1×) — listed only while the fluid is on | normal |
 | Glass | Vibration | on / off — the shake of a ring over pace | on |
@@ -215,6 +279,7 @@ greyed out.
 | Matrix | Speed | slider, 0.25×–2.5× of 22 steps a second — listed only while the rain is on | 1× |
 | Matrix | Colour #1 | any colour — the rain; its heads are the colour lit toward white, less so the darker it is | green `#00ff66` |
 | Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
+| Train | Moving scene | on / off — off stops the train, its smoke and the fire where they stand | on |
 
 Settings change how the page looks, never what it measures or how it judges a reading:
 switching the shake off leaves the over-pace verdict in the tick, the caption and the halo.
@@ -225,8 +290,9 @@ everything, and the panel says so while it is on.
 
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
 font service. Fira Code also takes over the figures, which are otherwise set in the system's
-monospaced face. Matrix is set in Fira Code whatever the typeface says; the reader's own choice
-is kept, and returns with Glass.
+monospaced face. Matrix is set in Fira Code and Train in Jersey 10 whatever the typeface says; the
+reader's own choice is kept, and returns with Glass. Jersey 10 is not offered as a choice: it is
+a bitmap face, set at a few fixed sizes that the rest of the page does not keep to.
 
 ## Footer strip
 

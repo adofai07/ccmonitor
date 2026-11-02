@@ -32,7 +32,7 @@ const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 // inline <style> and an inline <script>, no external ones to allow; `img-src data:` covers the
 // data-URI favicon and the noise background (the inline SVG is markup, not an image fetch);
 // connect-src 'self' is fetch()/EventSource to this same server. font-src 'self' is the
-// typefaces Settings offers, bundled under public/fonts and served from the allowlist below —
+// bundled typefaces, under public/fonts and served from the allowlist below —
 // this server, never a font CDN.
 const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
@@ -51,18 +51,21 @@ const SECURITY_HEADERS = {
   ].join('; '),
 };
 
-// The dashboard is ONE page, public/index.html, self-contained but for the typefaces its
-// Settings panel offers, which are bundled rather than fetched from anywhere. So the servable
-// set is an allowlist of exactly the names it needs, not a blocklist of the tricks a path can
-// play. Nothing the client writes reaches the filesystem, which retires traversal,
-// percent-escapes, NUL bytes, FIFOs and symlinked directories in a single rule instead of one
-// guard each — a guarantee this page is small enough to simply afford.
+// The dashboard is ONE page, public/index.html, self-contained but for the typefaces it uses
+// and the sprite sheet of the Train theme, all bundled rather than fetched
+// from anywhere. The sheet reaches the page through fetch(), so connect-src covers it and img-src
+// stays as it is. So the servable set is an allowlist of exactly the names it needs, not a
+// blocklist of the tricks a path can play. Nothing the client writes reaches the filesystem,
+// which retires traversal, percent-escapes, NUL bytes, FIFOs and symlinked directories in a
+// single rule instead of one guard each — a guarantee this page is small enough to simply afford.
 const ASSETS = new Map([
   ['/', 'index.html'],
   ['/index.html', 'index.html'],
   ['/fonts/SourceSerif4Variable-Roman.ttf.woff2', 'fonts/SourceSerif4Variable-Roman.ttf.woff2'],
   ['/fonts/NotoSans-Latin.woff2', 'fonts/NotoSans-Latin.woff2'],
   ['/fonts/FiraCode-VF.woff2', 'fonts/FiraCode-VF.woff2'],
+  ['/fonts/Jersey10-Latin.woff2', 'fonts/Jersey10-Latin.woff2'],
+  ['/sprites/train.png', 'sprites/train.png'],
 ]);
 
 const MIME = {
@@ -237,7 +240,7 @@ async function serveStatic(pathname, res) {
   }
 
   // A typeface does not change under a running dashboard, and the Settings panel draws a sample
-  // in each, so every load would fetch all of them again; a day's cache ends that. The page is
+  // in each it offers, so every load would fetch them again; a day's cache ends that. The page is
   // left uncached, since it is the part that does change.
   const cache = extname(file) === '.woff2' ? { 'cache-control': 'max-age=86400' } : {};
   res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[extname(file)] ?? 'application/octet-stream', ...cache });

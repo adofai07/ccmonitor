@@ -1,14 +1,16 @@
 # Bundled typefaces
 
-The typefaces the dashboard's Settings panel offers, served by the dashboard itself so they look
-the same on every machine and nothing is fetched from anywhere else. All three are under the SIL
-Open Font License 1.1; each licence sits beside its font.
+The typefaces the dashboard uses beyond the system's own, served by the dashboard itself so they
+look the same on every machine and nothing is fetched from anywhere else. Three are offered in the
+Settings panel, and the Train theme sets itself in the fourth. All four are under the SIL Open
+Font License 1.1; each licence sits beside its font.
 
 | File | Source | Changes |
 | --- | --- | --- |
 | `SourceSerif4Variable-Roman.ttf.woff2` | Adobe, [source-serif 4.005R](https://github.com/adobe-fonts/source-serif/releases/tag/4.005R), `source-serif-4.005_WOFF2.zip` → `VAR/` | none — the licence reserves the name "Source", so it ships exactly as released |
 | `FiraCode-VF.woff2` | [Fira Code 6.2](https://github.com/tonsky/FiraCode/releases/tag/6.2), `Fira_Code_v6.2.zip` → `woff2/` | none |
 | `NotoSans-Latin.woff2` | [google/fonts](https://github.com/google/fonts/tree/main/ofl/notosans) `ofl/notosans/NotoSans[wdth,wght].ttf` | width fixed at 100 and cut to Latin (below); no reserved name |
+| `Jersey10-Latin.woff2` | [google/fonts](https://github.com/google/fonts/tree/main/ofl/jersey10) `ofl/jersey10/Jersey10-Regular.ttf` | cut to Latin (below); no reserved name |
 
 `NotoSans-Latin.woff2` was made with fontTools 4.65:
 
@@ -23,5 +25,10 @@ pyftsubset NotoSans-wght.ttf \
 The full font is 2 MB; the dashboard's text is Latin, so the cut keeps the weight axis and every
 OpenType feature (tabular figures included) at 57 KB. Noto Sans has no ▲ ▼ ◆ →, so those come
 from the next face in the stack.
+
+`Jersey10-Latin.woff2` was made the same way with fontTools 4.68, from the same list less the
+marks and arrows it does not have, at 13 KB. It has no ▲ ▼ ◆ → or ± of its own, so those also come
+from the next face in the stack. A bitmap face looks its best at a few fixed sizes, so the Train
+theme keeps to 20, 40 and 60px.
 
 Only the `.woff2` files are served, each by name in `src/server.js`'s allowlist.

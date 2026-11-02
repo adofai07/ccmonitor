@@ -468,10 +468,10 @@ this package; without it the footer just says so.
 
 `GET /healthz` — `{"ok":true,"version":"0.1.0"}`.
 
-Static files are the dashboard page, `public/index.html`, and the typefaces its Settings panel
-offers, in `public/fonts/` with their licences. Only those exact files are served — an
-allowlist in `src/server.js`, not the directory — and the page's CSP lets it load fonts from
-this server alone. The page draws the weekly limit alone — the session limit is gone upstream
+Static files are the dashboard page, `public/index.html`, the typefaces it uses, in
+`public/fonts/` (their licences sit beside them and are not served), and the Train theme's sprite
+sheet, `public/sprites/train.png`. Only those exact files are served — an allowlist in `src/server.js`,
+not the directory — and the page's CSP lets it load fonts from this server alone. The page draws the weekly limit alone — the session limit is gone upstream
 and Fable is not used — while the API above keeps reporting all three.
 
 ### Access
@@ -530,7 +530,9 @@ src/paths.js         the cache and Claude Code directories
 src/cost.js          ccusage subprocess, cached — the footer number, not quota
 bin/ccquota.js       json | watch | serve | statusline
 public/index.html    the dashboard: one page, inline style and script
-public/fonts/        bundled typefaces for Settings, with their licences and provenance
+public/fonts/        bundled typefaces, with their licences and provenance
+public/sprites/      the Train theme's sprite sheet, built from art/
+art/                 the sprites' sources: Aseprite Lua and the packer; not served or shipped
 ```
 
 ### Colour across the warning band

@@ -16,28 +16,31 @@
    backdrop and to the ring's interior: the sky drifts on a ~30s loop
    and warms when the limit heats up, and the ring holds a small fluid
    stirred by the same heat. The arc, tick and chart move only when
-   data moves. Settings offers a second theme, Matrix, at the end of
-   this sheet.
+   data moves. Settings offers two more themes, Matrix and Train, at
+   the end of this sheet.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
 
-/* The typefaces Settings offers beyond the system's own, bundled under public/fonts (each
-   with its licence) and served by this same server, so they look the same on every machine
-   and nothing is fetched from anywhere else. Variable fonts: one file covers every weight
-   the page uses. "fallback" waits a moment for a face that is on its way instead of flashing
-   the default one first, and from loopback it arrives long before the moment is up. */
+/* The typefaces the page uses beyond the system's own: those Settings offers and the Train theme's
+   bitmap face, bundled under public/fonts (each with its licence) and served by this same server,
+   so they look the same on every machine and nothing is fetched from anywhere else. The three on
+   offer are variable fonts: one file covers every weight the page uses. "fallback" waits a moment
+   for a face that is on its way instead of flashing the default one first, and from loopback it
+   arrives long before the moment is up. */
 @font-face { font-family: "Source Serif 4"; src: url("/fonts/SourceSerif4Variable-Roman.ttf.woff2") format("woff2"); font-weight: 200 900; font-display: fallback; }
 @font-face { font-family: "Noto Sans";      src: url("/fonts/NotoSans-Latin.woff2") format("woff2");                font-weight: 100 900; font-display: fallback; }
 @font-face { font-family: "Fira Code";      src: url("/fonts/FiraCode-VF.woff2") format("woff2");                   font-weight: 300 700; font-display: fallback; }
+@font-face { font-family: "Jersey 10";      src: url("/fonts/Jersey10-Latin.woff2") format("woff2");                font-weight: 400;     font-display: fallback; }
 
 :root {
   /* --sans is whichever typeface Settings has chosen; figures that must line up stay in --mono,
-     except that Fira Code takes them too — two monospaced faces side by side read as a mistake. */
+     except that Fira Code and Jersey 10 take them too — two faces side by side read as a mistake. */
   --font-system: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif:  "Source Serif 4", ui-serif, Georgia, serif;
   --font-noto:   "Noto Sans", ui-sans-serif, system-ui, sans-serif;
   --font-code:   "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-pixel:  "Jersey 10", ui-monospace, SFMono-Regular, Menlo, monospace;
   --sans: var(--font-system);
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
@@ -96,6 +99,7 @@
 :root[data-font="source-serif-4"] { --sans: var(--font-serif); }
 :root[data-font="noto-sans"]      { --sans: var(--font-noto); }
 :root[data-font="fira-code"]      { --sans: var(--font-code); --mono: var(--font-code); }
+:root[data-font="jersey-10"]      { --sans: var(--font-pixel); --mono: var(--font-pixel); }
 
 html, body { height: 100%; }
 body {
@@ -296,6 +300,7 @@ main {
 .range:focus-visible, .pcolour:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 
 .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px 0 2px; }
+[aria-labelledby="ph-theme"].picks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pick {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
   padding: 8px 4px 6px; border-radius: 10px; border: 1px solid var(--hair); background: rgb(var(--tint) / .025);
@@ -806,6 +811,216 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-tui] .panel,
 :root[data-tui] .panel *,
 :root[data-tui] .panel *::before { border-radius: 0; }
+
+/* ══════════════════════════════════════════════════════════════════
+   Train — the third theme, chosen in Settings: a pixel scene.
+
+   The scene (the train section of the script) fills the window behind
+   the page, drawn small on one canvas and enlarged with hard edges. The
+   page itself is the same page, so everything it says, and the keyboard
+   and screen readers, work as they do in Glass; it is only reset as flat
+   plates with stepped corners, in a bitmap face, at the top of the
+   window, leaving the train its lane below.
+
+   The sky is the accent. --band is what colours the ring, its chart and
+   its numeral's bloom, and the script writes it on the row; here it is
+   overruled with the sky's own colour, which the scene writes as it
+   walks. A row with no reading is left the grey it was given.
+   All of it keys on data-train, which is set only while the scene runs,
+   so a browser that cannot run it keeps the glass page.
+   ══════════════════════════════════════════════════════════════════ */
+/* it stays out of sight until there is a reading to show, and then fades up (see rise()) */
+.scene { position: fixed; left: 0; bottom: 0; z-index: 0; display: none; pointer-events: none; image-rendering: pixelated;
+         opacity: 0; transition: opacity 1.2s var(--ease) !important; }
+.pxdefs { position: absolute; width: 0; height: 0; }
+:root[data-train] .scene { display: block; }
+:root[data-train] {
+  --tint:    255 240 210;
+  --ink-rgb: 250 241 219;
+  --hi:      #fff7e2;
+  --ink-2:   rgb(var(--ink-rgb) / .86);
+  --ink-3:   rgb(var(--ink-rgb) / .74);
+  --ink-4:   rgb(var(--ink-rgb) / .6);
+  --base:    #101522;
+  --hair:    rgb(var(--tint) / .16);
+  --edge:    rgb(var(--tint) / .3);
+  --plate:   #151b2c;
+  --plate-2: #1e2638;
+  --pixel:   3px;     /* one of the page's pixels, for the plates' borders; #pxgrid and GRID spell out
+                         the same 3 for the ring and the chart */
+  --sky:     rgb(114 234 208);
+  --sky-rgb: 114 234 208;
+  --lane:    240px;
+}
+:root[data-train] .sky,
+:root[data-train] .grain,
+:root[data-train] .vig { display: none; }
+:root[data-train] .art > *,
+:root[data-train] .fresh .dot { animation: none !important; }
+:root[data-train] .lrow:has(.ring:not([data-band="unknown"])) {
+  --band: var(--sky) !important;
+  --band-rgb: var(--sky-rgb) !important;
+}
+:root[data-train] #detail:has(.dband:not([data-band="unknown"])) {
+  --band: var(--sky) !important;
+  --band-rgb: var(--sky-rgb) !important;
+}
+:root[data-train] .dband:not([data-band="unknown"]) { color: var(--sky) !important; }
+
+/* the page, up out of the train's way; the lane is reserved at the end of its scroll */
+:root[data-train] main {
+  justify-content: flex-start; gap: 14px;
+  padding-top: 16px; padding-bottom: var(--lane);
+}
+
+/* A bitmap face looks its best at a few fixed sizes, so the page's many small sizes fold into 20px,
+   with 40 and 60 for the figures. */
+:root[data-train] body { font-size: 20px; line-height: 1.1; -webkit-font-smoothing: none; font-synthesis: none; }
+:root[data-train] .mark h1 { font-size: 20px; letter-spacing: .08em; font-weight: 400; color: var(--sky); }
+:root[data-train] .plan,
+:root[data-train] .fresh,
+:root[data-train] .mlabel,
+:root[data-train] .mpace,
+:root[data-train] .meta-eta,
+:root[data-train] .chartcap,
+:root[data-train] .chartcap .note,
+:root[data-train] .dtitle,
+:root[data-train] .dband,
+:root[data-train] .dclose,
+:root[data-train] .dfoot,
+:root[data-train] .ro dt,
+:root[data-train] .ro dd small,
+:root[data-train] .ro dd.est,
+:root[data-train] .chead h2,
+:root[data-train] .cwarn,
+:root[data-train] .ctot .k,
+:root[data-train] .ctab,
+:root[data-train] .ctab th,
+:root[data-train] .cnote,
+:root[data-train] .rule .tag,
+:root[data-train] .ptitle,
+:root[data-train] .phead,
+:root[data-train] .pname,
+:root[data-train] .prow.sub .pname,
+:root[data-train] .phint,
+:root[data-train] .pnote,
+:root[data-train] .pval,
+:root[data-train] .pfoot,
+:root[data-train] .preset,
+:root[data-train] .seg span,
+:root[data-train] .pick .fn,
+:root[data-train] .chartempty {
+  font-size: 20px; line-height: 1; letter-spacing: .01em; font-weight: 400; font-style: normal;
+}
+:root[data-train] .mclock { font-size: 40px; line-height: 40px; letter-spacing: 0; }
+:root[data-train] .mclock.word { font-size: 20px; letter-spacing: .02em; }
+:root[data-train] .ro dd,
+:root[data-train] .ctot .v { font-size: 40px; line-height: 40px; letter-spacing: 0; }
+:root[data-train] .num { font-size: 60px; font-weight: 400; letter-spacing: 0; text-shadow: 3px 3px 0 rgb(0 0 0 / .6); }
+:root[data-train] .pctsign { font-size: 20px; text-shadow: none; }
+/* wider than the column at many widths, and the verdict is at the end: they wrap rather than lose it */
+:root[data-train] .mpace,
+:root[data-train] .meta-eta { line-height: 20px; min-height: 20px; white-space: normal; overflow: visible; }
+/* the name and the countdown, the same, at the widths where they do not fit */
+:root[data-train] .mlabel,
+:root[data-train] .mclock { white-space: normal; overflow: visible; }
+/* a figure on its line and what qualifies it on the next, for the same reason */
+:root[data-train] .ro dd { white-space: normal; overflow: visible; }
+:root[data-train] .ro dd small { display: block; margin-left: 0; }
+/* the numeral steps down with a ring too small for it; a container query, as the ring is the measure */
+@container (max-width: 130px) { :root[data-train] .num { font-size: 40px; } }
+:root[data-train] .meta { width: clamp(150px, 19vw, 250px); }
+:root[data-train] .mpace .tri { font-size: 10px; }
+
+/* flat plates with stepped corners: four offset shadows draw the border and leave each corner a
+   pixel short, and a fifth is the hard drop shadow */
+:root[data-train] .top,
+:root[data-train] .glass,
+:root[data-train] .cost,
+:root[data-train] .panel,
+:root[data-train] .rule .tag {
+  border: 0; border-radius: 0;
+  background: var(--plate);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow:
+    0 calc(-1 * var(--pixel)) 0 0 var(--sky), 0 var(--pixel) 0 0 var(--sky),
+    calc(-1 * var(--pixel)) 0 0 0 var(--sky), var(--pixel) 0 0 0 var(--sky),
+    calc(2 * var(--pixel)) calc(2 * var(--pixel)) 0 0 rgb(0 0 0 / .4);
+}
+:root[data-train] .glass::before { display: none; }
+:root[data-train] .top { padding: 6px 10px; margin-bottom: -8px; }   /* one piece with the plate below */
+:root[data-train] .cost { padding: 16px 18px; }
+:root[data-train] .rule { justify-content: center; }
+:root[data-train] .rule .ln { display: none; }
+:root[data-train] .rule .tag { padding: 4px 10px; }
+:root[data-train] .plan,
+:root[data-train] .fresh,
+:root[data-train] .dband,
+:root[data-train] .dclose,
+:root[data-train] .gear,
+:root[data-train] .preset,
+:root[data-train] .switch,
+:root[data-train] .switch::before,
+:root[data-train] .seg,
+:root[data-train] .seg span,
+:root[data-train] .pick,
+:root[data-train] .pick .swatch,
+:root[data-train] .ring,
+:root[data-train] .readouts,
+:root[data-train] .chartempty,
+:root[data-train] .cbar,
+:root[data-train] .sw { border-radius: 0; }
+:root[data-train] .fresh .dot { border-radius: 0; box-shadow: none; }
+:root[data-train] .panel { padding: 14px 16px; }
+:root[data-train] .chead h2 { color: var(--sky); }
+:root[data-train] .chead h2 .sl { color: var(--ink-3); opacity: 1; }
+:root[data-train] .cwarn { color: var(--ink-2); }
+:root[data-train] .ro { background: var(--plate-2); }
+:root[data-train] .detailInner { background: var(--plate-2); }
+:root[data-train] .ctab td { padding: 3px 8px 3px 0; }
+:root[data-train] .ctab col.c2 { width: 110px; }
+
+/* The ring is drawn as it always is and then coarsened by the filter the page carries: sampled on a
+   3px grid and each sample grown to a block. So what goes in is aliased, or its edges come out
+   half-toned, and a line that must stay whole is as wide as the grid, as the arc is and the tick
+   is made here; the hairlines are left to break up. The chart's lines are laid on the same grid
+   to begin with (see gridPath), which keeps their steps joined. The bloom is a soft glow, which
+   has no place in pixels; so are round caps. */
+:root[data-train] .art svg { filter: url(#pxgrid); }
+:root[data-train] .art svg * { shape-rendering: crispEdges; }
+:root[data-train] .arc.bloom { display: none; }
+:root[data-train] .arc { stroke-linecap: butt !important; }
+:root[data-train] .nl { stroke-width: 3; stroke-linecap: butt; }
+:root[data-train] .nb { stroke-linecap: butt; }
+:root[data-train] .chart .full,
+:root[data-train] .chart .run,
+:root[data-train] .chart .area,
+:root[data-train] .chart .proj,
+:root[data-train] .chart .head { shape-rendering: crispEdges; }
+:root[data-train] .chart .full,
+:root[data-train] .chart .run { stroke-width: 3; stroke-linecap: square; stroke-linejoin: miter; }
+:root[data-train] .chart .proj { stroke-width: 3; stroke-linecap: butt; stroke-linejoin: miter; stroke-dasharray: none; }
+:root[data-train] .chart .ax { font-size: 20px; letter-spacing: 0; }
+/* the trace and the projection never run under a label in this layout; a thin knock-out only keeps
+   the dotted guide lines out of the letters */
+:root[data-train] .chart .lbl { stroke: var(--plate); stroke-width: 4; stroke-linejoin: miter; }
+:root[data-train] .chart,
+:root[data-train] .chartempty { height: 160px; }
+
+/* the theme's patch of itself, in Settings: a sky, a field and a small train in box-shadows */
+.pick[data-pick="train"] .swatch {
+  position: relative;
+  background: linear-gradient(#72ead0 0 62%, #6abe30 62% 82%, #663931 82%);
+  image-rendering: pixelated;
+}
+.pick[data-pick="train"] .swatch::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px; margin: -5px 0 0 -13px;
+  background: #222034;
+  box-shadow:
+    2px 0 #222034, 4px 0 #222034, 6px 0 #222034, 8px 0 #222034, 10px 0 #222034, 12px 0 #ac3232, 14px 0 #ac3232,
+    16px 0 #ac3232, 18px 0 #ac3232, 20px 0 #d9a066, 0 2px #222034, 4px 2px #ac3232, 8px 2px #ac3232, 12px 2px #222034,
+    16px 2px #222034, 20px 2px #222034, 4px -2px #222034, 18px -2px #222034, 18px -4px #222034, 16px -6px #fff, 14px -8px #fff;
+}
 </style>
 </head>
 <body data-hold="0">
@@ -815,6 +1030,17 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   <div class="warm" id="warm"><div class="blob w1"></div><div class="blob w2"></div><div class="blob w3"></div></div>
 </div>
 <canvas class="mx" id="rain" aria-hidden="true"></canvas>
+<canvas class="scene" id="scene" aria-hidden="true"></canvas>
+<!-- samples a drawing on a 3px grid and grows each sample to a block; the Train theme's ring -->
+<svg class="pxdefs" aria-hidden="true" focusable="false">
+  <filter id="pxgrid" filterUnits="userSpaceOnUse" x="-40" y="-40" width="240" height="240" color-interpolation-filters="sRGB">
+    <feFlood x="1" y="1" width="1" height="1" flood-color="#fff"/>
+    <feComposite width="3" height="3"/>
+    <feTile result="grid"/>
+    <feComposite in="SourceGraphic" in2="grid" operator="in"/>
+    <feMorphology operator="dilate" radius="1"/>
+  </filter>
+</svg>
 <div class="grain" aria-hidden="true"></div>
 <div class="vig" aria-hidden="true"></div>
 
@@ -1304,6 +1530,7 @@ function render() {
   $("warm").style.opacity = String(heat);
   roomHeat = heat;   // the Matrix theme's rain warms with it too
   if (matrix) matrix.heat();
+  trainReading();    // and the Train theme's sky has somewhere new to walk to
 
   const sig = f.tone + "|" + (s && s.lastError ? s.lastError.code : "") + "|" +
     ORDER.map((k) => { const l = limitOf(k); return l && l.percent !== null ? showPct(l.percent) : "?"; }).join(",");
@@ -1707,7 +1934,7 @@ function renderDetail(key) {
   const html =
     `<div class="dhead">
        <span class="dtitle">${esc((lim && lim.label) || SHORT[key])} · ${esc(fmtWindow(winSec))} window</span>
-       <span class="dband" style="color:${rgbCss(ramp.rgb)}">${esc(bandWord)}</span>
+       <span class="dband" data-band="${band}" style="color:${rgbCss(ramp.rgb)}">${esc(bandWord)}</span>
        <button class="dclose" type="button" id="dclose">close</button>
      </div>
      <dl class="readouts">
@@ -1823,6 +2050,41 @@ function chartSeries(key, proj) {
   return { pts, usable, now, t0, t1, ymax, projX, gapMs };
 }
 
+/* What the layout leaves for the chart's type. CHAR_W is the advance of one .ax glyph, 10px of a
+   ui-monospace face (~0.6em) plus .04em of tracking; mid centres text on a line, capY is the cap
+   label's baseline, floor the bottom row's, and two labels closer than clash are moved step apart.
+   Train's bitmap face is set at 20px, so there the chart is taller and its margins wider, and the
+   cap label has a row of its own above the plot, where the ramp cannot reach it. */
+const CHART_TYPE = {
+  plain: { PL: 34, PR: 46, PT: 10, PB: 19, CHAR_W: 6.4, mid: 3.4, capY: 19, floor: 5, clash: 12, step: 15 },
+  pixel: { PL: 34, PR: 56, PT: 26, PB: 24, CHAR_W: 7.6, mid: 6, capY: 16, floor: 6, clash: 18, step: 22, tall: 160 },
+};
+/* A line laid on the page's 3px grid, cell by cell, each move across or up and never both at once:
+   every cell shares a side with the last, so a one-point step keeps its riser and the trace stays
+   one line. Coarsening a smooth line afterwards, as the ring is, leaves such a step as two bars
+   touching at a corner. The half pixel puts a 3px stroke exactly on whole rows. */
+const GRID = 3, onGrid = (v) => Math.round(v / GRID) * GRID + 0.5;
+function gridPath(points) {
+  let x = onGrid(points[0][0]), y = onGrid(points[0][1]), d = "M" + x + " " + y;
+  for (let i = 1; i < points.length; i++) {
+    const x0 = x, y0 = y, tx = onGrid(points[i][0]), ty = onGrid(points[i][1]);
+    const n = Math.max(Math.abs(tx - x0), Math.abs(ty - y0)) / GRID;
+    for (let k = 1; k <= n; k++) {
+      const nx = onGrid(x0 + ((tx - x0) * k) / n), ny = onGrid(y0 + ((ty - y0) * k) / n);
+      if (nx !== x) { d += "H" + nx; x = nx; }
+      if (ny !== y) { d += "V" + ny; y = ny; }
+    }
+  }
+  return d;
+}
+/* the projection on the same grid: three cells on and two off, so a forecast is never mistaken for a reading */
+function gridDash(a, b) {
+  const n = Math.max(1, Math.round(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])) / GRID));
+  const at = (k) => [a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n];
+  let d = "";
+  for (let k = 0; k < n; k += 5) d += gridPath([at(k), at(Math.min(n, k + 3))]);
+  return d;
+}
 function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   const h = S.hist, m = chartSeries(key, proj), { pts, usable, now } = m;
   if (usable.length < 2) {
@@ -1831,9 +2093,9 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
             <div class="chartempty">${h ? "not enough readings retained yet to draw a line" : "loading history…"}</div>`;
   }
 
-  const PL = 34, PR = 46, PT = 10, PB = 19;
-  /* advance of one .ax glyph: 10px of a ui-monospace face (~0.6em) plus .04em of tracking */
-  const CHAR_W = 6.4;
+  const pixel = trainOn(), T = pixel ? CHART_TYPE.pixel : CHART_TYPE.plain;
+  const { PL, PR, PT, PB, CHAR_W } = T;
+  const edge = pixel ? onGrid : (v) => v;
   const { t0, t1, ymax, projX } = m;
 
   const X = (t) => PL + ((t - t0) / (t1 - t0)) * (W - PL - PR);
@@ -1848,17 +2110,19 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
       cur.push(p);
     }
     if (cur.length > 1) out.push(cur);
+    if (pixel) return out.map((a) => gridPath(a.map((p) => [X(p.t), Y(p.v)]))).join(" ");
     return out.map((a) => "M" + a.map((p) => X(p.t).toFixed(1) + " " + Y(p.v).toFixed(1)).join("L")).join(" ");
   };
 
   const since = fit && typeof fit.sinceT === "number" && isFinite(fit.sinceT) ? fit.sinceT : null;
+  let fitLabel = null;
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${
     esc(SHORT[key])} usage history, ${usable.length} readings, latest ${usable[usable.length-1].v} percent">`;
 
   for (const fr of [0, .5, 1]) {
     const y = Y(ymax * fr);
     s += `<line class="grid" x1="${PL}" y1="${y.toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
-    s += `<text class="ax" x="${PL - 7}" y="${(y + 3.4).toFixed(1)}" text-anchor="end">${Math.round(ymax * fr)}</text>`;
+    s += `<text class="ax" x="${PL - 7}" y="${(y + T.mid).toFixed(1)}" text-anchor="end">${Math.round(ymax * fr)}</text>`;
   }
   const warn = num(th && th.warningFloorPercent, NaN);
   const warnOn = isFinite(warn) && warn <= ymax;
@@ -1874,13 +2138,16 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
       /* a two-sample run is a sliver; shading it would read as an
          artefact, so only a run wide enough to be a shape is filled */
       if (run.length > 1 && X(run[run.length - 1].t) - X(run[0].t) > (W - PL - PR) * 0.08) {
-        s += `<path class="area" d="${runD} L${X(run[run.length-1].t).toFixed(1)} ${(H-PB).toFixed(1)} L${X(run[0].t).toFixed(1)} ${(H-PB).toFixed(1)} Z"></path>`;
+        s += `<path class="area" d="${runD} L${edge(X(run[run.length-1].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} L${edge(X(run[0].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} Z"></path>`;
       }
       s += `<path class="run" d="${runD}"></path>`;
     }
     if (since > t0 && since < t1) {
       s += `<line class="since" x1="${X(since).toFixed(1)}" y1="${PT}" x2="${X(since).toFixed(1)}" y2="${(H - PB).toFixed(1)}"></line>`;
-      s += `<text class="ax" x="${(X(since) - 4).toFixed(1)}" y="${(H - PB - 4).toFixed(1)}" text-anchor="end">fit</text>`;
+      /* Train's is too big for the corner the upright leaves: it moves past the upright rather
+         than meet the axis, and is drawn last, as the labels that matter may want the place */
+      const room = !pixel || X(since) - 4 - 3 * CHAR_W > PL + 2;
+      fitLabel = { x: X(since) + (room ? -4 : 4), y: H - PB - 4, anchor: room ? "end" : "start" };
     }
   }
 
@@ -1898,40 +2165,56 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   if (projX !== null) {
     const capText = "cap " + stamp(projX);
     capLeft = X(projX) - 5 - capText.length * CHAR_W;
-    s += `<path class="proj" d="M${X(last.t).toFixed(1)} ${Y(last.v).toFixed(1)}L${X(projX).toFixed(1)} ${Y(100).toFixed(1)}"></path>`;
-    s += `<text class="ax lbl" x="${(X(projX) - 5).toFixed(1)}" y="${PT + 9}" text-anchor="end" fill="var(--band)">${esc(capText)}</text>`;
+    s += `<path class="proj" d="${pixel ? gridDash([X(last.t), Y(last.v)], [X(projX), Y(100)])
+      : `M${X(last.t).toFixed(1)} ${Y(last.v).toFixed(1)}L${X(projX).toFixed(1)} ${Y(100).toFixed(1)}`}"></path>`;
+    s += `<text class="ax lbl" x="${(X(projX) - 5).toFixed(1)}" y="${T.capY}" text-anchor="end" fill="var(--band)">${esc(capText)}</text>`;
   }
   const headX = X(last.t), headY = Y(last.v);
   const label = last.v + "%";
   const lw = label.length * CHAR_W;
-  const capRow = PT + 9;
+  const capRow = T.capY;
   let lx = headX + 7, la = "start";
   if (lx + lw > W - 2) { lx = headX - 7; la = "end"; }          // never off the right edge
   /* clamp BEFORE testing for a clash: a head at 100% wants a row above
      the plot, gets pushed down into exactly the row the cap label owns,
      and the clash has to be judged on where the label really lands */
   let ly = clamp(headY - 7, PT + 8, H - PB - 3);
+  /* The ramp leaves the head going up and to the right, so that is the one place a label as big
+     as the bitmap face's must not be. Up and to the left is clear: the trace comes from below. */
+  if (T === CHART_TYPE.pixel && projX !== null) { lx = headX - 8; la = "end"; ly = Math.max(headY - 10, capRow); }
   if (projX !== null) {
     const l = la === "end" ? lx - lw : lx, r = la === "end" ? lx : lx + lw;
     /* they only fight when the label reaches into the cap label's span
        AND sits in its row — which is exactly the high-percent case,
        because a projection is drawn precisely when the head is high */
-    if (r + 8 > capLeft && l < X(projX) && Math.abs(ly - capRow) < 12) {
-      ly = clamp(Math.max(headY + 15, capRow + 15), PT + 8, H - PB - 3);
+    if (r + 8 > capLeft && l < X(projX) && Math.abs(ly - capRow) < T.clash) {
+      ly = clamp(Math.max(headY + T.step, capRow + T.step), PT + 8, H - PB - 3);
+      /* down and to the right: the trace came from the left, and may have come steeply */
+      if (pixel) { lx = headX + 8; la = "start"; }
     }
   }
   /* "warn" sits in the right margin at the warning line, which is exactly where the head
      label lands when the reading is near the floor; the head's value wins, the line stays */
   if (warnOn) {
-    const wy = Y(warn) + 3.4, wl = W - PR + 5, hl = la === "end" ? lx - lw : lx, hr = la === "end" ? lx : lx + lw;
-    if (!(hr > wl - 3 && hl < wl + 4 * CHAR_W + 3 && Math.abs(ly - wy) < 11)) {
+    const wy = Y(warn) + T.mid, wl = W - PR + 5, hl = la === "end" ? lx - lw : lx, hr = la === "end" ? lx : lx + lw;
+    if (!(hr > wl - 3 && hl < wl + 4 * CHAR_W + 3 && Math.abs(ly - wy) < T.clash - 1)) {
       s += `<text class="ax" x="${wl.toFixed(1)}" y="${wy.toFixed(1)}" fill="rgb(var(--warning-rgb)/.65)">warn</text>`;
     }
   }
-  s += `<circle class="head" cx="${headX.toFixed(1)}" cy="${headY.toFixed(1)}" r="2.6"></circle>`;
+  s += pixel ? `<rect class="head" x="${onGrid(headX) - 4.5}" y="${onGrid(headY) - 4.5}" width="9" height="9"></rect>`
+             : `<circle class="head" cx="${headX.toFixed(1)}" cy="${headY.toFixed(1)}" r="2.6"></circle>`;
   s += `<text class="ax lbl" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${la}" fill="var(--band)">${label}</text>`;
-  s += `<text class="ax" x="${PL}" y="${H - 5}">${esc(stamp(t0))}</text>`;
-  s += `<text class="ax" x="${(W - PR).toFixed(1)}" y="${H - 5}" text-anchor="end">${projX !== null ? esc(stamp(t1)) : "now"}</text>`;
+  if (fitLabel) {
+    const fw = 3 * CHAR_W, fl = fitLabel.anchor === "end" ? fitLabel.x - fw : fitLabel.x, fr = fl + fw;
+    const hl = la === "end" ? lx - lw : lx, hr = hl + lw;
+    /* in the bitmap face it gives way to the head's value, and to a trace running low through it */
+    const low = pixel && usable.some((p) => X(p.t) > fl - 2 && X(p.t) < fr + 2 && Y(p.v) > fitLabel.y - 18);
+    if (!pixel || !(low || (fr + 3 > hl && fl - 3 < hr && Math.abs(ly - fitLabel.y) < T.clash))) {
+      s += `<text class="ax" x="${fitLabel.x.toFixed(1)}" y="${fitLabel.y.toFixed(1)}" text-anchor="${fitLabel.anchor}">fit</text>`;
+    }
+  }
+  s += `<text class="ax" x="${PL}" y="${H - T.floor}">${esc(stamp(t0))}</text>`;
+  s += `<text class="ax" x="${(W - PR).toFixed(1)}" y="${H - T.floor}" text-anchor="end">${projX !== null ? esc(stamp(t1)) : "now"}</text>`;
   s += `</svg>`;
 
   return `<div class="chartcap">
@@ -1950,7 +2233,8 @@ function renderCharts() {
   S.chartsDirty = false;
   S.chartsAt = Date.now();
   const th = S.snap ? S.snap.thresholds : null, f = freshness();
-  const H = matchMedia("(max-width: 560px)").matches ? 100 : 118;   // the .chart height in CSS
+  /* the .chart height in CSS */
+  const H = trainOn() ? CHART_TYPE.pixel.tall : matchMedia("(max-width: 560px)").matches ? 100 : 118;
   for (const key of ORDER) {
     const host = $("spark-" + key);
     if (!host) continue;
@@ -2441,8 +2725,8 @@ function fluidTick(ts) {
    Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
    through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
-  /* the terminal has no fluid, so under it the loop stops too */
-  const on = PREFS.fluid && !tuiOn();
+  /* the terminal and the scene have no fluid, so under them the loop stops too */
+  const on = PREFS.fluid && !tuiOn() && !trainOn();
   for (const key of ORDER) {
     if (!FLUIDS[key]) continue;
     const canvas = q(key, "fluid");
@@ -3354,12 +3638,939 @@ function matrixMotion() {
   if (!moving && !matrix.painted) matrix.still();
 }
 
+/* ═════════════════════════ train ═════════════════════════
+   The third theme, in pixels: a steam train runs through a village, and
+   the window is the view from alongside it. The camera keeps up with the
+   train, so the train stands on screen with its wheels turning and the
+   world goes past it, in layers that move the slower the further off they
+   are. The page stays where it is, on plain plates over the sky.
+
+   The sky IS the page's accent. Its middle band is the colour the ring
+   would have, teal by day, amber at the warning floor and redder from
+   there; and everything on the page that carries the ring's colour
+   carries the sky's instead, so the two cannot disagree.
+
+   The story is told by the served cut points, so it lands on the marks
+   the ring prints: evening comes at the warning floor, and the sun then
+   sinks as the reading climbs, setting at the third of the band's quarter
+   points. There the land scorches, the village gives out, and a demon's
+   mouth takes the train down into hell. At the cap the only station in
+   the world comes into sight, the end of the line, and the train brakes
+   to a stand at it while the fire goes on burning around it.
+
+   NOTHING HERE FOLLOWS A READING DIRECTLY, and that is the rule the whole
+   of it is built on: no change may happen at once. The scene keeps its
+   own reading, v, which walks after the real one at a fixed pace, and
+   evening, hell and the train's speed walk after v, each in its own time.
+   Every colour and position on screen is a function of those walkers, so
+   however far a reading jumps, the sun still has to cross the sky to get
+   there. The one exception is the first reading a page sees: there is
+   nothing to change from, so no scene is drawn until there is one, and
+   it fades up already in that state.
+
+   Its own setting: "Moving scene", off stops it where it stands, and
+   reduced motion holds a still frame. A still frame cannot walk, so it
+   dissolves into the next one instead, slowly. */
+const TRN = {
+  tall: 240,     // how many scene pixels high the window is, about; the width follows from it
+  hz: 30,        // steps a second: the scene moves in whole pixels, so more would be wasted
+  run: 56,       // scene pixels a second past the train at full speed
+  read: 1.2,     // points a second the scene's reading walks after the real one
+  dusk: 50,      // seconds day takes to turn to evening
+  fall: 40,      // seconds from the first scorched field to hell's full light
+  brink: 0.55,   // how far through that fall the mouth comes
+  brake: 30,     // seconds from full speed to a stand, and back
+  arc: 45,       // seconds the sun takes over the whole sky at its quickest
+  nose: 130,     // the column of the terminus the locomotive's nose comes to rest at
+  fade: 4,       // seconds a still frame takes to become the next one
+  sky: 15,       // inks in the sky, top to horizon, dithered into each other; odd, so one is the middle
+  rail: 24,      // the rail stands this far above the bottom of the window
+};
+/* The sheet, built by art/pack.lua: the base art on the top half, and its lights at the same place
+   on the bottom half. Each sprite below is x, y, width, height, frames, and whether it has lights.
+   Fetched rather than loaded as an image, which needs no change to the page's img-src: an
+   ImageBitmap is made from the bytes and only ever drawn. */
+const TRAIN_SHEET = "/sprites/train.png";
+const SPR = {
+  loco: [0, 0, 64, 32, 4, 1],
+  tender: [257, 0, 30, 22, 4, 0],
+  coach: [0, 33, 56, 24, 4, 1],
+  coachB: [225, 33, 56, 24, 4, 1],
+  house1: [0, 58, 34, 32, 1, 1],
+  house2: [35, 58, 30, 36, 1, 1],
+  house3: [66, 58, 28, 24, 1, 1],
+  house4: [95, 58, 24, 40, 1, 1],
+  house5: [120, 58, 38, 28, 1, 1],
+  church: [159, 58, 36, 60, 1, 1],
+  windmill: [196, 58, 22, 42, 1, 1],
+  sails: [219, 58, 40, 40, 4, 0],
+  oak1: [380, 58, 22, 28, 1, 0],
+  oak2: [403, 58, 26, 30, 1, 0],
+  poplar: [430, 58, 10, 32, 1, 0],
+  pine: [441, 58, 14, 28, 1, 0],
+  bush1: [456, 58, 12, 8, 1, 0],
+  bush2: [469, 58, 16, 10, 1, 0],
+  haystack: [486, 58, 14, 10, 1, 0],
+  tuft1: [501, 58, 8, 5, 1, 0],
+  tuft2: [0, 119, 8, 6, 1, 0],
+  tuft3: [9, 119, 10, 6, 1, 0],
+  fence: [20, 119, 16, 7, 1, 0],
+  lamp: [37, 119, 6, 22, 1, 1],
+  pole: [44, 119, 12, 36, 1, 0],
+  sheep: [57, 119, 11, 8, 2, 0],
+  cloud1: [80, 119, 44, 14, 1, 0],
+  cloud2: [125, 119, 30, 10, 1, 0],
+  cloud3: [156, 119, 58, 18, 1, 0],
+  field0: [215, 119, 32, 26, 2, 0],
+  field1: [280, 119, 32, 26, 2, 0],
+  field2: [345, 119, 32, 26, 2, 1],
+  track0: [410, 119, 32, 10, 2, 0],
+  track1: [0, 156, 32, 10, 2, 0],
+  track2: [65, 156, 32, 10, 2, 0],
+  front0: [130, 156, 32, 16, 2, 0],
+  front1: [195, 156, 32, 16, 2, 0],
+  front2: [260, 156, 32, 16, 2, 0],
+  mouthBack: [0, 173, 152, 104, 1, 1],
+  mouthFront: [153, 173, 152, 104, 1, 1],
+  flameL: [306, 173, 20, 28, 6, 1],
+  ash1: [427, 173, 48, 14, 1, 0],
+  ash2: [476, 173, 34, 10, 1, 0],
+  spire3: [0, 278, 26, 44, 1, 1],
+  charred2: [27, 278, 22, 30, 1, 1],
+  charred1: [50, 278, 18, 26, 1, 1],
+  ruin1: [69, 278, 32, 24, 1, 1],
+  ruin2: [102, 278, 28, 20, 1, 1],
+  spire1: [131, 278, 16, 32, 1, 1],
+  spire2: [148, 278, 12, 22, 1, 0],
+  flameM: [161, 278, 12, 16, 6, 1],
+  flameS: [234, 278, 8, 10, 6, 1],
+  bat: [283, 278, 9, 6, 3, 1],
+  brazier: [311, 278, 10, 18, 1, 1],
+  skulls: [322, 278, 16, 8, 1, 0],
+  bones: [339, 278, 14, 6, 1, 0],
+  field3: [354, 278, 32, 26, 4, 1],
+  front3: [0, 323, 32, 16, 4, 1],
+  track3: [129, 323, 32, 10, 1, 1],
+  terminus: [162, 323, 176, 64, 1, 1],
+};
+const CARS = ["coach", "coachB", "coach", "tender", "loco"];   // left to right
+/* The light. Sprites are drawn in day colours and multiplied by these, depth by depth; the sky's
+   ends are mixed with the accent, which stays exact in its middle. */
+const SKY = { dayTop: [38, 132, 176], dayLow: [236, 255, 240], eveTop: [74, 42, 106], eveLow: [255, 220, 132],
+              pitTop: [22, 6, 14], pitLow: [255, 176, 46] };
+const LIGHT = { day: [255, 255, 255], eveHigh: [255, 212, 172], eveLow: [170, 94, 102], pit: [214, 84, 72],
+                cloudEve: [255, 178, 142], cloudPit: [150, 44, 44] };
+const HILL = { far: [116, 170, 142], near: [72, 132, 92], rimFar: [150, 198, 164], rimNear: [108, 172, 112],
+               pit: [38, 16, 22], pitRim: [146, 46, 30] };
+/* its inks, and how far past either end of its arc it is, on the other side of the world: 1.2 and
+   -0.2 are both well under the land */
+const SUN = { day: [255, 251, 214], eve: [255, 206, 92], low: [240, 84, 48], under: 1.2 };
+const EMBER_INKS = ["#fbf236", "#ffb02e", "#df7126", "#ac3232"];
+const SMOKE = { back: 14, up: 33 };   // where the stack is: back from the nose, up from the rail
+/* The mouth is the head of a beast whose body the train runs through. Its neck is these columns of
+   the head repeated, as many times as it takes to hide the whole train at once, so that it goes in
+   under one sky and comes out under another; the last few columns are its stepped end. */
+const BEAST = { neck: 112, wide: 36, end: 148, necks: 8 };
+const beastLength = () => SPR.mouthFront[2] + BEAST.wide * BEAST.necks;
+const ease = (t) => t * t * (3 - 2 * t);
+const toward = (v, to, by) => (v < to ? Math.min(to, v + by) : Math.max(to, v - by));
+const lerp = (a, b, t) => a + (b - a) * t;
+/* the 4×4 Bayer matrix, as fractions: added to a level before it is floored, it dithers it */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((n) => (n + 0.5) / 16);
+
+let train = null, trainBroken = false;
+/* whether the scene is what is on screen — not the same as Train being chosen, if it cannot run */
+const trainOn = () => document.documentElement.hasAttribute("data-train");
+
+/* the served cut points the scene turns on. Hell is the band's third quarter point, the same
+   92.5 the ring prints a mark at; both are derived, so the mark and the fire cannot drift apart. */
+function trainCuts(th) {
+  let warn = num(th && th.warningFloorPercent, 70), cap = num(th && th.exhaustedPercent, 100);
+  if (!(warn > 0 && cap > warn)) { warn = 70; cap = 100; }     // only a malformed table does this
+  return { warn, cap, hell: warn + ((cap - warn) * (WARN_STATIONS - 1)) / WARN_STATIONS };
+}
+/* what the ring's colour would be at v once evening has come, and so what the sky's becomes */
+const warmInk = (v, c) => mix(STOP.warning, STOP.exhausted, clamp((v - c.warn) / (c.cap - c.warn), 0, 1));
+
+function makeTrain(canvas) {
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) return null;
+  const rand = seeded(1825);       // the year of the first public steam railway
+  const rnd = (n) => (rand() * n) | 0;
+  const pick = (list) => list[rnd(list.length)];
+
+  /* ── the walkers: everything drawn is a function of these ───── */
+  let goal = 0;                    // the last reading seen, which the scene is walking toward
+  let v = 0;                       // the scene's own reading
+  let w = 0;                       // how far evening has come, 0–1
+  let h = 0;                       // how far into hell, 0–1
+  let spd = 1;                     // the train's speed, 0–1 of full
+  let sun = 0.06, sunRound = false, sunOver = false;   // along its arc, 0 sunrise to 1 sunset
+  let cut = trainCuts(null);
+  let seen = false, missed = false;   // has a reading ever come? Did one come while off screen?
+
+  /* ── the world ───────────────────────────────────────────────── */
+  let dist = 0, clock = 0;         // scene pixels travelled; seconds of scene
+  let beyond = false, mouth = null;   // past the mouth, where the frontier is? The mouth itself, while near
+  /* The end of the line. A speed falling at a steady rate covers a known distance, so the terminus
+     is placed exactly that far ahead the moment the train starts to brake, and scrolls in as it
+     slows: terminus.stop is the distance travelled at which the nose comes level with it, and it
+     is left behind when the train pulls away. halt is where the train is stopping now, if it is. */
+  let terminus = null, halt = null;
+  let W = 0, H = 0, railY = 0, unit = 0, scale = 0;
+  let atlas = null, sheetH = 0;
+  let active = false, moving = false, loop = false, raf = 0, lastTs = 0;
+  let nextLight = 0, glow = 0;
+  const tints = [];                // the sheet multiplied by each depth's light, redone only as it changes
+  const tintKeys = [];
+  let skyInks = [], skyKey = "", hillFar = "#000", hillNear = "#000", rimFar = "#000", rimNear = "#000";
+  let puffInk = [255, 255, 255], accent = STOP.steady, shown = STOP.steady, accentKey = "";
+  let gliding = false, glideFrom = STOP.steady, glideT0 = 0, glideMs = 1;
+  const skyCv = document.createElement("canvas"), skyCx = skyCv.getContext("2d");
+  let skyImg = null, skyPx = null;
+  const fadeCv = document.createElement("canvas"), fadeCx = fadeCv.getContext("2d");
+  let fadeT0 = 0, fadeTimer = 0;   // when the frame on show began to dissolve; 0 when none is
+  const hillsFar = new Int16Array(4096), hillsNear = new Int16Array(4096);
+  let farEdge = 0, nearEdge = 0, jagFar = 0, jagNear = 0;
+  const puffs = [], embers = [];
+  let puffDue = 0;
+
+  const offOf = (L) => dist * L.par + clock * (L.drift || 0);
+  /* a thing placed at the layer's frontier; dx nudges it there, for what rides on something else */
+  const put = (L, name, up, extra) => {
+    const o = { s: SPR[name], x: L.edge + ((extra && extra.dx) || 0), up, ...extra };
+    L.items.push(o);
+    return o;
+  };
+
+  /* The land scorches as hell nears: while the village still stands the fields go dry and then
+     to ash, tile by tile at random, so the change comes on as a thinning and not as a line. */
+  const biome = () => {
+    if (beyond) return 3;
+    return Math.min(2, Math.floor((h / TRN.brink) * 2.4 + rand()));
+  };
+  const tile = (L, name, up, b) => {
+    const s = SPR[name + b];
+    L.items.push({ s, x: L.edge, up, ...(s[4] > 2 ? { fps: 7, ph: 0 } : { f: rnd(s[4]) }) });
+  };
+  const spawnField = (L) => { tile(L, "field", 0, biome()); L.edge += 32; };
+  /* the front tile's top rows are the track's ballast, so the two change biome together */
+  function spawnTrack(L) {
+    const b = biome();
+    tile(L, "track", -9, b);
+    LAYERS.front.edge = L.edge;
+    tile(LAYERS.front, "front", -TRN.rail, b);
+    L.edge += 32;
+  }
+
+  const fire = (L, size, dx, up) => put(L, size, up, { dx, fire: true, fps: 11, ph: rnd(6) });
+
+  /* The main row keeps a rhythm, a stretch of village and then a stretch of country, until the
+     scorching reaches it. Past that it is what the fire has left. */
+  const HOUSES = ["house1", "house2", "house3", "house4", "house5", "house1", "house3"];
+  const COUNTRY = ["oak1", "oak2", "pine", "haystack", "bush2", "poplar", "sheep"];
+  function spawnMain(L) {
+    const up = 4 + rnd(7);
+    if (beyond) {
+      const n = pick(["spire1", "spire2", "spire3", "spire3", "skulls", "brazier"]);
+      put(L, n, up);
+      if (n === "spire3" && rand() < 0.5) fire(L, "flameS", 6, up + 20);
+      L.edge += SPR[n][2] + 8 + rnd(44);
+      return;
+    }
+    if (h > TRN.brink * 0.3) {
+      const n = pick(["ruin1", "ruin2", "charred1", "charred2", "ruin1"]);
+      put(L, n, up);
+      if (n.startsWith("ruin")) {
+        fire(L, "flameM", 4 + rnd(10), up + 6);
+        if (rand() < 0.6) fire(L, "flameS", 16 + rnd(8), up + 4);
+      }
+      L.edge += SPR[n][2] + 6 + rnd(30);
+      return;
+    }
+    if (!(L.left > 0)) { L.town = !L.town; L.left = L.town ? 5 + rnd(7) : 2 + rnd(4); }
+    L.left--;
+    if (L.town) {
+      const n = pick(HOUSES);
+      put(L, n, up);
+      L.edge += SPR[n][2] + 2;
+      if (rand() < 0.35) { put(L, pick(["oak1", "poplar", "pine"]), up - 2); L.edge += 6; }
+      if (rand() < 0.3) { put(L, "lamp", up - 3, { dx: 1 }); L.edge += 6; }
+      L.edge += rnd(8);
+      return;
+    }
+    const n = pick(COUNTRY);
+    put(L, n, up - rnd(3), n === "sheep" ? { fps: 2, ph: rnd(2) } : null);
+    L.edge += SPR[n][2] + 8 + rnd(26);
+  }
+
+  /* The back row: the far side of the village, hazed by distance, and its church and windmill. */
+  function spawnBack(L) {
+    const up = 24;
+    if (beyond) { const n = pick(["spire3", "spire1", "spire2"]); put(L, n, up); L.edge += SPR[n][2] + 10 + rnd(50); return; }
+    if (h > TRN.brink * 0.3) { const n = pick(["charred1", "charred2", "ruin2"]); put(L, n, up); L.edge += SPR[n][2] + 16 + rnd(40); return; }
+    L.since = (L.since || 0) + 1;
+    if (L.since > 5 + rnd(5)) {
+      L.since = 0;
+      if (rand() < 0.5) { put(L, "church", up); L.edge += SPR.church[2] + 8; return; }
+      put(L, "windmill", up);
+      put(L, "sails", up + 18, { dx: -9, fps: 5, ph: rnd(4) });
+      L.edge += SPR.windmill[2] + 16;
+      return;
+    }
+    const n = pick(["oak1", "oak2", "poplar", "poplar", "pine", "house3", "house2"]);
+    put(L, n, up);
+    L.edge += SPR[n][2] + 3 + rnd(16);
+  }
+
+  /* By the track: a fence, telegraph poles and bushes, and nothing where the terminus is to stand. */
+  function spawnSide(L) {
+    const up = 2;
+    if (terminus) {
+      const x = terminusX(), end = x + SPR.terminus[2] + 8;
+      if (L.edge + 40 > x && L.edge < end) { L.edge = end; return; }
+    }
+    if (beyond) {
+      const n = pick(["bones", "skulls", "spire2", "brazier", "bones"]);
+      put(L, n, up);
+      if (rand() < 0.5) fire(L, "flameM", SPR[n][2] + 8, up);
+      L.edge += SPR[n][2] + 26 + rnd(60);
+      return;
+    }
+    if (h > TRN.brink * 0.3) {
+      if (rand() < 0.5) fire(L, "flameS", 0, up);
+      else put(L, "charred1", up);
+      L.edge += 30 + rnd(50);
+      return;
+    }
+    const n = pick(["fence", "fence", "fence", "pole", "bush1", "tuft2"]);
+    put(L, n, up);
+    L.edge += SPR[n][2] + (n === "fence" ? 0 : 10 + rnd(16));
+  }
+
+  /* Under the track, nearest of all: grass and flowers, and then the flames. */
+  function spawnFront(L) {
+    if (beyond) {
+      fire(L, pick(["flameS", "flameM", "flameM", "flameL"]), 0, -14 - rnd(7));
+      L.edge += 12 + rnd(38);
+      return;
+    }
+    if (h > TRN.brink * 0.5) {
+      if (rand() < h) fire(L, "flameS", 0, -16 - rnd(5));
+      L.edge += 26 + rnd(50);
+      return;
+    }
+    put(L, pick(["tuft1", "tuft2", "tuft3"]), -14 - rnd(7));
+    L.edge += 10 + rnd(30);
+  }
+
+  /* This layer is so slow that a cloud stays for minutes, so white clouds and black ones are both
+     always up there, and the walk into hell fades one set out and the other in. */
+  function spawnCloud(L) {
+    const up = 96 + rnd(Math.max(30, railY - 130));
+    const dark = rand() < 0.5;
+    if (dark && rand() < 0.25) put(L, "bat", up, { fps: 8, ph: rnd(3), pit: true });
+    else put(L, pick(dark ? ["ash1", "ash2"] : ["cloud1", "cloud2", "cloud3"]), up, { pit: dark, cloud: !dark });
+    L.edge += 24 + rnd(60);
+  }
+
+  /* far to near; a layer's tint is its depth's copy of the sheet */
+  const LAYERS = {
+    cloud: { par: 0.05, drift: 2, tint: 3, items: [], edge: 0, spawn: spawnCloud },
+    back:  { par: 0.28, tint: 2, items: [], edge: 0, spawn: spawnBack },
+    field: { par: 0.6,  tint: 1, items: [], edge: 0, spawn: spawnField },
+    main:  { par: 0.6,  tint: 1, items: [], edge: 0, spawn: spawnMain },
+    side:  { par: 1,    tint: 0, items: [], edge: 0, spawn: spawnSide },
+    track: { par: 1,    tint: 0, items: [], edge: 0, spawn: spawnTrack },
+    front: { par: 1,    tint: 0, items: [], edge: 0, spawn: null },      // laid with the track
+    tuft:  { par: 1.3,  tint: 0, items: [], edge: 0, spawn: spawnFront },
+  };
+  const LIST = Object.values(LAYERS);
+
+  /* The hills are a line of heights kept in a ring, written as they come on screen. Rolling here,
+     and jagged past the mouth; the change eases in over 90 columns, so a hill goes from one
+     to the other instead of showing a seam. */
+  const rolling = (x, a) => a + 11 * Math.sin(x / 67) + 6 * Math.sin(x / 23 + 1.3) + 2 * Math.sin(x / 9.7);
+  const jagged = (x, a) => a + 6 + Math.abs(((x * 0.041) % 2) - 1) * 44 + Math.abs(((x * 0.127) % 2) - 1) * 13 - 22;
+  function growHills(par, ring, edge, jag, base) {
+    const to = Math.floor(dist * par) + W + 2;
+    for (; edge < to; edge++) {
+      jag = toward(jag, beyond ? 1 : 0, 1 / 90);
+      ring[edge & 4095] = Math.round(lerp(rolling(edge, base), jagged(edge, base), ease(jag)));
+    }
+    return [edge, jag];
+  }
+  function growWorld() {
+    for (const L of LIST) {
+      const off = offOf(L);
+      /* wider than anything placed relative to the edge, so the mouth is always made out of sight */
+      if (L.spawn) while (L.edge < off + W + 96) L.spawn(L);
+      let n = 0;
+      while (n < L.items.length && L.items[n].x + L.items[n].s[2] < off - 72) n++;
+      if (n) L.items.splice(0, n);
+    }
+    [farEdge, jagFar] = growHills(0.07, hillsFar, farEdge, jagFar, 46);
+    [nearEdge, jagNear] = growHills(0.14, hillsNear, nearEdge, jagNear, 30);
+  }
+
+  /* the world made anew for the state the walkers are in, as if it had always been so */
+  function rebuild() {
+    for (const L of LIST) { L.items.length = 0; L.edge = Math.floor(offOf(L)) - 72; L.left = 0; L.since = 0; }
+    farEdge = Math.floor(dist * 0.07); nearEdge = Math.floor(dist * 0.14);
+    jagFar = jagNear = beyond ? 1 : 0;
+    mouth = null;
+    terminus = spd === 0 && beyond ? { stop: Math.ceil(dist) } : null;     // already standing at it
+    halt = terminus ? terminus.stop : null;
+    puffs.length = embers.length = 0;
+    growWorld();
+  }
+  /* keep: a still frame stays on the same stretch of land unless hell has come or gone, the
+     scorching it stopped in has passed, or the train has reached the terminus or left it */
+  function snap(keep) {
+    const was = beyond, burnt = h > 0, stood = spd === 0;
+    v = goal;
+    w = v >= cut.warn ? 1 : 0;
+    h = v > cut.hell ? 1 : 0;
+    spd = v >= cut.cap ? 0 : 1;
+    sun = sunAim(v, w, h);
+    sunRound = false;
+    beyond = h >= 1;
+    if (!keep || beyond !== was || (burnt && h === 0) || stood !== (spd === 0) || (terminus && spd !== 0)) rebuild();
+    light(true);
+  }
+
+  /* ── the walk ────────────────────────────────────────────────── */
+  /* By day the sun crosses the sky with the reading. At the warning floor evening carries it down
+     toward the hills, and from there the reading sinks it, to touch them where hell begins and to
+     be gone as the land starts to burn. */
+  function sunAim(at, eve, pit) {
+    const day = lerp(0.06, 0.8, clamp(at / cut.warn, 0, 1));
+    const low = lerp(0.9, 0.995, clamp((at - cut.warn) / (cut.hell - cut.warn), 0, 1));
+    return lerp(day, low, ease(eve)) + 0.08 * ease(pit);
+  }
+  /* A reading that falls far, as one does when the week resets, does not walk the sun back the way
+     it came: it goes on down and comes up in the east, on a new morning. Only a fall back into the
+     day does that, and only a long one, since a short way the sun can as well walk back. It is
+     settled by where the walk is going: the sun keeps up with where it has got to, so the two never
+     draw apart. It changes sides under the land with its glow gone, waits there while hell lasts,
+     and comes up in time to arrive with the walk; once up, it keeps going whatever the reading does. */
+  function moveSun(dt) {
+    const end = sunAim(goal, goal >= cut.warn ? 1 : 0, goal > cut.hell ? 1 : 0);
+    const far = goal < cut.warn && end < sun - 0.3;
+    if (far && !sunRound) { sunRound = true; sunOver = false; }
+    if (sunRound && !sunOver && !far) sunRound = false;      // the reading thought better of it
+    if (!sunRound) { sun = toward(sun, sunAim(v, w, h), dt / TRN.arc); return; }
+    if (!sunOver) {
+      sun += dt / TRN.arc;
+      if (sun > SUN.under) { sun = 1 - SUN.under; sunOver = true; }
+      return;
+    }
+    if (h > 0.45 && sun < 0) return;
+    const left = Math.max(1, (v - goal) / TRN.read);
+    sun += Math.min(1 / TRN.arc, Math.max(end - sun, 0) / left) * dt;
+    if (sun >= end - 0.001) sunRound = false;
+  }
+
+  function step(dt) {
+    clock += dt;
+    v = toward(v, goal, TRN.read * dt);
+    w = toward(w, v >= cut.warn ? 1 : 0, dt / TRN.dusk);
+    h = toward(h, v > cut.hell ? 1 : 0, dt / TRN.fall);
+    /* The mouth opens at the frontier, so the rails run into it just off screen. Its middle is
+       where the hell tiles start, so the fire begins inside it. Only one is ever on its way: a
+       reading that wavers on the line waits for the beast to pass, rather than swapping it for
+       another one in plain view. */
+    if (!mouth && (beyond ? h < TRN.brink - 0.1 : h >= TRN.brink)) {
+      beyond = !beyond;
+      mouth = { x: LAYERS.track.edge - 76, out: !beyond };
+    }
+    if (mouth && mouth.x + beastLength() < dist - 16) mouth = null;
+    /* it stops at the cap, and only once it is through: a train does not halt in the mouth */
+    if (v >= cut.cap && beyond && h >= 1 && !mouth) { if (halt === null) halt = haltAhead(); }
+    else halt = null;
+    spd = toward(spd, halt !== null && dist + stopDistance(spd) >= halt - 0.5 ? 0 : 1, dt / TRN.brake);
+    dist += TRN.run * spd * dt;
+    if (terminus && halt === null && terminusX() + SPR.terminus[2] < dist - 72) terminus = null;
+    moveSun(dt);
+    growWorld();
+    stepSmoke(dt);
+    stepEmbers(dt);
+    if (clock >= nextLight) { nextLight = clock + 1 / 6; light(false); }
+  }
+
+  const trainHead = () => Math.min(W - 2, Math.round(W * 0.64) + 32);      // the loco's nose, on screen
+  const stopDistance = (speed) => (TRN.run * TRN.brake * speed * speed) / 2;
+  const terminusX = () => terminus.stop + trainHead() - TRN.nose;
+  /* Where the train can stop, or null if it cannot yet. A terminus in the world is never moved or
+     swapped for another: the train brakes for one still ahead, stops just past one it has barely
+     left, and lets one it has passed go out of sight before the next is placed. That one starts
+     beyond the frontier of what is built, however slowly the train is going. */
+  function haltAhead() {
+    const need = dist + stopDistance(spd);
+    if (terminus) {
+      if (terminus.stop >= need) return terminus.stop;
+      return need - terminus.stop <= 24 ? Math.ceil(need) : null;
+    }
+    terminus = { stop: Math.ceil(Math.max(need, dist + W - trainHead() + TRN.nose + 100)) };
+    /* what already stands there is still out of sight, and goes */
+    const x = terminusX(), L = LAYERS.side;
+    L.items = L.items.filter((o) => o.x + o.s[2] < x || o.x > x + SPR.terminus[2]);
+    return terminus.stop;
+  }
+  function stepSmoke(dt) {
+    const s = ease(spd), stack = trainHead() - SMOKE.back;
+    /* no smoke from inside the beast */
+    const swallowed = mouth && stack > mouth.x - dist + 40 && stack < mouth.x - dist + beastLength() - 4;
+    if (s > 0.02 && !swallowed) {
+      puffDue -= dt * (1.2 + 7 * s);
+      while (puffDue <= 0) {
+        puffDue += 1;
+        const x = stack, y = railY - SMOKE.up;
+        puffs.push({ x, y, vx: -TRN.run * s * 0.55 - 3, vy: -13 - rand() * 7, age: 0, life: 1.6 + rand() * 1.6 });
+      }
+    }
+    for (const p of puffs) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy *= 1 - 0.5 * dt;
+    }
+    for (let i = puffs.length - 1; i >= 0; i--) if (puffs[i].age > puffs[i].life) puffs.splice(i, 1);
+  }
+  /* ash and sparks, as soon as the land starts to burn */
+  function stepEmbers(dt) {
+    const want = Math.round(ease(h) * 90);
+    if (embers.length < want) {
+      embers.push({ x: rand() * W, y: railY + 18 - rand() * 30, vx: -ease(spd) * TRN.run * 0.4 - 6 + rand() * 10,
+                    vy: -16 - rand() * 26, age: 0, life: 1.4 + rand() * 3.4, ink: pick(EMBER_INKS) });
+    }
+    for (const e of embers) {
+      e.age += dt;
+      e.x += e.vx * dt + Math.sin(clock * 3 + e.life * 9) * 0.25;
+      e.y += e.vy * dt;
+    }
+    for (let i = embers.length - 1; i >= 0; i--) {
+      if (embers[i].age > embers[i].life) embers.splice(i, 1);
+    }
+  }
+
+  /* ── the light ───────────────────────────────────────────────── */
+  /* The sky's inks, top to horizon. The middle one is the accent, exactly, so at rest the sky is
+     the ring's own colour; those above run to the deep of the sky and those below to the light at
+     its edge. Evening climbs from the horizon, the low bands turning first and the high ones
+     last, and hell comes down from the top, so neither crosses the sky as one flat wash. */
+  function paintInks() {
+    const W_ = ease(w), H_ = ease(h), warm = warmInk(v, cut), inks = [], n = TRN.sky;
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1), up = clamp((0.5 - t) * 2, 0, 1), down = clamp((t - 0.5) * 2, 0, 1);
+      const day = up ? mix(STOP.steady, SKY.dayTop, up * 0.72) : mix(STOP.steady, SKY.dayLow, down * 0.74);
+      const eve = up ? mix(warm, SKY.eveTop, up * 0.78) : mix(warm, SKY.eveLow, down * 0.82);
+      const pit = up ? mix(warm, SKY.pitTop, up * 0.96) : mix(warm, SKY.pitLow, down * 0.86);
+      const e = Math.pow(W_, 1.8 - 1.6 * t), d = Math.pow(H_, 0.45 + 1.1 * t);
+      inks.push(mix(mix(day, eve, e), pit, d));
+    }
+    return inks;
+  }
+
+  /* One copy of the sheet per depth: the base art multiplied by the light that reaches that far,
+     then mixed toward the air in front of it. Multiplying would fill the clear pixels too, so
+     they are cut back out with the art's own shape. */
+  function tintSheet(i, mul, air, thick) {
+    const key = mul.join() + "|" + air.join() + "|" + thick;
+    if (tintKeys[i] === key) return;
+    tintKeys[i] = key;
+    const c = tints[i].getContext("2d");
+    c.globalCompositeOperation = "copy";
+    c.drawImage(atlas, 0, 0, atlas.width, sheetH, 0, 0, atlas.width, sheetH);
+    c.globalCompositeOperation = "multiply";
+    c.fillStyle = rgbCss(mul);
+    c.fillRect(0, 0, atlas.width, sheetH);
+    c.globalCompositeOperation = "destination-in";
+    c.drawImage(atlas, 0, 0, atlas.width, sheetH, 0, 0, atlas.width, sheetH);
+    c.globalCompositeOperation = "source-atop";
+    c.fillStyle = "rgb(" + air.join(" ") + " / " + thick + ")";
+    c.fillRect(0, 0, atlas.width, sheetH);
+    c.globalCompositeOperation = "source-over";
+  }
+
+  /* quantised, so a slow change costs a repaint only when it would be seen */
+  function light(force) {
+    const W_ = ease(w), H_ = ease(h), Q = clamp((v - cut.warn) / (cut.hell - cut.warn), 0, 1);
+    accent = mix(STOP.steady, warmInk(v, cut), W_);
+    const key = accent.join() + "|" + (w * 96 | 0) + "|" + (h * 96 | 0) + "|" + (sun * 240 | 0) + "|" + W + "|" + railY;
+    if (key === skyKey && !force) return;
+    skyKey = key;
+    if (!gliding) pushAccent(accent);
+
+    skyInks = paintInks();
+    const eve = mix(LIGHT.eveHigh, LIGHT.eveLow, Q);
+    const near = mix(mix(LIGHT.day, eve, W_), LIGHT.pit, H_);
+    const air = skyInks[(TRN.sky * 0.7) | 0];
+    tintSheet(0, near, air, 0);
+    tintSheet(1, near, air, 0.1);
+    tintSheet(2, near, air, 0.34);
+    tintSheet(3, mix(mix(LIGHT.day, LIGHT.cloudEve, W_), LIGHT.cloudPit, H_), air, 0.06);
+    glow = clamp(W_ * (0.2 + 0.8 * Q) + H_, 0, 1);
+    puffInk = mix([236, 236, 232], near, 0.55);
+
+    const shade = (ink, thick) => rgbCss(mix(mix(ink, near, 0.5), air, thick));
+    hillFar = shade(mix(HILL.far, HILL.pit, H_), 0.52);
+    hillNear = shade(mix(HILL.near, HILL.pit, H_), 0.28);
+    rimFar = shade(mix(HILL.rimFar, HILL.pitRim, H_), 0.4);
+    rimNear = shade(mix(HILL.rimNear, HILL.pitRim, H_), 0.16);
+    paintSky();
+  }
+
+  function pushAccent(ink) {
+    const k = ink.join(" ");
+    if (k === accentKey) return;
+    accentKey = k;
+    shown = ink;
+    const r = document.documentElement.style;
+    r.setProperty("--sky", rgbCss(ink));
+    r.setProperty("--sky-rgb", k);
+  }
+  /* When the scene changes other than by walking, the page's accent eases there on its own: it has
+     no business jumping just because the picture behind it can. Nothing cuts this short, and it
+     aims at wherever the accent has got to, so it always lands on it. */
+  function glide(ms) {
+    glideFrom = shown; glideT0 = performance.now(); glideMs = ms;
+    if (gliding) return;
+    gliding = true;
+    const go = () => {
+      const t = clamp((performance.now() - glideT0) / glideMs, 0, 1);
+      pushAccent(mix(glideFrom, accent, ease(t)));
+      if (t < 1) setTimeout(go, 50); else gliding = false;
+    };
+    go();
+  }
+
+  /* the sun, along its arc: east to west, and flattened so that it comes down the open side of
+     the window rather than behind the page. It sets on the hills, not on the true horizon. */
+  function sunAt() {
+    const a = (sun - 0.5) * Math.PI, crest = horizon() - 40;
+    return { x: W * (0.5 + 0.47 * Math.sin(a)), y: crest - (crest - 16) * Math.cos(a) };
+  }
+  const horizon = () => railY - 26;
+
+  /* Bands of ink, dithered into each other in the old way, and warmed around the sun: its glow
+     is only a push toward the horizon's inks, which is what makes the rings round it. */
+  function paintSky() {
+    const sy = Math.max(1, horizon() + 12), n = TRN.sky;
+    if (skyCv.width !== W || skyCv.height !== sy) {
+      skyCv.width = W; skyCv.height = sy;
+      skyImg = skyCx.createImageData(W, sy);
+      skyPx = new Uint32Array(skyImg.data.buffer);
+    }
+    const inks = Uint32Array.from(skyInks, (c) => (255 << 24 | c[2] << 16 | c[1] << 8 | c[0]) >>> 0);
+    /* the glow fades as the sun goes under, so its changing sides is never seen */
+    const up = clamp((SUN.under - Math.max(sun, 1 - sun)) / (SUN.under - 1), 0, 1);
+    const s = sunAt(), force = (3 + 4 * ease(w)) * (1 - ease(h)) * up, R = 62 + 34 * ease(w), R2 = R * R;
+    let i = 0;
+    for (let y = 0; y < sy; y++) {
+      const base = (y / (sy - 1)) * (n - 1);
+      for (let x = 0; x < W; x++, i++) {
+        const dx = (x - s.x) * 0.66, dy = y - s.y, d = dx * dx + dy * dy;
+        let lv = base + BAYER[(y & 3) * 4 + (x & 3)];
+        if (d < R2) { const g = 1 - d / R2; lv += g * g * force; }
+        const k = lv | 0;
+        skyPx[i] = inks[k < n ? k : n - 1];
+      }
+    }
+    skyCx.putImageData(skyImg, 0, 0);
+  }
+
+  /* ── drawing ─────────────────────────────────────────────────── */
+  function blit(o, x, y, tint) {
+    const s = o.s, n = o.fps ? (((clock * o.fps) | 0) + o.ph) % s[4] : o.f || 0, sx = s[0] + n * s[2];
+    ctx.drawImage(o.fire ? atlas : tints[tint], sx, s[1], s[2], s[3], x, y, s[2], s[3]);
+    if (s[5] && glow > 0.02) {
+      const faded = ctx.globalAlpha;
+      ctx.globalAlpha = faded * glow;
+      ctx.drawImage(atlas, sx, s[1] + sheetH, s[2], s[3], x, y, s[2], s[3]);
+      ctx.globalAlpha = faded;
+    }
+  }
+  function drawLayer(L) {
+    const off = offOf(L), dark = clamp(h * 2 - 0.3, 0, 1);
+    for (const o of L.items) {
+      const x = Math.round(o.x - off);
+      if (x > W || x + o.s[2] < 0) continue;
+      const faded = o.pit ? dark : o.cloud ? 1 - dark : 1;
+      if (faded <= 0) continue;
+      ctx.globalAlpha = faded;
+      blit(o, x, railY - o.up - o.s[3], L.tint);
+      ctx.globalAlpha = 1;
+    }
+  }
+  function drawHills(ring, par, ink, rim) {
+    const off = Math.floor(dist * par), y0 = horizon() + 2;
+    for (let x = 0; x < W; x++) {
+      const t = ring[(off + x) & 4095];
+      ctx.fillStyle = ink;
+      ctx.fillRect(x, y0 - t, 1, t);
+      ctx.fillStyle = rim;
+      ctx.fillRect(x, y0 - t, 1, 1);
+    }
+  }
+  function drawSun() {
+    const s = sunAt(), r = Math.round(9 + 5 * ease(w)), cx = Math.round(s.x), cy = Math.round(s.y);
+    const ink = mix(mix(SUN.day, SUN.eve, ease(w)), SUN.low, clamp((v - cut.warn) / (cut.hell - cut.warn), 0, 1) * ease(w));
+    ctx.fillStyle = rgbCss(ink);
+    for (let dy = -r; dy <= r; dy++) {
+      const half = Math.round(Math.sqrt(r * r - dy * dy));
+      ctx.fillRect(cx - half, cy + dy, half * 2 + 1, 1);
+    }
+  }
+  function drawTrain() {
+    let x = trainHead();
+    const wheel = (dist / 8) & 3;
+    for (let i = CARS.length - 1; i >= 0; i--) {
+      const s = SPR[CARS[i]];
+      x -= s[2];
+      const bob = spd > 0.04 && (dist + i * 37) % 71 < 5 ? 1 : 0;
+      blit({ s, f: wheel }, x, railY - s[3] - 1 - bob, 0);
+      x -= 2;
+      ctx.fillStyle = "#222034";
+      ctx.fillRect(x, railY - 9 - bob, 2, 2);
+    }
+  }
+  function drawTerminus() {
+    if (!terminus) return;
+    const s = SPR.terminus, x = Math.round(terminus.stop - dist) + trainHead() - TRN.nose;
+    if (x <= W && x + s[2] >= 0) blit({ s }, x, railY - 2 - s[3], 0);
+  }
+  /* a slice of a sprite, by columns, with its lights */
+  function slice(s, from, wide, x, y) {
+    ctx.drawImage(tints[0], s[0] + from, s[1], wide, s[3], x, y, wide, s[3]);
+    if (!s[5]) return;
+    ctx.globalAlpha = glow;
+    ctx.drawImage(atlas, s[0] + from, s[1] + sheetH, wide, s[3], x, y, wide, s[3]);
+    ctx.globalAlpha = 1;
+  }
+  /* On the way in the head faces the village and the train is swallowed; on the way out the beast
+     is turned round, and the train comes out of its mouth into the morning. */
+  function drawBeast(front) {
+    if (!mouth) return;
+    const len = beastLength(), x = Math.round(mouth.x - dist);
+    if (x > W || x + len < 0) return;
+    const f = SPR.mouthFront, y = railY + 8 - f[3], n = BEAST.wide;
+    ctx.save();
+    if (mouth.out) { ctx.translate(x + len, 0); ctx.scale(-1, 1); } else ctx.translate(x, 0);
+    if (!front) { slice(SPR.mouthBack, 0, SPR.mouthBack[2], 0, y); ctx.restore(); return; }
+    slice(f, 0, BEAST.end, 0, y);
+    for (let i = 0; i < BEAST.necks; i++) slice(f, BEAST.neck, n, BEAST.end + i * n, y);
+    slice(f, BEAST.end, f[2] - BEAST.end, BEAST.end + BEAST.necks * n, y);
+    ctx.restore();
+  }
+  /* a puff grows, and then thins away by shrinking, greying as it ages; it is never faded, so nothing flickers */
+  function drawPuffs() {
+    for (const p of puffs) {
+      const t = p.age / p.life, r = t < 0.7 ? 1 + Math.round(t * 3) : Math.max(1, Math.round((1 - t) * 10));
+      ctx.fillStyle = rgbCss(mix(puffInk, mix(puffInk, [90, 88, 90], 0.5), t));
+      ctx.fillRect(Math.round(p.x) - r, Math.round(p.y) - r, r * 2, r * 2);
+    }
+  }
+  function drawEmbers() {
+    for (const e of embers) {
+      ctx.fillStyle = e.ink;
+      ctx.fillRect(Math.round(e.x), Math.round(e.y), 1, e.age < 0.4 ? 2 : 1);
+    }
+  }
+  function paint() {
+    if (!atlas) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(skyCv, 0, 0);
+    drawSun();
+    drawLayer(LAYERS.cloud);
+    drawHills(hillsFar, 0.07, hillFar, rimFar);
+    drawHills(hillsNear, 0.14, hillNear, rimNear);
+    drawLayer(LAYERS.back);
+    drawLayer(LAYERS.field);
+    drawLayer(LAYERS.main);
+    drawLayer(LAYERS.side);
+    drawTerminus();
+    drawBeast(false);
+    drawLayer(LAYERS.track);
+    drawPuffs();
+    drawTrain();
+    drawBeast(true);
+    drawLayer(LAYERS.front);
+    drawLayer(LAYERS.tuft);
+    drawEmbers();
+    if (fadeT0) {
+      const t = (performance.now() - fadeT0) / (TRN.fade * 1000);
+      if (t >= 1) { fadeT0 = 0; return; }
+      ctx.globalAlpha = 1 - t;
+      ctx.drawImage(fadeCv, 0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /* ── the loop ────────────────────────────────────────────────── */
+  function tick(ts) {
+    raf = requestAnimationFrame(tick);
+    if (!atlas || !seen) return;      // the sheet is on its way, or there is nothing yet to show
+    const gap = ts - lastTs;
+    if (lastTs && gap < 1000 / TRN.hz - 1.5) return;
+    /* a long gap is a hidden tab or a sleeping machine: the scene waits for you. The walk picks
+       up where it was, so a reading that landed meanwhile still has to be walked to. */
+    const dt = lastTs ? Math.min(gap, 100) / 1000 : 0;
+    lastTs = ts;
+    step(dt);
+    paint();
+  }
+  function play(on) {
+    if (on === loop) return;
+    loop = on;
+    cancelAnimationFrame(raf);
+    if (on) { lastTs = 0; raf = requestAnimationFrame(tick); }
+  }
+
+  /* A still frame cannot walk to its next state, so it dissolves: the new frame is drawn, and the
+     old one laid over it and faded out by paint(), so it carries on through whatever happens
+     next: a moving scene taking over, a resize, a change of theme. A timer keeps drawing only for
+     as long as nothing else is. */
+  function dissolve() {
+    if (!atlas) return;      // rise() will start from goal
+    paint();      // the old state, drawn fresh: a resize may have cleared the canvas meanwhile
+    fadeCv.width = W; fadeCv.height = H;
+    fadeCx.drawImage(canvas, 0, 0);
+    fadeT0 = performance.now();
+    glide(TRN.fade * 1000);       // first, or the state would push the accent straight to its end
+    snap(true);
+    if (!fadeTimer) stepFade();
+  }
+  /* runs on through a change of theme, so that the fade is over on time whether or not it was seen */
+  function stepFade() {
+    fadeTimer = 0;
+    if (!fadeT0) return;
+    if (performance.now() - fadeT0 >= TRN.fade * 1000) fadeT0 = 0;
+    if (active && !loop) paint();
+    if (fadeT0) fadeTimer = setTimeout(stepFade, 120);
+  }
+
+  /* the window in scene pixels: whole device pixels each, so every edge is as hard as it can be */
+  function fit() {
+    const dpr = devicePixelRatio || 1;
+    const u = Math.max(2, Math.round(innerHeight / TRN.tall));
+    const px = Math.max(1, Math.round(u * dpr));
+    const w2 = Math.ceil((innerWidth * dpr) / px), h2 = Math.ceil((innerHeight * dpr) / px);
+    if (w2 === W && h2 === H && px === scale) return false;
+    W = w2; H = h2; scale = px; unit = px / dpr;
+    railY = H - TRN.rail;
+    canvas.width = W; canvas.height = H;
+    canvas.style.width = (W * px) / dpr + "px";
+    canvas.style.height = (H * px) / dpr + "px";
+    /* the page keeps clear of the lane the train runs in, at the end of its scroll */
+    document.documentElement.style.setProperty("--lane", Math.round(unit * (TRN.rail + 40)) + "px");
+    return true;
+  }
+
+  function ready(bitmap) {
+    atlas = bitmap;
+    sheetH = atlas.height / 2;
+    for (let i = 0; i < 4; i++) {
+      const c = document.createElement("canvas");
+      c.width = atlas.width; c.height = sheetH;
+      tints.push(c);
+    }
+    if (active && seen) rise();
+  }
+  /* the first frame: nothing has been shown, so it simply fades up, already in its state */
+  function rise() {
+    glide(1200);                     // first, or the state would push the accent straight to its end
+    snap();
+    paint();
+    void canvas.offsetWidth;         // so that this is a change the fade can start from
+    canvas.style.opacity = "1";
+  }
+  fetch(TRAIN_SHEET).then((r) => (r.ok ? r.blob() : Promise.reject(new Error("no sheet"))))
+    .then((b) => createImageBitmap(b)).then(ready)
+    .catch(() => { play(false); active = false; train = null; trainBroken = true; showPrefs(); });
+
+  return {
+    start() {
+      if (active) return;
+      active = true;
+      const moved = fit();
+      if (!atlas || !seen) return;
+      if (!skyKey) { rise(); return; }
+      if (moved) { growWorld(); light(true); }
+    },
+    stop() { active = false; play(false); },
+    /* moving, or standing still; a still scene is drawn once, and again only when a reading moves it */
+    play(on) {
+      moving = on;
+      if (on) missed = false;
+      play(on);
+      if (on || !atlas || !seen) return;
+      /* coming back to a still scene: a reading that landed meanwhile is dissolved to */
+      if (missed) { missed = false; dissolve(); } else paint();
+    },
+    /* A reading. The first one is where the scene starts, however late it comes, as nothing has been
+       shown to walk from; every later one is somewhere to walk to. */
+    reading(p, th) {
+      if (typeof p !== "number") return;
+      cut = trainCuts(th);
+      const was = goal;
+      goal = clamp(p, 0, cut.cap);
+      if (!seen) {
+        seen = true;
+        if (atlas && active) rise();
+        return;
+      }
+      if (goal === was) return;
+      if (!active) missed = true;
+      else if (!moving) dissolve();
+    },
+    resize() {
+      if (!active || !fit() || !atlas || !seen) return;
+      growWorld();
+      light(true);
+      paint();
+    },
+  };
+}
+
+/* The hottest reading drawn, for the scene to walk to; null while there is none, so an outage
+   leaves the sky as it was instead of calling it morning. */
+function trainReading() {
+  if (!train) return;
+  const f = freshness();
+  if (f.blank) return;
+  let p = null;
+  for (const key of ORDER) {
+    const l = limitOf(key);
+    if (l && typeof l.percent === "number") p = Math.max(p === null ? 0 : p, l.percent);
+  }
+  train.reading(p, S.snap ? S.snap.thresholds : null);
+}
+
+/* What the scene should be doing now: nothing outside the theme; moving while it may; otherwise
+   one still frame of it. */
+function trainMotion() {
+  const on = PREFS.theme === "train";
+  /* like the terminal, a scene that cannot start is left out, and the glass page stands */
+  if (on && !train && !trainBroken) {
+    try { train = makeTrain($("scene")); } catch (_) { train = null; }
+    trainBroken = !train;
+  }
+  const root = document.documentElement;
+  if (!train) { root.removeAttribute("data-train"); return; }
+  if (!on) { train.stop(); root.removeAttribute("data-train"); return; }
+  root.setAttribute("data-train", "");
+  train.start();
+  trainReading();
+  train.play(PREFS.scene && !REDUCE.matches);
+}
+
 /* ═════════════════════════ settings ═════════════════════════
    How the page looks, never what it measures: the theme, and each
    theme's own — Glass's fluid, its speed, the shake, the moving
    background and the typeface; the Matrix terminal's rain, how much
-   of it falls, how fast, and its two colours. The panel
-   lists only the settings of the theme on screen. Kept
+   of it falls, how fast, and its two colours; whether Train's scene
+   moves. The panel lists only the settings of the theme on screen. Kept
    in this browser, applied before the ring is first drawn so a
    chosen look never flashes in the default one, and followed in other
    open tabs. Only choices that differ from the defaults are stored, so
@@ -3368,9 +4579,9 @@ function matrixMotion() {
    everything, whatever these say.                                    */
 const PREFS_KEY = "ccquota.prefs";
 const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true,
-                        rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", font: "system" };
+                        rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", scene: true, font: "system" };
 /* key, label, and the glyphs on its swatch */
-const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"]];
+const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
 /* key, label, and the stylesheet variable holding its stack */
 const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source Serif 4", "--font-serif"],
@@ -3379,7 +4590,8 @@ const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source
 const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "glass"],
                   ["shake", "Vibration", "The ring shakes while over pace", "glass"],
                   ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
-                  ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"]];
+                  ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"],
+                  ["scene", "Moving scene", "The train, its smoke and the fire", "train"]];
 /* The rain's sliders: key, label, the least, the most and the step, then its value as shown and as
    read aloud. Amount is the share of the columns falling at once; Speed, of MX.hz steps a second. */
 const SLIDERS = [["rainAmount", "Amount", 5, 100, 5, (v) => v + "%", (v) => v + " percent of the columns falling"],
@@ -3455,6 +4667,7 @@ function buildPrefs() {
       ${sw(SWITCHES[1])}
       ${sw(SWITCHES[2])}
       ${sw(SWITCHES[3])}
+      ${sw(SWITCHES[4])}
       ${SLIDERS.map(slider).join("")}
       <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
     </div>
@@ -3523,10 +4736,10 @@ function syncPrefs() {
   }
   /* the theme's patch of itself falls in the rain's own colour */
   panel.querySelector('.pick[data-pick="matrix"] .swatch').style.setProperty("--rain", PREFS.rain1);
-  /* Only the settings of the theme on screen are listed — the glass page's when the terminal
-     cannot run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
+  /* Only the settings of the theme on screen are listed — the glass page's when a theme cannot
+     run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
      and the rain's amount and speed only while the rain is on. */
-  const shown = tuiOn() ? "matrix" : "glass";
+  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : "glass";
   panel.querySelectorAll("[data-for]").forEach((el) => { el.hidden = el.dataset.for !== shown; });
   if (!PREFS.fluid) $("prefsSpeed").hidden = true;
   if (!PREFS.rain) panel.querySelectorAll("[data-rain]").forEach((el) => { el.hidden = true; });
@@ -3541,9 +4754,12 @@ function applyPrefs() {
   root.dataset.shake = PREFS.shake ? "on" : "off";
   root.dataset.sky = PREFS.sky ? "on" : "off";
   FLUID.speed = PREFS.speed;
-  /* the terminal first: whether it runs decides the fluid, the wording and the controls */
+  /* the terminal and the scene first: whether they run decides the fluid, the wording and the controls */
   matrixMotion();
-  if (PREFS.fluid && !tuiOn()) startFluids();
+  trainMotion();
+  /* the scene's face goes with the scene, so a browser that cannot run it keeps the reader's own */
+  if (trainOn()) root.dataset.font = "jersey-10";
+  if (PREFS.fluid && !tuiOn() && !trainOn()) startFluids();
   fluidMotion();
   /* the cost strip points at the gauge above it, which is a bar in the terminal */
   $("cwGauge").textContent = tuiOn() ? "bar" : "ring";
@@ -3579,7 +4795,7 @@ addEventListener("storage", (e) => {
   PREFS = loadPrefs();
   showPrefs();
 });
-if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); syncPrefs(); });
+if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); syncPrefs(); });
 
 /* ═════════════════════════ cost ═════════════════════════
    A different data source with a different meaning, in a colour
@@ -3701,6 +4917,7 @@ addEventListener("resize", () => {
     renderCharts();
     for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].resize();
     matrixMotion();
+    if (train) train.resize();
     placeSeam();
   });
 });
