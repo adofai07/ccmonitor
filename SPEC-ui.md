@@ -263,8 +263,8 @@ A gear at the right end of the header, beside the freshness pill, opens a small 
 out of it and floats over the page, so a switch can be flipped while watching the ring it
 changes. The gear again, Escape, a click elsewhere or focus moving away closes it.
 
-The panel lists the theme, then only the settings of the theme on screen; nothing is shown
-greyed out.
+The panel lists the theme, then only the settings of the theme on screen, and the one setting that
+belongs to no theme; nothing is shown greyed out.
 
 | theme | setting | choices | default |
 | --- | --- | --- | --- |
@@ -280,6 +280,7 @@ greyed out.
 | Matrix | Colour #1 | any colour — the rain; its heads are the colour lit toward white, less so the darker it is | green `#00ff66` |
 | Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
 | Train | Moving scene | on / off — off stops the train, its smoke and the fire where they stand | on |
+| all | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
 
 Settings change how the page looks, never what it measures or how it judges a reading:
 switching the shake off leaves the over-pace verdict in the tick, the caption and the halo.
@@ -296,7 +297,7 @@ a bitmap face, set at a few fixed sizes that the rest of the page does not keep 
 
 ## Footer strip
 
-**Always visible**, never collapsed: the ccusage cost numbers.
+Shown unless *Settings* hides it: the ccusage cost numbers.
 
 ```
 ccusage · 7d $2,289 · opus $1,869 · fable $415
