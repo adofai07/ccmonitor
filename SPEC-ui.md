@@ -146,8 +146,10 @@ other.
   the same stretch of land unless hell, the scorching or the terminus has come or gone.
 - A hidden tab stops the scene, and the walk picks up where it was: a reading that landed
   meanwhile still has to be walked to when the tab comes back.
-- The scene has no fluid, no shake and no choice of face, so Settings does not list those while it
-  runs. A browser that cannot draw it, or a sheet that will not load, keeps the glass page, its
+- The ring shakes while over pace as it does in Glass, by the same rule and on the same switch, in
+  whole pixels and with no twist, which would take it off its grid.
+- The scene has no fluid and no choice of face, so Settings does not list those while it runs. A
+  browser that cannot draw it, or a sheet that will not load, keeps the glass page, its
   settings and the reader's own typeface.
 
 ## Primary view — the weekly limit, a ring and its chart
@@ -271,7 +273,7 @@ belongs to no theme; nothing is shown greyed out.
 | all | Theme | Glass, Matrix, Train | Glass |
 | Glass | Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
 | Glass | Speed | slow / normal / fast (0.25×, 0.5×, 1×) — listed only while the fluid is on | normal |
-| Glass | Vibration | on / off — the shake of a ring over pace | on |
+| Glass, Train | Vibration | on / off — the shake of a ring over pace | on |
 | Glass | Animated background | on / off — off pauses the drifting sky where it stands | on |
 | Glass | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
 | Matrix | Rain | on / off — off stops the rain where it stands | on |

@@ -861,7 +861,6 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-train] .sky,
 :root[data-train] .grain,
 :root[data-train] .vig { display: none; }
-:root[data-train] .art > *,
 :root[data-train] .fresh .dot { animation: none !important; }
 :root[data-train] .lrow:has(.ring:not([data-band="unknown"])) {
   --band: var(--sky) !important;
@@ -996,6 +995,31 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    to begin with (see gridPath), which keeps their steps joined. The bloom is a soft glow, which
    has no place in pixels; so are round caps. */
 :root[data-train] .art svg { filter: url(#pxgrid); }
+/* The shake, with Glass's rule for when and how hard, in pixels: whole ones, jumped between, and no
+   twist, since a fraction of a pixel blurs the ring's edges and a rotation takes it off its grid.
+   Two loops of unrelated lengths still add up to something that never visibly repeats. */
+:root[data-train] .ring[data-pace="over"]:not([data-band="exhausted"]) .art > * {
+  --amp: round(calc(1px + 4px * var(--psev)), 1px);
+  --drift: round(calc(var(--amp) / 2), 1px);
+  animation: pxjitter .683s steps(1) infinite, pxsway 1.297s steps(1) infinite;
+}
+@keyframes pxjitter {
+  0%, 100% { translate: 0 0; }
+  11% { translate: var(--amp) 0; }
+  23% { translate: calc(var(--amp) * -1) var(--amp); }
+  34% { translate: 0 calc(var(--amp) * -1); }
+  46% { translate: var(--amp) var(--amp); }
+  58% { translate: calc(var(--amp) * -1) 0; }
+  69% { translate: 0 var(--amp); }
+  81% { translate: var(--amp) calc(var(--amp) * -1); }
+  92% { translate: calc(var(--amp) * -1) calc(var(--amp) * -1); }
+}
+@keyframes pxsway {
+  0%, 100% { transform: none; }
+  27% { transform: translate(var(--drift), 0); }
+  52% { transform: translate(0, var(--drift)); }
+  79% { transform: translate(calc(var(--drift) * -1), 0); }
+}
 :root[data-train] .art svg * { shape-rendering: crispEdges; }
 :root[data-train] .arc.bloom { display: none; }
 :root[data-train] .arc { stroke-linecap: butt !important; }
@@ -4580,7 +4604,8 @@ function trainMotion() {
    theme's own — Glass's fluid, its speed, the shake, the moving
    background and the typeface; the Matrix terminal's rain, how much
    of it falls, how fast, and its two colours; whether Train's scene
-   moves. One belongs to no theme: whether the cost strip is shown. The
+   moves, and its own shake, which shares Glass's switch. One belongs
+   to no theme: whether the cost strip is shown. The
    panel lists only the settings of the theme on screen, and that one. Kept
    in this browser, applied before the ring is first drawn so a
    chosen look never flashes in the default one, and followed in other
@@ -4597,9 +4622,9 @@ const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
 /* key, label, and the stylesheet variable holding its stack */
 const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source Serif 4", "--font-serif"],
                ["noto-sans", "Noto Sans", "--font-noto"], ["fira-code", "Fira Code", "--font-code"]];
-/* key, label, hint, and the theme it belongs to, or "all" */
+/* key, label, hint, and the themes it belongs to, or "all" */
 const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "glass"],
-                  ["shake", "Vibration", "The ring shakes while over pace", "glass"],
+                  ["shake", "Vibration", "The ring shakes while over pace", "glass train"],
                   ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
                   ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"],
                   ["scene", "Moving scene", "The train, its smoke and the fire", "train"],
@@ -4756,7 +4781,9 @@ function syncPrefs() {
      run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
      and the rain's amount and speed only while the rain is on. */
   const shown = tuiOn() ? "matrix" : trainOn() ? "train" : "glass";
-  panel.querySelectorAll("[data-for]").forEach((el) => { el.hidden = el.dataset.for !== shown && el.dataset.for !== "all"; });
+  panel.querySelectorAll("[data-for]").forEach((el) => {
+    el.hidden = el.dataset.for !== "all" && !el.dataset.for.split(" ").includes(shown);
+  });
   if (!PREFS.fluid) $("prefsSpeed").hidden = true;
   if (!PREFS.rain) panel.querySelectorAll("[data-rain]").forEach((el) => { el.hidden = true; });
   $("prefsStill").hidden = !REDUCE.matches;
