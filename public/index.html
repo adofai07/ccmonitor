@@ -675,6 +675,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 .chartcap .note { text-transform: none; letter-spacing: .02em; font-size: 11px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .chart { display: block; width: 100%; height: 118px; overflow: visible; }
 .chart .grid  { stroke: rgb(var(--ink-rgb) / .075); stroke-width: 1; }
+.chart .day   { stroke: rgb(var(--ink-rgb) / .075); stroke-width: 1; }
 .chart .warnln{ stroke: rgb(var(--warning-rgb)/.4); stroke-width: 1; stroke-dasharray: 3 4; }
 .chart .full  { fill: none; stroke: rgb(var(--ink-rgb) / .34); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .chart .run   { fill: none; stroke: var(--band); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
@@ -693,6 +694,22 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   border: 1px solid var(--hair); border-radius: 10px; background: rgba(7,9,13,.28);
 }
 .dfoot { margin: 8px 0 0; font-size: 11px; line-height: 1.55; color: var(--ink-4); max-width: 92ch; }
+/* The graph saved as a picture, over a choice of spans: a row at the foot of the panel, outside
+   the part rebuilt with each reading, so a button keeps its focus. */
+.dexport { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--hair); }
+.dxh { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-4); font-weight: 600; }
+.dxspans { display: flex; gap: 4px; }
+.dxspan {
+  border: 1px solid var(--hair); background: rgb(var(--tint) / .04); color: var(--ink-2);
+  font-size: 11px; font-variant-numeric: tabular-nums; padding: 3px 9px; border-radius: 6px; cursor: pointer;
+}
+.dxspan:hover { color: var(--ink); border-color: var(--edge); }
+.dxspan:focus { outline: none; }
+.dxspan:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
+.dxspan[aria-busy="true"] { cursor: progress; color: var(--ink); border-color: var(--edge); }
+/* the others, while one is being saved */
+.dxspan[aria-disabled="true"]:not([aria-busy]) { cursor: default; color: var(--ink-4); border-color: var(--hair); }
+.dxnote { font-size: 11px; color: var(--ink-4); min-width: 0; overflow-wrap: anywhere; }
 
 /* ── cost: a different instrument, kept at arm's length ────────
    Rings are radial, money is linear. Nothing circular appears
@@ -892,6 +909,9 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-train] .dtitle,
 :root[data-train] .dband,
 :root[data-train] .dclose,
+:root[data-train] .dxh,
+:root[data-train] .dxspan,
+:root[data-train] .dxnote,
 :root[data-train] .dfoot,
 :root[data-train] .ro dt,
 :root[data-train] .ro dd small,
@@ -965,6 +985,9 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-train] .fresh,
 :root[data-train] .dband,
 :root[data-train] .dclose,
+:root[data-train] .dxh,
+:root[data-train] .dxspan,
+:root[data-train] .dxnote,
 :root[data-train] .gear,
 :root[data-train] .preset,
 :root[data-train] .switch,
@@ -1105,6 +1128,11 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
         <div class="detailInner">
           <div class="seam" id="seam" aria-hidden="true"></div>
           <div id="detail" role="region" aria-label="Limit detail"></div>
+          <div class="dexport" role="group" aria-labelledby="dxh">
+            <span class="dxh" id="dxh">Download the graph</span>
+            <span class="dxspans" id="dxspans"></span>
+            <span class="dxnote" id="dxnote" role="status"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -2054,9 +2082,11 @@ function burnNote(fit) {
 }
 
 /* The readings a chart draws and the axes they fit, shared by the glass chart and the
-   terminal's, so the two can never draw different things. */
-function chartSeries(key, proj) {
-  const h = S.hist, idx = HISTORY_KEYS.indexOf(key);
+   terminal's, so the two can never draw different things. A saved graph brings its own readings
+   and the start of its span, and its axis runs from there whatever the readings cover; it also
+   brings how far past now its axis may reach for a projection. */
+function chartSeries(key, proj, src = null) {
+  const h = src ? src.hist : S.hist, idx = HISTORY_KEYS.indexOf(key);
   const raw = h && Array.isArray(h.samples) ? h.samples : [];
   /* The cache keeps a count of readings, not an age. An account switched back to after days
      away still holds the last ones it took, and drawn as given they stretch the axis back to
@@ -2064,12 +2094,12 @@ function chartSeries(key, proj) {
      right edge, so the rows look like another account's. The chart spans what the cache is
      sized for — capacity readings at the poll interval, 12 hours — and nothing older. */
   const now = Date.now();
-  const from = now - num(h && h.capacity, 360) * num(h && h.intervalMs, 120000);
+  const from = src ? src.from : now - num(h && h.capacity, 360) * num(h && h.intervalMs, 120000);
   const pts = raw.filter((s) => s && Array.isArray(s.p) && isFinite(s.t) && s.t >= from)
                  .map((s) => ({ t: s.t, v: typeof s.p[idx] === "number" ? s.p[idx] : null }));
   const usable = pts.filter((p) => p.v !== null);
   if (usable.length < 2) return { pts, usable, now };
-  let t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, now);
+  let t0 = src ? src.from : pts[0].t, t1 = Math.max(pts[pts.length - 1].t, now);
   if (t1 - t0 < 60000) t1 = t0 + 60000;
 
   const vmax = usable.reduce((m, p) => Math.max(m, p.v), 0);
@@ -2079,7 +2109,7 @@ function chartSeries(key, proj) {
   /* only stretch the x-axis to reach a projection that is actually
      close enough to be worth showing */
   let projX = null;
-  if (proj !== null && proj > t1 && proj - t1 <= (t1 - t0) * 2.2) { t1 = proj; ymax = 100; projX = proj; }
+  if (proj !== null && proj > t1 && proj - t1 <= (t1 - t0) * (src ? src.reach : 2.2)) { t1 = proj; ymax = 100; projX = proj; }
   const gapMs = num(h && h.intervalMs, 60000) * 6;   // the server restarts a run across a gap this long
   return { pts, usable, now, t0, t1, ymax, projX, gapMs };
 }
@@ -2119,8 +2149,8 @@ function gridDash(a, b) {
   for (let k = 0; k < n; k += 5) d += gridPath([at(k), at(Math.min(n, k + 3))]);
   return d;
 }
-function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
-  const h = S.hist, m = chartSeries(key, proj), { pts, usable, now } = m;
+function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
+  const h = src ? src.hist : S.hist, m = chartSeries(key, proj, src), { pts, usable, now } = m;
   if (usable.length < 2) {
     return `<div class="chartcap"><span>history${presentUnknown ? " · current reading unknown" : ""}</span>
               <span class="note">${esc(burnNote(fit))}</span></div>
@@ -2129,6 +2159,9 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
 
   const pixel = trainOn(), T = pixel ? CHART_TYPE.pixel : CHART_TYPE.plain;
   const { PL, PR, PT, PB, CHAR_W } = T;
+  /* a label's width: measured in its own face where the caller can, as a saved graph's can, and
+     otherwise counted in glyphs, a Latin count that comes up short for a weekday in CJK or Persian */
+  const tw = src && src.measure ? src.measure : (t) => t.length * CHAR_W;
   const edge = pixel ? onGrid : (v) => v;
   const { t0, t1, ymax, projX } = m;
 
@@ -2163,6 +2196,17 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   if (warnOn) {
     s += `<line class="warnln" x1="${PL}" y1="${Y(warn).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(warn).toFixed(1)}"></line>`;
   }
+  /* a saved graph of a day or more marks each midnight, and names the day that begins there */
+  const days = [];
+  if (src && src.days) {
+    for (const d = new Date(t0); ; ) {
+      d.setHours(24, 0, 0, 0);
+      if (d.getTime() >= t1) break;
+      const x = edge(X(d.getTime()));
+      s += `<line class="day" x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(H - PB).toFixed(1)}"></line>`;
+      days.push([x, d.toLocaleDateString([], { weekday: "short" })]);
+    }
+  }
 
   s += `<path class="full" d="${seg(() => true)}"></path>`;
   if (since !== null) {
@@ -2180,7 +2224,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
       s += `<line class="since" x1="${X(since).toFixed(1)}" y1="${PT}" x2="${X(since).toFixed(1)}" y2="${(H - PB).toFixed(1)}"></line>`;
       /* Train's is too big for the corner the upright leaves: it moves past the upright rather
          than meet the axis, and is drawn last, as the labels that matter may want the place */
-      const room = !pixel || X(since) - 4 - 3 * CHAR_W > PL + 2;
+      const room = !pixel || X(since) - 4 - tw("fit") > PL + 2;
       fitLabel = { x: X(since) + (room ? -4 : 4), y: H - PB - 4, anchor: room ? "end" : "start" };
     }
   }
@@ -2198,14 +2242,14 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   let capLeft = Infinity;
   if (projX !== null) {
     const capText = "cap " + stamp(projX);
-    capLeft = X(projX) - 5 - capText.length * CHAR_W;
+    capLeft = X(projX) - 5 - tw(capText);
     s += `<path class="proj" d="${pixel ? gridDash([X(last.t), Y(last.v)], [X(projX), Y(100)])
       : `M${X(last.t).toFixed(1)} ${Y(last.v).toFixed(1)}L${X(projX).toFixed(1)} ${Y(100).toFixed(1)}`}"></path>`;
     s += `<text class="ax lbl" x="${(X(projX) - 5).toFixed(1)}" y="${T.capY}" text-anchor="end" fill="var(--band)">${esc(capText)}</text>`;
   }
   const headX = X(last.t), headY = Y(last.v);
   const label = last.v + "%";
-  const lw = label.length * CHAR_W;
+  const lw = tw(label);
   const capRow = T.capY;
   let lx = headX + 7, la = "start";
   if (lx + lw > W - 2) { lx = headX - 7; la = "end"; }          // never off the right edge
@@ -2231,7 +2275,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
      label lands when the reading is near the floor; the head's value wins, the line stays */
   if (warnOn) {
     const wy = Y(warn) + T.mid, wl = W - PR + 5, hl = la === "end" ? lx - lw : lx, hr = la === "end" ? lx : lx + lw;
-    if (!(hr > wl - 3 && hl < wl + 4 * CHAR_W + 3 && Math.abs(ly - wy) < T.clash - 1)) {
+    if (!(hr > wl - 3 && hl < wl + tw("warn") + 3 && Math.abs(ly - wy) < T.clash - 1)) {
       s += `<text class="ax" x="${wl.toFixed(1)}" y="${wy.toFixed(1)}" fill="rgb(var(--warning-rgb)/.65)">warn</text>`;
     }
   }
@@ -2239,7 +2283,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
              : `<circle class="head" cx="${headX.toFixed(1)}" cy="${headY.toFixed(1)}" r="2.6"></circle>`;
   s += `<text class="ax lbl" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${la}" fill="var(--band)">${label}</text>`;
   if (fitLabel) {
-    const fw = 3 * CHAR_W, fl = fitLabel.anchor === "end" ? fitLabel.x - fw : fitLabel.x, fr = fl + fw;
+    const fw = tw("fit"), fl = fitLabel.anchor === "end" ? fitLabel.x - fw : fitLabel.x, fr = fl + fw;
     const hl = la === "end" ? lx - lw : lx, hr = hl + lw;
     /* in the bitmap face it gives way to the head's value, and to a trace running low through it */
     const low = pixel && usable.some((p) => X(p.t) > fl - 2 && X(p.t) < fr + 2 && Y(p.v) > fitLabel.y - 18);
@@ -2249,6 +2293,18 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H) {
   }
   s += `<text class="ax" x="${PL}" y="${H - T.floor}">${esc(stamp(t0))}</text>`;
   s += `<text class="ax" x="${(W - PR).toFixed(1)}" y="${H - T.floor}" text-anchor="end">${projX !== null ? esc(stamp(t1)) : "now"}</text>`;
+  /* the days' names along the foot, wherever they clear the two ends and each other */
+  if (days.length) {
+    const left = PL + tw(stamp(t0)) + 8;
+    const right = W - PR - tw(projX !== null ? stamp(t1) : "now") - 8;
+    let last = -Infinity;
+    for (const [x, name] of days) {
+      const half = tw(name) / 2;
+      if (x - half < Math.max(left, last + 8) || x + half > right) continue;
+      s += `<text class="ax" x="${x.toFixed(1)}" y="${H - T.floor}" text-anchor="middle">${esc(name)}</text>`;
+      last = x + half;
+    }
+  }
   s += `</svg>`;
 
   return `<div class="chartcap">
@@ -2280,6 +2336,244 @@ function renderCharts() {
     const W = Math.max(220, Math.round(host.clientWidth || 480));
     const html = chartHTML(key, fit, band, proj, th, W, !known, H);
     if (html !== chartMarkup[key]) { chartMarkup[key] = html; host.innerHTML = html; }
+  }
+}
+
+/* ═════════════════════════ saving the graph ═════════════════════════
+   The detail panel saves the chart as a picture, over the last hour, 12
+   hours, day, 3 days or week. The server keeps about twenty days of
+   readings for it, where the chart beside the ring draws 12 hours. The
+   picture is the page's own chart, laid out again at the size of the
+   picture and painted onto a canvas, so it comes out in the theme on
+   screen: its colours, its type and, in Train, its pixels. A canvas and
+   not the SVG as an image, because only a canvas can use the page's own
+   fonts, and the page's rules allow no image but its own data URIs. */
+const GRAPH_SPANS = [[3600, "1h", "the last hour"], [43200, "12h", "the last 12 hours"], [86400, "1d", "the last day"],
+                     [259200, "3d", "the last 3 days"], [604800, "7d", "the last 7 days"]];
+/* in CSS pixels, drawn at twice that; 1.9 to 1, the shape a link preview takes */
+const GRAPH = { w: 1200, h: 630, pad: 40, scale: 2, chartTop: 168, chartH: 380 };
+
+function buildGraphSpans() {
+  const host = $("dxspans");
+  host.innerHTML = GRAPH_SPANS.map(([sec, label, span]) =>
+    `<button class="dxspan" type="button" data-span="${sec}" aria-label="${label}, ${span}">${label}</button>`).join("");
+  host.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-span]");
+    if (b) saveGraph(GRAPH_SPANS.find(([sec]) => String(sec) === b.dataset.span), b);
+  });
+}
+
+/* One save at a time: while one is drawn, the other spans stand dimmed and say so. */
+let savingGraph = false;
+async function saveGraph(span, btn) {
+  if (savingGraph || !span) return;
+  savingGraph = true;
+  const all = [...$("dxspans").querySelectorAll("button")];
+  for (const b of all) b.setAttribute("aria-disabled", "true");
+  btn.setAttribute("aria-busy", "true");
+  /* The panel can be closed while a save runs, and a closed panel is inert, so its status is not
+     read out: how the save went is then said in the page's own. */
+  const note = $("dxnote");
+  const say = (t) => { note.textContent = t; if (!S.open) $("live").textContent = t; };
+  say("drawing…");
+  let h = null;
+  try {
+    const r = await fetch("/api/history?span=" + span[0], { cache: "no-store" });
+    h = r.ok ? await r.json() : null;
+  } catch (_) { h = null; }
+  try {
+    if (!h || !Array.isArray(h.samples)) { say("the history could not be read"); return; }
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const key = S.open || ORDER[0], canvas = drawGraph(key, h, span);
+    const blob = await new Promise((done) => canvas.toBlob(done, "image/png"));
+    if (!blob) throw new Error("no picture");
+    const name = graphName(key, span), url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = name; a.hidden = true;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    say("saved " + name);
+  } catch (_) {
+    say("the picture could not be made");
+  } finally {
+    savingGraph = false;
+    for (const b of all) b.removeAttribute("aria-disabled");
+    btn.removeAttribute("aria-busy");
+  }
+}
+
+function graphName(key, span) {
+  const d = new Date(), p = (n) => String(n).padStart(2, "0");
+  return "quota-" + SHORT[key].toLowerCase() + "-" + span[1] + "-" + d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" +
+    p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + ".png";
+}
+
+function drawGraph(key, h, [sec, , spanWords]) {
+  const { w: GW, h: GH, pad, scale, chartTop, chartH } = GRAPH, pixel = trainOn(), terminal = tuiOn();
+  const canvas = document.createElement("canvas");
+  canvas.width = GW * scale; canvas.height = GH * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  const row = $("row-" + key), now = Date.now(), from = now - sec * 1000;
+
+  /* the theme on screen, read off the page: colours resolved inside the row, so the band is the
+     row's own (the sky's, in Train), and the faces the page has set */
+  const probe = document.createElement("span");
+  row.appendChild(probe);
+  const colour = (v) => { probe.style.color = v; return getComputedStyle(probe).color; };
+  let ink, dim, faint, hi, bg, frame;
+  try {
+    ink = colour("var(--ink)"); dim = colour("var(--ink-3)"); faint = colour("var(--ink-4)"); hi = colour("var(--hi)");
+    bg = pixel ? colour("var(--plate)") : terminal ? "#000" : "#10131a";
+    frame = pixel ? colour("var(--band)") : terminal ? MX_INK.line : colour("var(--edge)");
+  } finally {
+    probe.remove();
+  }
+  const face = (sel) => getComputedStyle(document.querySelector(sel)).fontFamily;
+  const sans = getComputedStyle(document.body).fontFamily, mono = face(".mclock"), numeral = face(".num");
+  const mark = getComputedStyle(document.querySelector(".mark h1")).color;
+  /* a bitmap face is crisp only at its own sizes */
+  const size = pixel ? { small: 20, title: 40, big: 60 } : { small: 14, title: 28, big: 60 };
+
+  /* the plate: Train's with stepped corners, as its plates have; the others square */
+  ctx.fillStyle = bg;
+  if (pixel) {
+    ctx.fillRect(3, 0, GW - 6, GH);
+    ctx.fillRect(0, 3, GW, GH - 6);
+    ctx.fillStyle = frame;
+    ctx.fillRect(3, 0, GW - 6, 3); ctx.fillRect(3, GH - 3, GW - 6, 3);
+    ctx.fillRect(0, 3, 3, GH - 6); ctx.fillRect(GW - 3, 3, 3, GH - 6);
+  } else {
+    ctx.fillRect(0, 0, GW, GH);
+    ctx.strokeStyle = frame; ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, GW - 1, GH - 1);
+  }
+
+  const write = (t, x, y, fill, px, fam, { align = "left", weight = 400, spacing = 0 } = {}) => {
+    ctx.globalAlpha = 1;
+    ctx.font = weight + " " + px + "px " + fam;
+    ctx.fillStyle = fill; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = spacing + "px";
+    ctx.fillText(t, x, y);
+    return ctx.measureText(t).width;
+  };
+  const when = (ms) => new Date(ms).toLocaleString([], { weekday: "short", day: "numeric", month: "short",
+                                                          hour: "2-digit", minute: "2-digit", hour12: false });
+  const L = pad, R = GW - pad, lim = limitOf(key), f = freshness();
+  const known = !f.blank && lim && typeof lim.percent === "number";
+
+  /* the mark and the plan, as the header has them; the limit, the span and its dates */
+  const top = pad + size.small;
+  const qw = write("QUOTA", L, top, mark, size.small, sans, { weight: pixel ? 400 : 620, spacing: pixel ? 1.6 : 2.8 });
+  const plan = $("plan").textContent.trim();
+  if (plan) write(plan, L + qw + 14, top, faint, size.small, sans, { spacing: pixel ? 0 : 1.4 });
+  const ty = top + 14 + size.title;
+  const tw = write((lim && lim.label) || SHORT[key], L, ty, ink, size.title, sans, { weight: pixel ? 400 : 500 });
+  write(" · " + spanWords, L + tw, ty, dim, size.title, sans, { weight: pixel ? 400 : 300 });
+  write(when(from) + " – " + when(now), L, ty + 10 + size.small, dim, size.small, sans);
+
+  /* the reading as it is now, and the clock on its window */
+  write(known ? showPct(lim.percent) + "%" : "—", R, pad + size.big - 6, hi, size.big, numeral,
+        { align: "right", weight: pixel ? 400 : 300 });
+  const rem = known && !lim.dormant ? remainSec(lim) : null;
+  /* "resets in" only before a countdown that is still running; past it, the clock's own word */
+  const clock = rem !== null ? (rem > 0 ? "resets in " : "") + fmtClock(rem) : known && lim.dormant ? "dormant" : "";
+  const sub = [f.hold ? "held" : "", clock].filter(Boolean).join(" · ");
+  if (sub) write(sub, R, pad + size.big + 10 + size.small, dim, size.small, sans, { align: "right" });
+
+  /* The chart, laid out by the page's own code at the picture's size, in a host inside the row so
+     the row's colours reach it, then painted onto the canvas and taken away again. */
+  const th = S.snap ? S.snap.thresholds : null;
+  const quiet = !!(known && lim.dormant) && !(lim.percent > 0);
+  const band = !known || quiet ? "unknown" : bandOf(lim.percent, th);
+  const fit = (Array.isArray(h.limits) && h.limits.find((l) => l && l.key === key)) || fitFor(key);
+  const proj = fit && typeof fit.projectedAt === "number" && isFinite(fit.projectedAt) ? fit.projectedAt : null;
+  const CW = GW - 2 * pad, host = document.createElement("div");
+  host.className = "spark";
+  host.style.cssText = "position:fixed;left:-100000px;top:0;width:" + CW + "px;pointer-events:none";
+  /* The picture is of the span: a projection stretches its axis by a third of the span at most,
+     where the chart beside the ring goes more than twice its width for one. The cap's time is
+     printed in the corner either way, while there is a reading to project from, and how far off
+     it is, as the ring's row says it: a weekday alone, six days out, reads as earlier today. */
+  if (known && proj !== null && proj > now) {
+    write("cap ~" + stamp(proj) + (fit.provisional ? "?" : "") + " · in " + fmtIn(proj - now), R,
+          pad + size.big + 18 + 2 * size.small, dim, size.small, sans, { align: "right" });
+  }
+  row.appendChild(host);
+  try {
+    /* the axis labels measured in their own face, as the canvas will set them, so the days' names
+       keep clear of the ends and of each other in any script */
+    host.innerHTML = '<svg class="chart"><text class="ax">0</text></svg>';
+    const mc = document.createElement("canvas").getContext("2d");
+    typeset(mc, getComputedStyle(host.querySelector("text")));
+    const measure = (t) => mc.measureText(t).width;
+    host.innerHTML = chartHTML(key, fit, band, proj, th, CW, !known, chartH,
+                               { hist: h, from, days: sec >= 86400, reach: 0.3, measure });
+    const svg = host.querySelector("svg.chart");
+    if (svg) paintSvg(ctx, svg, L, chartTop);
+    else write("not enough readings over " + spanWords + " to draw a line", GW / 2, chartTop + chartH / 2, faint, size.small, sans,
+               { align: "center" });
+  } finally {
+    host.remove();
+  }
+
+  /* the burn rate, as the chart's caption gives it; and where the kept readings begin, if after the
+     span does. A gap in them, as a machine asleep leaves, is only a gap in the line. */
+  const fy = GH - pad;
+  write(burnNote(fit), L, fy, dim, size.small, mono);
+  const began = num(h.keptFrom, NaN);
+  if (began > from + num(h.intervalMs, 120000) * 3) {
+    write("readings kept from " + when(began), R, fy, faint, size.small, sans, { align: "right" });
+  }
+  return canvas;
+}
+
+/* a canvas set in the type an element is set in */
+function typeset(ctx, s) {
+  ctx.font = s.fontStyle + " " + s.fontWeight + " " + s.fontSize + " " + s.fontFamily;
+  if ("letterSpacing" in ctx) ctx.letterSpacing = s.letterSpacing === "normal" ? "0px" : s.letterSpacing;
+}
+
+/* An SVG painted onto a canvas, element by element, as the page has styled it: the shapes and the
+   text the chart is made of, each with its own computed stroke, fill, dashes, opacity and type. */
+function paintSvg(ctx, svg, ox, oy) {
+  const n = (v, d) => { const x = parseFloat(v); return isFinite(x) ? x : d; };
+  for (const el of svg.querySelectorAll("line, path, rect, circle, text")) {
+    const s = getComputedStyle(el);
+    if (s.display === "none" || s.visibility === "hidden") continue;
+    const at = (a) => n(el.getAttribute(a), 0), op = n(s.opacity, 1), tag = el.tagName.toLowerCase();
+    const fill = s.fill && s.fill !== "none" && !s.fill.startsWith("url") ? s.fill : null;
+    const stroke = s.stroke && s.stroke !== "none" && !s.stroke.startsWith("url") ? s.stroke : null;
+    const sw = n(s.strokeWidth, 1);
+    ctx.save();
+    ctx.translate(ox, oy);
+    const toStroke = () => {
+      ctx.globalAlpha = op * n(s.strokeOpacity, 1);
+      ctx.strokeStyle = stroke; ctx.lineWidth = sw;
+      ctx.lineCap = s.strokeLinecap; ctx.lineJoin = s.strokeLinejoin; ctx.miterLimit = n(s.strokeMiterlimit, 4);
+      ctx.setLineDash(s.strokeDasharray === "none" ? [] : s.strokeDasharray.split(/[\s,]+/).map((v) => n(v, 0)));
+      ctx.lineDashOffset = n(s.strokeDashoffset, 0);
+    };
+    const toFill = () => { ctx.globalAlpha = op * n(s.fillOpacity, 1); ctx.fillStyle = fill; };
+    const strokeFirst = s.paintOrder.trim().startsWith("stroke");
+    let paintFill, paintStroke;
+    if (tag === "text") {
+      typeset(ctx, s);
+      ctx.textAlign = s.textAnchor === "end" ? "right" : s.textAnchor === "middle" ? "center" : "left";
+      ctx.textBaseline = "alphabetic";
+      const t = el.textContent, x = at("x"), y = at("y");
+      paintFill = () => { if (fill) { toFill(); ctx.fillText(t, x, y); } };
+      paintStroke = () => { if (stroke && sw > 0) { toStroke(); ctx.strokeText(t, x, y); } };
+    } else {
+      const p = new Path2D();
+      if (tag === "line") { p.moveTo(at("x1"), at("y1")); p.lineTo(at("x2"), at("y2")); }
+      else if (tag === "path") { const d = el.getAttribute("d"); if (d) p.addPath(new Path2D(d)); }
+      else if (tag === "rect") p.rect(at("x"), at("y"), at("width"), at("height"));
+      else p.arc(at("cx"), at("cy"), at("r"), 0, Math.PI * 2);
+      paintFill = () => { if (fill && tag !== "line") { toFill(); ctx.fill(p); } };
+      paintStroke = () => { if (stroke && sw > 0) { toStroke(); ctx.stroke(p); } };
+    }
+    if (strokeFirst) { paintStroke(); paintFill(); } else { paintFill(); paintStroke(); }
+    ctx.restore();
   }
 }
 
@@ -3101,10 +3395,20 @@ function makeMatrix(back, front) {
       for (const segs of content) {
         const L = row(true);
         put(L, 0, vt, ink);
-        for (const [cc, text, sink, bold] of segs) put(L, 2 + cc, fitText(text, Math.max(0, iw - cc)), sink, bold);
+        /* a run that carries an act is clickable, as the glass page's control it stands for is */
+        for (const [cc, text, sink, bold, act] of segs) {
+          const t = fitText(text, Math.max(0, iw - cc));
+          put(L, 2 + cc, t, sink, bold);
+          if (act && t) regs.push({ r0: out.length - 1, r1: out.length - 1, c0: 2 + cc, c1: 2 + cc + cellsOf(t) - 1, act });
+        }
         put(L, w - 1, vt, ink);
       }
-      put(row(true), 0, bl + hz.repeat(w - 2) + br, ink);
+      /* a note on the bottom edge, as the title is on the top one */
+      const B = row(true), footTxt = o.foot ? fitText(o.foot[0], Math.max(0, w - 6)) : "";
+      if (footTxt) {
+        const fc = put(B, put(B, 0, bl + hz + " ", ink), footTxt, o.foot[1]);
+        put(B, fc, " " + hz.repeat(Math.max(0, w - 5 - cellsOf(footTxt))) + br, ink);
+      } else put(B, 0, bl + hz.repeat(w - 2) + br, ink);
       if (o.act) regs.push({ r0, r1: out.length - 1, c0: 0, c1: w - 1, act: o.act });
     }
 
@@ -3370,17 +3674,65 @@ function makeMatrix(back, front) {
         }
         content.push([]);
       }
-      const foot = wrapText(words(d.querySelector(".dfoot")), iw);
-      if (cutFoot > 0 && foot.length) {
-        foot.length = Math.max(1, foot.length - cutFoot);
-        const last = foot[foot.length - 1];
-        foot[foot.length - 1] = cellsOf(last) + 2 <= iw ? last + " …" : fitText(last + " …", iw);
+      /* The row that saves the graph, its spans clickable: the heading shortens to SAVE, then the
+         spans close up, and only then does the heading stand on a line of its own. How the last
+         save went is written on the box's bottom edge, so a save never moves the page. Laid out
+         first, so that a page too tall for the window knows what it can give up. */
+      const spans = [...document.querySelectorAll("#dxspans button")], saves = [];
+      let headOwn = false;
+      if (spans.length) {
+        const chips = spans.map((b) => {
+          const act = "graph:" + b.dataset.span, busy = b.getAttribute("aria-busy") === "true";
+          const off = !busy && b.getAttribute("aria-disabled") === "true";   // another span is being saved
+          const lit = busy || (!off && (hover === act || document.activeElement === b));
+          return { t: "[" + b.textContent + "]", ink: lit ? MX_INK.lit : off ? MX_INK.dim : MX_INK.label, bold: lit ? 1 : 0, act };
+        });
+        const along = (gap) => chips.reduce((n, k) => n + cellsOf(k.t), 0) + gap * (chips.length - 1);
+        const head = words($("dxh")).toUpperCase();
+        const one = [[head, 1], ["SAVE", 1], ["SAVE", 0]].find(([t, gap]) => cellsOf(t) + 2 + along(gap) <= iw);
+        if (one) {
+          const [lead, gap] = one;
+          let c = cellsOf(lead) + 2;
+          saves.push([[0, lead, MX_INK.dim, 0], ...chips.map((k) => { const seg = [c, k.t, k.ink, k.bold, k.act]; c += cellsOf(k.t) + gap; return seg; })]);
+        } else {
+          headOwn = true;
+          saves.push([[0, head, MX_INK.dim, 0]]);
+          /* a space between the spans while they fit with one, none when only that fits, then a second line */
+          const gap = along(1) <= iw ? 1 : 0;
+          let line = [], c = 0;
+          for (const k of chips) {
+            if (c > 0 && c + cellsOf(k.t) > iw) { saves.push(line); line = []; c = 0; }
+            line.push([c, k.t, k.ink, k.bold, k.act]);
+            c += cellsOf(k.t) + gap;
+          }
+          saves.push(line);
+        }
       }
+      /* A page too tall for the window gives up, in turn: the blank line above the download row,
+         the explanation's last lines down to one that says it was cut, that one too, and a heading
+         on a line of its own, before the spans or the box's bottom edge would leave the screen. */
+      let cut = cutFoot;
+      const spaced = !(spans.length && cut > 0);
+      if (!spaced) cut--;
+      const foot = wrapText(words(d.querySelector(".dfoot")), iw);
+      if (cut > 0 && foot.length) {
+        if (spans.length && foot.length <= cut) { cut -= foot.length; foot.length = 0; }
+        else {
+          foot.length = Math.max(1, foot.length - cut);
+          cut = 0;
+          const last = foot[foot.length - 1];
+          foot[foot.length - 1] = cellsOf(last) + 2 <= iw ? last + " …" : fitText(last + " …", iw);
+        }
+      }
+      if (cut > 0 && headOwn) saves.shift();
       for (const l of foot) content.push([[0, l, MX_INK.dim, 0]]);
-      const closeEl = $("dclose");
+      if (spans.length && spaced) content.push([]);
+      content.push(...saves);
+      const closeEl = $("dclose"), note = spans.length ? words($("dxnote")) : "";
       box(words(d.querySelector(".dtitle")).toUpperCase(), words(bandEl).toUpperCase(), content, {
         rightInk: (bandEl && bandEl.style.color) || MX_INK.text,
         close: { act: "toggle:" + key + ":close", lit: hover === "toggle:" + key + ":close" || document.activeElement === closeEl },
+        foot: note ? [note, MX_INK.dim] : null,
       });
     }
 
@@ -3456,8 +3808,9 @@ function makeMatrix(back, front) {
     const fit = Math.max(1, Math.floor(H / CH));
     let doc = null;
     for (let level = 0; level <= 5; level++) { doc = compose(w, level); if (doc.rows.length <= fit) break; }
-    /* still too tall with the chart and the cost strip given up: the detail's explanation gives up
-       its last lines, and says so, rather than running off the bottom */
+    /* still too tall with the chart and the cost strip given up: the detail gives up the blank
+       above its download row, then its explanation's last lines, and says so, rather than
+       running off the bottom */
     if (doc.rows.length > fit) doc = compose(w, 5, doc.rows.length - fit);
     const n = cols * rows, x0 = Math.max(0, Math.floor((cols - w) / 2)), y0 = Math.max(0, Math.floor((fit - doc.rows.length) / 2));
     const C = new Array(n).fill(""), F = new Array(n).fill(""), K = new Uint8Array(n), B = new Uint8Array(n);
@@ -3474,6 +3827,8 @@ function makeMatrix(back, front) {
       }
     });
     regions = doc.regions.map((g) => ({ r0: g.r0 + y0, r1: g.r1 + y0, c0: g.c0 + x0, c1: g.c1 + x0, act: g.act }));
+    /* a save that starts or ends under a resting pointer */
+    if (hover) front.style.cursor = regions.some((g) => g.act === hover) ? cursorFor(hover) : "";
     for (let i = 0; i < n; i++) {
       if (C[i] === chs[i] && F[i] === fgs[i] && K[i] === wts[i] && B[i] === backs[i]) continue;
       chs[i] = C[i]; fgs[i] = F[i]; wts[i] = K[i]; backs[i] = B[i];
@@ -3509,10 +3864,21 @@ function makeMatrix(back, front) {
   front.addEventListener("click", (e) => {
     const g = hit(e);
     if (g && g.act.startsWith("toggle:")) $("ring-" + g.act.split(":")[1]).click();
+    if (g && g.act.startsWith("graph:")) {
+      const b = document.querySelector('#dxspans [data-span="' + g.act.slice(6) + '"]');
+      if (b) b.click();
+    }
   });
+  /* a span is a pointer while it can be saved; while another is being saved it is not, and the
+     one being saved shows its progress, as the glass page's buttons do */
+  function cursorFor(act) {
+    if (!act) return "";
+    const b = act.startsWith("graph:") && document.querySelector('#dxspans [data-span="' + act.slice(6) + '"]');
+    return !b ? "pointer" : b.getAttribute("aria-busy") === "true" ? "progress" : b.getAttribute("aria-disabled") === "true" ? "default" : "pointer";
+  }
   front.addEventListener("pointermove", (e) => {
     const g = hit(e), h = g ? g.act : null;
-    front.style.cursor = g ? "pointer" : "";
+    front.style.cursor = cursorFor(h);
     if (h !== hover) { hover = h; schedule(); }
   });
   front.addEventListener("pointerleave", () => { if (hover) { hover = null; schedule(); } });
@@ -3623,7 +3989,8 @@ function makeMatrix(back, front) {
       if (!active) {
         active = true;
         mo.observe(mainEl, { childList: true, subtree: true, characterData: true, attributes: true,
-                             attributeFilter: ["aria-expanded", "class", "style", "data-tone", "data-on", "data-pace", "data-band", "data-hot", "data-quiet", "data-state"] });
+                             attributeFilter: ["aria-expanded", "class", "style", "data-tone", "data-on", "data-pace", "data-band", "data-hot", "data-quiet", "data-state",
+                                               "aria-busy", "aria-disabled"] });
         mo.observe(document.body, { attributes: true, attributeFilter: ["data-hold"] });
         /* the cells are measured in Fira Code; until it has come, a fallback face stands in */
         if (document.fonts && document.fonts.load) {
@@ -4892,6 +5259,7 @@ function renderCost() {
 /* ═════════════════════════ wiring ═════════════════════════ */
 buildRings();
 buildPrefs();
+buildGraphSpans();
 applyPrefs();   // before the first render, so the first frame is already in the chosen look
 $("detailOuter").inert = true;
 render();

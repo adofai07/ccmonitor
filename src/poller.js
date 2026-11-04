@@ -47,8 +47,14 @@ const REPORT_CHECK_MS = 2_000;
 const REPORT_KEEP_MS = 8 * 24 * 3_600_000;
 const REPORT_SWEEP_MS = 3_600_000;
 
-// 12 hours at the base interval — the span the sparkline draws.
+// 12 hours at the base interval — the span the sparkline draws, and the trace the fit reads.
 export const HISTORY_CAPACITY = 360;
+// What the history file keeps: about twenty days at the base interval. The longest graph the page
+// saves is a week, and one poller records a reading about once an interval at most; a second on the
+// same cache (`watch` started before `serve`) records each again, and the week is still there. A
+// count and not an age, as the trace is: a clock that is wrong when the server starts must not be
+// able to throw a week of readings away.
+export const HISTORY_KEPT = 14_400;
 const HISTORY_KEYS = ['session', 'weekly', 'fable'];
 const HOUR_MS = 3_600_000;
 
@@ -156,7 +162,10 @@ export class QuotaPoller extends EventEmitter {
       this.lastError = penalty.error;
       this.staleSince = new Date(penalty.since ?? Date.now()).toISOString();
     }
-    this.samples = loadHistory(this.historyPath, capacity);
+    // Every kept reading, for the longer graphs; the trace the chart draws and the fit reads is the
+    // newest `capacity` of them, as it always was.
+    this.kept = loadHistory(this.historyPath, HISTORY_KEPT);
+    this.samples = this.kept.slice(-capacity);
     // The status line's reports: the newest one taken, the state of each session's file when
     // last read, the timer for the moment the newest stops covering, and whether this account
     // has had its one poll yet (for what reports do not carry).
@@ -355,6 +364,25 @@ export class QuotaPoller extends EventEmitter {
   }
 
   /**
+   * The kept readings of the last `ms`, oldest first: the series of a graph longer than the trace.
+   * Sorted and bounded by the clock, where the trace is taken as recorded: a clock that ran fast or
+   * slow while readings were taken leaves them out of order for as long as they are kept, and a
+   * graph of days would draw a line back across them. One dated ahead of the clock is in no span
+   * yet, and a reading two pollers on one cache both took is given once.
+   */
+  historySince(ms, now = Date.now()) {
+    const out = this.kept.filter((s) => s.t >= now - ms && s.t <= now).sort((a, b) => a.t - b.t);
+    return out.filter((s, i) => i === 0 || s.t !== out[i - 1].t);
+  }
+
+  /** When the kept readings begin: the oldest not dated ahead of the clock, or null with none. */
+  keptFrom(now = Date.now()) {
+    let first = null;
+    for (const s of this.kept) if (s.t <= now && (first === null || s.t < first)) first = s.t;
+    return first;
+  }
+
+  /**
    * Everything /api/history reports about one limit's trend, from a single pass over the
    * series: the fit, whether it supports a projection, and the span it was fitted over.
    * `sinceT` is what lets the UI clip the sparkline to the fitted span instead of drawing a
@@ -492,7 +520,8 @@ export class QuotaPoller extends EventEmitter {
     this.account = key;
     this.historyPath = historyPath(key);
     this.penaltyPath = join(dirname(this.historyPath), `backoff-${key}.json`);
-    this.samples = loadHistory(this.historyPath, this.capacity); // the other account's trace, or empty
+    this.kept = loadHistory(this.historyPath, HISTORY_KEPT); // the other account's readings, or none
+    this.samples = this.kept.slice(-this.capacity);
     // the other account's reports are its own; this one's are read from its own file, and
     // its first poll is still to come — for the plan, the thresholds and Fable, which no
     // report carries
@@ -606,6 +635,8 @@ export class QuotaPoller extends EventEmitter {
     };
     this.samples.push(sample);
     if (this.samples.length > this.capacity) this.samples.splice(0, this.samples.length - this.capacity);
+    this.kept.push(sample);
+    if (this.kept.length > HISTORY_KEPT) this.kept.splice(0, this.kept.length - HISTORY_KEPT);
     appendSample(this.historyPath, sample);
   }
 

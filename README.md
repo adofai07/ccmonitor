@@ -240,9 +240,18 @@ With a custom status line, Claude Code stops showing some footer hints (`esc to 
 Successful polls, and status line reports at most once an interval, are appended to
 `${XDG_CACHE_HOME:-~/.cache}/ccusageviz/history-<account>.jsonl`,
 one JSON object per line, and reloaded at startup so a restart does not blank the sparkline. The
-last 360 (12 h at the base interval) are kept, and the file is compacted to that on load,
-which is what bounds it. Failed polls are never recorded — a failure must not flatten the
-trace. An unwritable or half-written cache is ignored, never an error.
+last 14,400 (about twenty days at the base interval) are kept, and the file is compacted to that
+on load, which is what bounds it. The newest 360 of them, 12 h, are the trace: what the chart
+beside the ring draws and the burn rate is fitted over. The rest are for the longer graphs the
+page saves, up to a week, with room to spare for a second poller on the same cache (`watch`
+started before `serve`), which records each reading again. A count and not an age, so a clock
+that is wrong at startup cannot throw a week of readings away. Failed polls are never recorded —
+a failure must not flatten the trace. An unwritable or half-written cache is ignored, never an
+error.
+
+A ccquota from before the saved graphs keeps only the trace, and compacts this same file to it
+whenever it starts a poller or follows an account switch. Run one on the same cache, or leave one
+running, and the history is cut back to 12 h.
 
 `<account>` is a hash of the logged-in `accountUuid`, so each account keeps its own trace and
 switching between them does not blend two histories into one meaningless burn rate. The account
@@ -336,6 +345,10 @@ client can see it: long quiet stretches are normal while reports stand in for po
 page tells a live link from a dead one by its frames.
 
 `GET /api/history` — the sparkline series, plus the fit, so no client has to redo it.
+`GET /api/history?span=<seconds>` is the same with every kept reading of the last `span` seconds
+in `samples`, oldest first and none dated ahead of the server's clock, `spanSeconds` echoing it,
+and `keptFrom`, the time of the oldest kept reading (`null` with none): the series of a graph
+longer than the trace. A `span` that is not a positive, finite number is a 400.
 
 ```json
 {

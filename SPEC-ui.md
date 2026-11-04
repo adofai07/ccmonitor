@@ -76,8 +76,10 @@ window is one grid of character cells in Fira Code, shared by two layers.
   is the real button, placed unseen over the terminal's `[≡]`.
 - **It fits the window.** The page is centred, at most 100 cells wide, and gives up the chart's
   height, then the cost strip piece by piece, when the window is too short; with the detail open
-  in a small window its explanation gives up its last lines and ends in "…". When the freshness
-  line does not fit beside the name, the header splits over two lines.
+  in a small window it gives up the blank above its download row, then its explanation's last
+  lines, ending in "…", then that line too, and a download heading on a line of its own, before
+  the download row or the box's bottom edge would leave the screen. When the freshness line does
+  not fit beside the name, the header splits over two lines.
 - The rain warms with the room: the hotter the weekly limit runs, the more of the streams coming
   on screen fall in red (*Colour #2*), as the gradient warms in Glass.
 - *Rain*, the terminal's own setting, off stops the rain where it stands, and
@@ -164,9 +166,10 @@ One row: **the weekly limit**. Anthropic has removed the five-hour session limit
 not used here, so neither is drawn. The backend still reports all three (see the README) and
 the history still records all three, so a ring could come back by adding its key to the
 page's `ORDER`. The history chart is drawn at rest, beside the ring — no click needed to see
-the trace. It covers at most the last 12 hours, the span the history cache is sized for, so
-an account switched back to after days away starts a fresh trace instead of redrawing its old
-window. Below ~680px the chart drops under the ring at full width.
+the trace. It covers at most the last 12 hours, though the history keeps about twenty days for
+the graphs the detail panel saves (below), so an account switched back to after days away starts a
+fresh trace instead of redrawing its old window. Below ~680px the chart drops under the ring at
+full width.
 
 The ring:
 
@@ -258,6 +261,38 @@ directly under its row:
 
 The history chart is not repeated here; it is already beside the ring. Clicking the ring again
 collapses it.
+
+### Download the graph
+
+The panel's last row saves the chart as a picture, over the last hour, 12 hours, day, 3 days or
+7 days, one button each:
+
+```
+DOWNLOAD THE GRAPH   [1h] [12h] [1d] [3d] [7d]   saved quota-week-7d-2026-11-04-1222.png
+```
+
+- It is a PNG of 1200×630, drawn at twice that, named for the limit, the span and the minute it
+  was saved. On it: the limit's name, the span and its dates, the reading now and its reset, the
+  cap's time and how far off it is, the chart, and the burn rate as the chart's caption gives it.
+- The chart is the page's own, laid out again at the picture's size, so the picture is in the
+  theme on screen: its colours, its type and, in Train, its pixels and stepped corners. A span of
+  a day or more marks each midnight with the name of the day, wherever the name, measured in its
+  own face, clears the axis' two ends and the other names.
+- The axis always covers the whole span. The server keeps about twenty days of readings (see the
+  README), from when it started keeping them, so where they begin after the span does the line
+  starts there and the picture says from when. A gap in them, as a machine asleep leaves, is only
+  a gap in the line. Each account keeps its own.
+- One save at a time: while one is drawn, the other spans are dimmed. The note says how it went,
+  and when the panel was closed meanwhile, the page's live region says it too.
+- The row sits outside the part of the panel rebuilt with each reading, so a button keeps its
+  focus. In Matrix the terminal draws it in the detail box, its spans clickable. As the window
+  narrows the heading shortens to `SAVE`, then the spans close up, and only then does the heading
+  take a line of its own. The note goes on the box's bottom edge, so a save never moves the page:
+
+```
+│  DOWNLOAD THE GRAPH  [1h] [12h] [1d] [3d] [7d]               │
+└─ saved quota-week-7d-2026-11-04-1222.png ────────────────────┘
+```
 
 ## Settings
 

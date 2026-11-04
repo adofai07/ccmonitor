@@ -91,7 +91,14 @@ export function createQuotaServer({ poller = new QuotaPoller() } = {}) {
       const url = new URL(req.url.startsWith('//') ? `.${req.url}` : req.url, 'http://127.0.0.1');
       if (url.pathname === '/healthz') return send(res, 200, { ok: true, version: VERSION });
       if (url.pathname === '/api/quota') return send(res, 200, poller.snapshot());
-      if (url.pathname === '/api/history') return send(res, 200, history(poller));
+      if (url.pathname === '/api/history') {
+        // ?span=<seconds> asks for every kept reading of that long, for a graph longer than the trace
+        const span = url.searchParams.get('span');
+        if (span === null) return send(res, 200, history(poller));
+        const seconds = Number(span);
+        if (!(seconds > 0) || !Number.isFinite(seconds)) return send(res, 400, { error: 'bad span' });
+        return send(res, 200, history(poller, seconds));
+      }
       if (url.pathname === '/api/cost') return send(res, 200, await getCost());
       // GET only: SSE is a body that never ends, so a HEAD hangs forever holding a socket,
       // a heartbeat timer and two poller listeners, waiting for a body it may not be sent.
@@ -146,11 +153,15 @@ function isLocalRequest(req) {
  * fields the poller puts on them, and the per-limit numbers are read off it, never rescaled
  * or rounded on the way out.
  */
-function history(poller) {
+function history(poller, spanSeconds = null) {
+  const now = Date.now();
   return {
-    samples: poller.history(),
+    samples: spanSeconds === null ? poller.history() : poller.historySince(spanSeconds * 1000, now),
     intervalMs: poller.intervalMs,
     capacity: poller.capacity,
+    // a span also says when the kept readings begin, so a graph can tell where they start from
+    // where they merely stop for a while
+    ...(spanSeconds === null ? {} : { spanSeconds, keptFrom: poller.keptFrom(now) }),
     // fit() is the whole per-limit entry — the rate, the projection, and the sinceT /
     // sampleCount span the fit was taken over — from one pass over the series. Forwarded as
     // it comes: rebuilding it field by field here would just be a second place to get the
