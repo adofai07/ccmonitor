@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 
 export class CredentialsError extends Error {
   constructor(code, message) {
@@ -125,15 +125,69 @@ export function readCredentials() {
  * cache for setups that never switch.
  */
 export function accountKey() {
-  try {
-    // Where Claude Code keeps it: in CLAUDE_CONFIG_DIR when that is set, in the home directory
-    // otherwise. This runs inside every Claude Code session as well — the status line files each
-    // reading under the key — so it has to name that session's account, not a neighbour's.
-    const dir = process.env.CLAUDE_CONFIG_DIR || homedir();
-    const uuid = JSON.parse(readFileSync(join(dir, '.claude.json'), 'utf8'))?.oauthAccount?.accountUuid;
-    if (typeof uuid !== 'string' || !uuid) return 'default';
-    return createHash('sha256').update(uuid).digest('hex').slice(0, 12);
-  } catch {
-    return 'default'; // unreadable config is not worth failing a poll over
+  // Where Claude Code keeps it: in CLAUDE_CONFIG_DIR when that is set, in the home directory
+  // otherwise. This runs inside every Claude Code session as well — the status line files each
+  // reading under the key — so it has to name that session's account, not a neighbour's.
+  return accountIn(join(process.env.CLAUDE_CONFIG_DIR || homedir(), '.claude.json')) ?? 'default';
+}
+
+/**
+ * The account whose token the poller sends, keyed as accountKey() keys one: the cache its readings
+ * are filed in, and whose status line reports stand in for its polls.
+ *
+ * Without CCQUOTA_CREDENTIALS_PATH that is the config's own account. With it the token is another
+ * file's, and the config may be logged in as someone else. Keyed by the config, as it was, the
+ * polls answered for the file's account were filed under the config's, and the reports of the
+ * config's sessions were taken as the reading: two accounts' numbers on one page, jumping between
+ * them, beside one account's plan.
+ *
+ * So the account is the one logged in beside the file, where Claude Code keeps the config of the
+ * directory the file belongs to: `.claude.json` in that directory, or next to it for a directory
+ * named `.claude`, whose config is `~/.claude.json` beside `~/.claude`. Beside the path as given
+ * first, then beside where its links lead, so that a `~/.claude/.credentials.json` linked into a
+ * dotfiles checkout is still ~/.claude.json's. Failing that, a key of the file's own: its
+ * readings stay apart, and no session's report is ever taken for it, since no session can name it.
+ * Not CLAUDE_CONFIG_DIR's account: nothing says the file is that account's, and a guess that is
+ * wrong is the blend again.
+ */
+export function pollAccountKey() {
+  const override = process.env.CCQUOTA_CREDENTIALS_PATH;
+  if (!override) return accountKey();
+  const given = resolve(override);
+  const settled = settledPath(given);
+  for (const dir of new Set([dirname(given), dirname(settled)])) {
+    const key = accountIn(join(dir, '.claude.json'))
+      ?? (basename(dir) === '.claude' ? accountIn(join(dirname(dir), '.claude.json')) : null);
+    if (key) return key;
+  }
+  return keyOf(`credentials file ${settled}`);
+}
+
+/**
+ * The path with its links followed as far as they exist: the nearest existing ancestor resolved,
+ * the rest as given. A file that appears later, under /tmp on a Mac (/private/tmp) or any linked
+ * directory, then keeps the key it had, where resolving only once it exists would change it.
+ */
+function settledPath(path) {
+  const rest = [];
+  for (let at = path; ; at = dirname(at)) {
+    try {
+      return join(realpathSync(at), ...rest);
+    } catch {
+      if (dirname(at) === at) return path;
+      rest.unshift(basename(at));
+    }
   }
 }
+
+/** The keyed account a Claude Code config file is logged in as, or null when it names none. */
+function accountIn(configFile) {
+  try {
+    const uuid = JSON.parse(readFileSync(configFile, 'utf8'))?.oauthAccount?.accountUuid;
+    return typeof uuid === 'string' && uuid ? keyOf(uuid) : null;
+  } catch {
+    return null; // unreadable config is not worth failing a poll over
+  }
+}
+
+const keyOf = (text) => createHash('sha256').update(text).digest('hex').slice(0, 12);

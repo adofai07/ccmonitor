@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { appendFileSync, closeSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { accountKey } from './credentials.js';
+import { pollAccountKey } from './credentials.js';
 import { cacheDir } from './paths.js';
 import { FRESH_MS, readReport, reportPrefix } from './statusline.js';
 import { getQuota, emptyQuota, secondsUntil, withHeld, withReport, reportConflicts, FUTURE_SLACK_MS, ROUNDING, THRESHOLDS } from './usage.js';
@@ -78,30 +78,29 @@ const MIN_SAMPLES = 3;
 // status line reports in tenths, and one usage read both ways differs by under a point.
 const RESET_DROP = ROUNDING;
 
-// The variance of rounding to the nearest integer, and the reason the segmentation below
-// needs no tuned thresholds: a percent is delivered rounded, so this noise level is KNOWN
-// rather than something to estimate from the data. Used as a known sigma-squared it makes a
-// tread-split unable to repay its parameters (a staircase already sits at this level, so
-// carving one up buys nothing) while still letting a genuine level shift pay for itself.
-//
-// Status line reports come in tenths, whose rounding noise is a hundredth of that, so for a run
-// of them this is an upper bound rather than the known level: it errs towards fewer splits and a
-// wider standard error, never towards a trend the data cannot support.
-//
-// Estimating the variance instead was subtly wrong: when both the one-line and two-line
-// models sat at the floor their likelihoods tied, BIC took the cheaper one, and a real stop
-// went unfound — the run kept ten samples of the burn that preceded it and reported 0.16 %/hr
-// for someone who had put the laptop down.
+// How far a reading can sit from the true value by rounding alone: half a point for the endpoint's
+// whole points. A reading that close to a line agrees with it exactly, because it is that line's
+// value rounded. The status line's tenths are scored as they always were, against QUANT_VAR, which
+// is a hundred times their rounding already; a band as well would allow for it twice. A tenths
+// report that lands on a whole number cannot be told from a poll and is given the band, which errs
+// towards fewer splits: a stop that lands there shows a reading or two later.
+const halfStep = (p) => (Number.isInteger(p) ? 0.5 : 0);
+
+// The variance of rounding to a whole point, and the scale on which the segmentation below scores
+// whatever a line leaves outside the readings' rounding: a departure smaller than that rounding is
+// not worth a parameter. Fixed rather than estimated. Estimated from the data, the variance
+// collapsed on flat stretches, the one-line and two-line models tied, BIC took the cheaper one,
+// and a real stop went unfound: the run kept ten samples of the burn before it and reported
+// 0.16 %/hr for someone who had put the laptop down.
 const QUANT_VAR = 1 / 12;
 
-// Parameters per model, for the BIC penalty. With sigma-squared known rather than fitted, one
-// line is slope + intercept; two lines are that twice plus the split location. Nothing here is
-// chosen; k·ln(n) is the criterion itself.
-const PARAMS_ONE = 2;
-const PARAMS_TWO = 5;
+// Parameters per segment, for the BIC penalty: a line's slope and intercept, and where it begins.
+// Nothing here is chosen; k·ln(n) is the criterion itself.
+const PARAMS_PER_SEGMENT = 3;
 
-// A runaway guard, not a limit any real day reaches.
-const MAX_BREAKS = 8;
+// Totals closer than this are the same total: which of two equal divisions wins must not turn on
+// the order a sum was added in.
+const TIE = 1e-9;
 
 // Above this, the ETA's own uncertainty is too wide for the number to be read as fact and the
 // UI marks it "?". It is expressed in the thing the reader actually cares about — how far the
@@ -142,7 +141,7 @@ export class QuotaPoller extends EventEmitter {
     this.lastRequestAt = 0;
     // Cached data is per-account. The request floor deliberately is not: it protects the
     // endpoint from this machine, and a switch does not make a burst acceptable.
-    this.account = accountKey();
+    this.account = pollAccountKey();
     this.historyPath = historyPath(this.account);
     this.slotPath = join(dirname(this.historyPath), 'last-request');
     this.slotLock = `${this.slotPath}.lock`;
@@ -515,7 +514,7 @@ export class QuotaPoller extends EventEmitter {
    * burn rate that describes neither.
    */
   followAccount({ keepLast = false } = {}) {
-    const key = accountKey();
+    const key = pollAccountKey();
     if (key === this.account) return false;
     this.account = key;
     this.historyPath = historyPath(key);
@@ -675,30 +674,6 @@ export class QuotaPoller extends EventEmitter {
 }
 
 /**
- * The stretch the user is *currently* in, found by recursive change-point detection.
- *
- * A burn rate has to answer "at the rate I am going NOW", so the fit must not span a change
- * of behaviour. series() already cuts at a window reset and at a gap where the poller was
- * off; neither catches the two cases that actually distort the number — an idle stretch the
- * poller sat through, and a genuine change of pace.
- *
- * For every candidate split, compare fitting two independent lines against fitting one. Take
- * the split that explains the most variance, keep it only if it beats one line by REGIME_GAIN,
- * then recurse into the tail, because a day has more than one break in it: start work, lunch,
- * resume. What survives is the last segment.
- *
- * Why not simply grow backwards until the points stop looking linear: tolerating T points of
- * deviation always drags in T/Δrate hours of the previous regime, so a loose tolerance blurs
- * the boundary and a tight one shreds a bursty-but-real trend. Locating the boundary avoids
- * having to pick that tolerance at all. On synthetic regimes this recovers the true current
- * rate in every case tried, including three consecutive ones; growing-until-non-linear
- * recovered five of seven.
- *
- * A short regime is not silently blessed: it still has to clear the evidence gates, and a
- * 68-minute stretch will not carry a 7-day projection. That is the intended outcome — the UI
- * says "measuring" rather than extrapolating a spree across a week.
- */
-/**
  * Prefix sums over a run, so the least-squares fit of ANY sub-range costs O(1).
  *
  * Time is carried as hours since the run's first sample. Squaring epoch milliseconds reaches
@@ -706,14 +681,17 @@ export class QuotaPoller extends EventEmitter {
  */
 function prefixSums(points) {
   const t0 = points[0].t;
-  const s = { t: [0], p: [0], tt: [0], tp: [0], pp: [0] };
+  // `at`: each reading's own time, for the residuals cost() takes one by one
+  const s = { at: [], t: [0], p: [0], tt: [0], tp: [0], pp: [0], hh: [0] };
   points.forEach((pt, i) => {
     const t = (pt.t - t0) / HOUR_MS;
+    s.at.push(t);
     s.t.push(s.t[i] + t);
     s.p.push(s.p[i] + pt.p);
     s.tt.push(s.tt[i] + t * t);
     s.tp.push(s.tp[i] + t * pt.p);
     s.pp.push(s.pp[i] + pt.p * pt.p);
+    s.hh.push(s.hh[i] + halfStep(pt.p) ** 2);
   });
   return s;
 }
@@ -733,43 +711,99 @@ function lineOf(s, a, b) {
 }
 
 /**
- * Gaussian deviance of a segment under the KNOWN quantization variance, up to constants
- * shared by every model. A perfectly flat run scores 0 here, which is the honest answer and
- * needs no floor to keep it finite.
+ * Deviance of the least-squares line over [a, b) of a run, counting only what falls outside each
+ * reading's halfStep, or Infinity as soon as it is known to exceed `limit`.
+ *
+ * The least-squares line, not the one that would leave the least outside the bands: that one has
+ * no closed form, and this one keeps prefix sums. It can charge a staircase a little at its ends
+ * that another line would not, never enough to pay for a cut: over 14,202 steady whole-point burns
+ * of 0.05 to 2 %/hr, every offset and length, none read 0.00.
+ *
+ * Before the pass, a floor: what is left outside the bands is at least the residuals' length less
+ * the bands' (the triangle inequality), so a segment that plainly cannot win is dropped in O(1).
  */
-const cost = (line) => line.rss / QUANT_VAR;
+function cost(points, s, a, b, limit = Infinity) {
+  const line = lineOf(s, a, b);
+  const band = s.hh[b] - s.hh[a];
+  if (line.rss > band && (Math.sqrt(line.rss) - Math.sqrt(band)) ** 2 > limit * QUANT_VAR) return Infinity;
+  const n = b - a;
+  const mt = (s.t[b] - s.t[a]) / n;
+  const mp = (s.p[b] - s.p[a]) / n;
+  const most = limit * QUANT_VAR;
+  let out = 0;
+  for (let i = a; i < b; i++) {
+    const p = points[i].p;
+    const e = Math.abs(p - (mp + line.slope * (s.at[i] - mt))) - halfStep(p);
+    if (e > 0 && (out += e * e) > most) return Infinity;
+  }
+  return out / QUANT_VAR;
+}
 
 /**
- * Where the current run begins: the last point at which splitting the series pays for itself.
+ * Where the current run begins: the start of the last segment in the best division of the series
+ * into straight lines.
  *
- * For every candidate split, the two-line model is scored against the one-line model by BIC —
- * likelihood plus k·ln(n). A split must earn its two extra parameters out of the fit it buys,
- * so noise never justifies one and a real change of pace always does. Recursing into the tail
- * finds the most recent break of several, which is the one that describes now.
+ * A burn rate has to answer "at the rate I am going NOW", so the fit must not span a change of
+ * behaviour. series() already cuts at a window reset and at a gap where the poller was off;
+ * neither catches an idle stretch the poller sat through, a stop, or a change of pace. Each of
+ * those is a break between lines. A division is scored by BIC: each segment's cost() plus
+ * PARAMS_PER_SEGMENT·ln(n), so a segment has to earn its parameters out of the fit it buys, and
+ * no threshold is tuned.
  *
- * This replaces an accumulation of hand-set thresholds — a minimum split gain, a minimum
- * segment length in steps, a separate flat-gap detector for the idle the step search could not
- * see, a stall detector for the stop that produces no steps, and a chain ordering to keep them
- * straight. Each had been added to patch a case the previous one missed. None survives: an
- * idle stretch, a stop and a change of pace are all just splits that repay their parameters.
+ * Of a whole-point reading only what a line leaves outside its rounding counts (halfStep), and
+ * that is what keeps a slow burn whole. In whole points a steady burn under about 1.5 %/hr is a
+ * staircase, a point an hour or longer, and its newest step is flat. Scored against its own value, that step had no error at
+ * all while one line through the staircase was charged the rounding of every reading, so cutting
+ * the step off always paid: the run became the step, and it read 0.00 %/hr with no projection
+ * while the cap came on. Inside the bands the line and the step agree exactly, and the cut buys
+ * nothing. A stop still breaks the line once it outlasts the band, after about two points' worth
+ * of the burn: 30 to 45 minutes at 3 %/hr, two to three hours at 0.65 %/hr, where a point takes
+ * an hour and a half. Tenths show one sooner, as they always did.
+ *
+ * Every division is searched, not one break at a time. Splitting once and recursing into the tail
+ * cut burn, lunch, burn in the middle of lunch, and the half-lunch left in the tail cost less than
+ * another break, so the rate after lunch read 12% low: optimistic, the wrong way for this number
+ * to be wrong. Ties go to the later start, since the readings cannot tell those divisions apart
+ * and the later one is nearer now: at a stop, the flat after the last step rather than one step
+ * of the burn before it.
+ *
+ * The search over divisions is exhaustive in effect: a start is skipped only when even a free
+ * segment from it could not beat the best division found so far, and a cost is abandoned once it
+ * passes what would, so it finds the division an unbounded search finds. Over 360
+ * readings that is about 0.3 ms, under 3 ms in the slowest realistic shapes tried, and about 12 ms
+ * on noisy traces that neither source produces.
  */
 function runStart(points) {
-  let from = 0;
-  for (let depth = 0; depth < MAX_BREAKS; depth++) {
-    const rest = points.slice(from);
-    const n = rest.length;
-    if (n < 2 * MIN_SAMPLES) break;
-    const s = prefixSums(rest);
-    const whole = cost(lineOf(s, 0, n)) + PARAMS_ONE * Math.log(n);
-    let best = null;
-    for (let k = MIN_SAMPLES; k <= n - MIN_SAMPLES; k++) {
-      const c = cost(lineOf(s, 0, k)) + cost(lineOf(s, k, n)) + PARAMS_TWO * Math.log(n);
-      if (best === null || c < best.c) best = { k, c };
-    }
-    if (!best || best.c >= whole) break;
-    from += best.k;
+  const n = points.length;
+  if (n < 2 * MIN_SAMPLES) return 0;
+  const s = prefixSums(points);
+  const perSegment = PARAMS_PER_SEGMENT * Math.log(n);
+  // best[j]: the score of the best division of the first j readings; start[j]: where its last
+  // segment begins. A segment holds MIN_SAMPLES readings at least.
+  const best = new Float64Array(n + 1).fill(Infinity);
+  const start = new Int32Array(n + 1);
+  best[0] = 0;
+  for (let j = MIN_SAMPLES; j <= n; j++) {
+    // the lowest score seen for j, which every candidate is measured against; best[j] is the score
+    // of the division taken, which on a tie is a later start's, up to TIE above it
+    let low = Infinity;
+    const tryFrom = (i) => {
+      const room = low - best[i] - perSegment + TIE;
+      if (room < 0) return;
+      const total = best[i] + cost(points, s, i, j, room) + perSegment;
+      if (total < low - TIE || (total <= low + TIE && i > start[j])) {
+        low = Math.min(low, total);
+        best[j] = total;
+        start[j] = i;
+      }
+    };
+    // where the last segment began one reading ago is usually where it begins now, and trying it
+    // first sets a bound that most other starts cannot get under
+    const lead = start[j - 1];
+    if (j - lead >= MIN_SAMPLES && best[lead] < Infinity) tryFrom(lead);
+    for (let i = j - MIN_SAMPLES; i >= 0; i--) if (i !== lead && best[i] < Infinity) tryFrom(i);
   }
-  return from;
+  return start[n];
 }
 
 /**

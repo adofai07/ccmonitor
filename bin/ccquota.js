@@ -21,7 +21,8 @@ Environment
   PORT                       server port (default 8787, loopback only)
   CLAUDE_CONFIG_DIR          Claude Code's config directory: its .credentials.json, and the
                              settings.json serve sets the status line in (default ~/.claude)
-  CCQUOTA_CREDENTIALS_PATH   full path to the credentials file, overrides the above
+  CCQUOTA_CREDENTIALS_PATH   full path to the credentials file, overrides the above; its
+                             account is the one in the .claude.json beside it
   XDG_CACHE_HOME             where the sample history and the status line's reports are kept
                              (default ~/.cache); set for serve, it goes into the status line
   XDG_STATE_HOME             where a status line you took out is remembered (default

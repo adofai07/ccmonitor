@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "start": "node bin/ccquota.js serve",
+    "test": "node --test test/*.test.js",
     "check": "node --check bin/ccquota.js && node --check src/cost.js && node --check src/credentials.js && node --check src/poller.js && node --check src/paths.js && node --check src/server.js && node --check src/statusline.js && node --check src/usage.js"
   },
   "engines": {
