@@ -1254,7 +1254,7 @@ do
   blitTo("track7", 0, img, glow)
 end
 ---------------------------------------------------------------------------------------------------
--- The terminus: the one station in the world, burnt out, with its clock stopped at the cap. A vault
+-- The terminus: the one station in the world, burnt out, with its clock still going. A vault
 -- on cast iron, torn open, and at its right end the stone gable, the only part the stopped train
 -- leaves in full view. Nothing on it is spaced evenly, and nothing reads as lettering.
 ---------------------------------------------------------------------------------------------------
@@ -1580,7 +1580,7 @@ do
   P.pix(img, 135, 12, "grey"); P.pix(img, 139, 16, "ink"); P.pix(img, 134, 17, "grey")
 
   -- the clock: a rose of cut stone round old glass with the fire behind it, hottest low and to the
-  -- right, as in the beast's eye. Both hands at twelve; no numerals.
+  -- right, as in the beast's eye. No numerals. The page draws the hands, at the time.
   local cx, cy, ringR, rimR, faceR = 153, 25, 11.4, 9.7, 8.8
   for y = cy - 13, cy + 13 do for x = cx - 13, cx + 13 do
     local dx, dy = x - cx, y - cy
@@ -1608,14 +1608,10 @@ do
     local a = i * pi / 6
     for r = (i % 3 == 0 and i > 0) and 7 or 8, 9 do dark(round(cx + r * sin(a)), round(cy - r * math.cos(a))) end
   end
-  -- the glass has lost a shard, and the crack from it stops short of the hands
+  -- the glass has lost a shard, and the crack from it stops short of the hub
   for _, q in ipairs({ { 146, 31 }, { 147, 31 }, { 145, 31 }, { 146, 30 }, { 147, 30 }, { 145, 30 }, { 146, 29 }, { 145, 29 }, { 148, 32 }, { 147, 32 }, { 146, 32 }, { 149, 33 }, { 148, 33 }, { 147, 33 }, { 148, 31 }, { 145, 28 }, { 150, 32 } }) do dark(q[1], q[2]) end
   P.pix(glow, 148, 30, "rust"); P.pix(glow, 146, 28, "rust"); P.pix(glow, 149, 31, "rust"); P.pix(glow, 150, 33, "rust")
-  for y = cy - 6, cy do dark(cx, y) end                        -- the long hand, from the hub up
-  for _, q in ipairs({ { -4, 1 }, { -3, 2 }, { -2, 1 } }) do     -- the short one's spade
-    for x = cx - q[2] + 1, cx + q[2] - 1 do dark(x, cy + q[1]) end
-  end
-  for x = cx - 1, cx + 1 do for y = cy - 1, cy + 1 do dark(x, y) end end
+  for x = cx - 1, cx + 1 do for y = cy - 1, cy + 1 do dark(x, y) end end     -- the hub; the page draws the hands
 
   -- the fall took the right rake in stepped courses, and a bite of the rose's own stone, so the
   -- dial hangs in the gap on its black rim

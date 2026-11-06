@@ -131,7 +131,7 @@ other.
   as the train slows. It is never moved or replaced in view: if the reading leaves the cap and
   comes back, the train brakes for it if it is still ahead, stops up to 24 scene pixels past it if
   it has only just left, and otherwise lets it go by and stops at the next. It carries no sign and
-  no lettering; its clock has stopped with both hands at twelve.
+  no lettering; its clock keeps the viewer's time, and its red seconds hand ticks.
 - **Going back.** A reading that falls, as one does when the week resets, walks back the same way:
   the train pulls away from the terminus, leaves hell through the beast (it comes out of the mouth this time), and
   the sky cools. A long fall back into the day does not walk the sun back the way it came: it goes
@@ -318,7 +318,7 @@ belongs to no theme; nothing is shown greyed out.
 | Matrix | Speed | slider, 0.25×–2.5× of 22 steps a second — listed only while the rain is on | 1× |
 | Matrix | Colour #1 | any colour — the rain; its heads are the colour lit toward white, less so the darker it is | green `#00ff66` |
 | Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
-| Train | Moving scene | on / off — off stops the train, its smoke and the fire where they stand | on |
+| Train | Moving scene | on / off — off stops the train, its smoke, the fire and the station clock where they stand | on |
 | all | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
 
 Settings change how the page looks, never what it measures or how it judges a reading:
