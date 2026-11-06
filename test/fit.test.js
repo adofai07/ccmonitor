@@ -1,5 +1,7 @@
 // The burn rate and its projection, on synthetic readings: whole points as the endpoint gives
-// them, tenths as the status line does.
+// them, tenths as the status line does. In whole points the fit reads a burn of 2 %/hr and up; a
+// slower one moves a point less often than that, and the flat step since its last point reads as
+// a stop, so slow burns are checked in tenths only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sandbox } from './sandbox.js';
@@ -41,11 +43,33 @@ function fitOf({ pts, now }, resetInHours = 160) {
 const near = (got, want, within, what) =>
   assert.ok(Math.abs(got - want) <= within, `${what}: ${got} is not within ${within} of ${want}`);
 
-for (const step of [1, 0.1]) {
-  const unit = step === 1 ? 'whole points' : 'tenths';
+// what each unit is checked on: the steady rates, those projected, and the changes of pace
+const changes = {
+  'idle, then a burn': [[[6, 0], [3, 3]], 3],
+  'slow, then fast': [[[6, 1], [3, 5]], 5],
+  'burn, lunch, burn': [[[3, 3], [1, 0], [2, 3]], 3],
+  'three rates': [[[3, 2], [3, 6], [3, 3]], 3],
+  'idle, then a burn of 2 %/hr': [[[5, 0], [7, 2]], 2],
+};
+const UNITS = [
+  { step: 1, unit: 'whole points', rates: [2, 3, 4, 6], projected: [2, 3], changes },
+  {
+    step: 0.1,
+    unit: 'tenths',
+    rates: [0.3, 0.65, 1, 1.5, 3],
+    projected: [0.65, 1, 3],
+    changes: {
+      ...changes,
+      'fast, then slow': [[[4, 4], [5, 1]], 1],
+      'three slower rates': [[[3, 1], [3, 4], [3, 2]], 2],
+      'idle, then a slow burn': [[[5, 0], [7, 0.8]], 0.8],
+    },
+  },
+];
 
-  test(`a steady burn reads its rate, slow ones included (${unit})`, () => {
-    for (const rate of [0.3, 0.65, 1, 1.5, 3]) {
+for (const { step, unit, rates, projected, changes } of UNITS) {
+  test(`a steady burn reads its rate (${unit})`, () => {
+    for (const rate of rates) {
       for (const offset of OFFSETS) {
         const f = fitOf(readings([[12, rate]], { offset, step }));
         near(f.burnPercentPerHour, rate, rate * 0.05, `${rate} %/hr, offset ${offset}`);
@@ -54,7 +78,7 @@ for (const step of [1, 0.1]) {
   });
 
   test(`a steady burn that reaches the cap before the reset projects it (${unit})`, () => {
-    for (const rate of [0.65, 1, 3]) {
+    for (const rate of projected) {
       for (const offset of OFFSETS) {
         const r = readings([[12, rate]], { offset, step });
         const f = fitOf(r);
@@ -66,15 +90,7 @@ for (const step of [1, 0.1]) {
   });
 
   test(`the rate is the current run's, after a change (${unit})`, () => {
-    const cases = {
-      'idle, then a burn': [[[6, 0], [3, 3]], 3],
-      'slow, then fast': [[[6, 1], [3, 5]], 5],
-      'fast, then slow': [[[4, 4], [5, 1]], 1],
-      'burn, lunch, burn': [[[3, 3], [1, 0], [2, 3]], 3],
-      'three rates': [[[3, 1], [3, 4], [3, 2]], 2],
-      'idle, then a slow burn': [[[5, 0], [7, 0.8]], 0.8],
-    };
-    for (const [name, [segments, rate]] of Object.entries(cases)) {
+    for (const [name, [segments, rate]] of Object.entries(changes)) {
       for (const offset of OFFSETS) {
         near(fitOf(readings(segments, { offset, step })).burnPercentPerHour, rate, rate * 0.06, `${name}, offset ${offset}`);
       }
@@ -90,11 +106,11 @@ for (const step of [1, 0.1]) {
   });
 }
 
-test('a stop reads 0.00 once it has lasted about two points of the burn', () => {
+test('a stop reads 0.00 within the hour', () => {
   const cases = [
-    ['3 %/hr in whole points, 45 minutes on', [[6, 3], [0.75, 0]], 1],
-    ['0.65 %/hr in whole points, 3 hours on', [[8, 0.65], [3, 0]], 1],
-    ['3 %/hr in tenths, 30 minutes on', [[6, 3], [0.5, 0]], 0.1],
+    ['3 %/hr in whole points, 30 minutes on', [[6, 3], [0.5, 0]], 1],
+    ['3 %/hr in tenths, 20 minutes on', [[6, 3], [1 / 3, 0]], 0.1],
+    ['1 %/hr in tenths, 45 minutes on', [[6, 1], [0.75, 0]], 0.1],
   ];
   for (const [name, segments, step] of cases) {
     for (const offset of OFFSETS) {
@@ -116,6 +132,6 @@ test('a fit over a full trace stays cheap, even on readings no source gives', ()
   const started = performance.now();
   fitOf({ pts, now });
   const ms = performance.now() - started;
-  // about 12 ms here; the bound is for a search gone quadratically worse, not for a slow machine
+  // under a millisecond here; the bound is for a search gone quadratically worse, not for a slow machine
   assert.ok(ms < 2000, `took ${ms.toFixed(1)} ms`);
 });

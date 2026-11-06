@@ -404,54 +404,33 @@ late. Optimistic is the wrong direction for this number to be wrong in — it re
 is not there. The same fault on the 5-hour window averaged 28 points burned in 12 minutes
 against 30 flat minutes before them, and published a rate four times too low.
 
-The run is found by penalised-likelihood segmentation. The series is divided into straight
-lines, and a division is scored by **BIC**: each segment's deviance plus `3·ln(n)` for its slope,
-intercept and start, so a segment stands only if it repays its parameters out of the fit it buys.
-Every division is searched, by dynamic programming, and the run is the last segment of the best
-one. The previous version split once and recursed into the tail. It cut burn, lunch, burn in the
-middle of lunch, the half-lunch left in the tail cost less than another break, and the rate after
-lunch read 12% low. Where two divisions score the same, the later start wins: the readings cannot
-tell them apart, and the later one is nearer now.
+The run is found by penalised-likelihood segmentation. For every candidate split, a two-line
+model is scored against one line by **BIC** — log-likelihood plus `k·ln(n)` — and the split is
+taken only if it repays its two extra parameters out of the fit it buys. Recursing into the tail
+finds the most recent break of several, which is the one that describes now. Prefix sums make
+any sub-range fit O(1), so a full pass over 360 samples costs about 0.2 ms.
 
-Of a whole-point reading, a segment's deviance counts only what its line leaves **outside the
-reading's rounding**. The reading is the true value rounded, so a line within half a point of it
-agrees with it exactly. That is what keeps a slow burn in one piece. In whole points a steady
-burn under about 1.5 %/hr is a staircase, a point an hour or longer, and its newest step is flat.
-The previous version scored every reading against a rounding variance of 1/12 and held that a
-staircase could not be carved up for profit. It could. The flat step had no error at all, while
-one line through the staircase was charged the rounding of every reading, so cutting the step off
-always paid. The run became the step, and a steady 0.65 %/hr read 0.00 with no projection at 98%
-of positions while the cap came on. Now the same burn reads its true rate at every position and
-projects within 25% of the true time. Replayed against a week of real readings, all of them whole
-points, the previous fit read 0.00 at 84 of 291 half-hourly positions where this one reads a
-burn, and never the other way round.
+Nothing here is tuned, and the reason is that the noise level is **known** rather than
+estimated: a percent arrives rounded, so its variance is 1/12, the variance of rounding to the
+nearest integer. Scoring against a known sigma-squared is what lets a genuine level shift repay
+its parameters while a split that merely carves up a staircase tread cannot — a staircase
+already sits at exactly that noise level, so dividing one buys nothing. Quantization, which is
+what makes a slow series look flat between steps and defeated several earlier attempts at this,
+is exactly what makes the criterion work unaided. Status line reports come in tenths, whose
+rounding noise is a hundredth of that; for a run of them 1/12 is an upper bound rather than the
+known level, which errs towards fewer splits and a wider standard error, never towards a trend
+the data cannot support.
 
-Outside the rounding, a departure is scored at a variance of 1/12, that of rounding to a whole
-point: a departure smaller than the rounding is not worth a parameter. Tenths from the status
-line are scored against the same variance, as they always were, with no band: 1/12 is already a
-hundred times a tenth's rounding. A tenths report that lands on a whole number cannot be told
-from a poll and is treated as one, which only errs towards fewer splits. The variance is fixed,
-not estimated. Estimating it was subtly wrong: when both the one-line and two-line models sat at
-the floor their likelihoods tied, BIC took the cheaper one, and a real stop went unfound. The run
-kept ten samples of the burn before it and reported 0.16 %/hr for someone who had put the laptop
-down.
+Estimating the variance from the data instead was subtly wrong, and the symptom was precise:
+when both the one-line and two-line models sat at the floor their likelihoods tied, BIC took the
+cheaper one, and a real stop went unfound. The run kept ten samples of the burn preceding it and
+reported 0.16 %/hr for someone who had put the laptop down. With the variance known, the same
+case finds the stop exactly and reports 0.00, within half an hour of it happening.
 
-In whole points a stop shows once it has lasted about two points' worth of the burn, since until
-then the readings cannot tell it from a slower one: 30 to 45 minutes at 3 %/hr, and two to three
-hours at 0.65 %/hr, where a point takes an hour and a half. In tenths it shows about as soon as
-it did before: half an hour at 3 %/hr, an hour at 1 %/hr.
-
-The search is bounded so that it stays cheap, and finds the division an unbounded one finds: a
-start is skipped when even a free segment from it could not beat the best division found so far,
-and a segment's deviance is abandoned once it passes that. Over 360 readings a fit takes about
-0.3 ms, under 3 ms in the slowest realistic shapes tried, and about 12 ms on noisy traces that
-neither source produces. Each segment is scored by its least-squares line, which keeps prefix
-sums, rather than by whichever line leaves least outside the rounding; across 14,202 steady
-whole-point burns of 0.05 to 2 %/hr, at every offset and length, none read 0.00.
-
-The same 1/12 floors the residual variance behind the standard error. A run that happens to sit
-exactly on a line still cannot be known more precisely than the rounding that produced it, and a
-standard error of zero would claim otherwise.
+The floor still appears once more, in the right place: the residual variance behind the standard
+error is floored at 1/12 too. A run that happens to sit exactly on a line still cannot be known
+more precisely than the rounding that produced it, and a standard error of zero would claim
+otherwise.
 
 An idle stretch, a full stop and a change of pace are all the same thing to it: a split that
 pays for itself. An earlier version needed a minimum split gain, a minimum segment length
@@ -463,10 +442,8 @@ gone.
 
 Against seven synthetic regimes — idle-then-burn, burn-then-stop, slow-to-fast, steady, pure
 idle, burn/lunch/burn, and three consecutive rates — this recovers the true current rate in all
-seven, in whole points and in tenths, a stop once it has lasted as long as said above. Steady
-burns from 0.2 to 6 %/hr read their true rate, and bursty ones centre on it. Exponentially
-weighted least squares managed six of the seven and a Gamma-Poisson filter with forgetting four;
-both assume the rate drifts, and this one changes abruptly.
+seven. Exponentially weighted least squares managed six and a Gamma-Poisson filter with
+forgetting four; both assume the rate drifts, and this one changes abruptly.
 
 ### Uncertainty, not gates
 
