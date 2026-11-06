@@ -112,16 +112,17 @@ The story turns on the served cut points, so it lands on the marks the ring prin
 | --- | --- |
 | under the warning floor (70%) | day. The sun crosses the sky with the reading |
 | at the warning floor | evening comes: the sun is carried down, the sky turns amber from the horizon up, and windows and lamps light |
-| from there to the band's third quarter point (92.5%) | the sun sinks to the hills and the sky reddens with the reading |
-| past the third quarter point | the land scorches, the village gives out into ruins, and a horned beast's mouth swallows the train. It comes out at the far end, in hell |
+| from there to the band's third quarter point (92.5%) | the sun sinks to the hills and the sky reddens with the reading, and the summer dries out with it: the grass yellows, goes to straw and cracks, the trees thin, the hills brown, the flock is taken in, and the village wears down and empties, its windows going dark |
+| past the third quarter point | the fire takes what the summer left: the fields burn to ash, the empty houses catch and burn out to ruins, the dead trees char, and a horned beast's mouth swallows the train. It comes out at the far end, in hell |
 | at the cap (100%) | once through, the only station in the world comes into sight, the burnt-out terminus at the end of the line, and the train brakes to a stand at its platform. Its smoke stops; the fire goes on burning around it |
 
 **No change happens at once.** Nothing in the scene follows a reading directly. The scene keeps its
 own reading, which walks after the real one at a fixed pace, and evening, hell and the train's
 speed walk after that, each in its own time: day to evening takes 50 s, the fall into hell 40 s and
 the brake 30 s. However far a reading jumps, the scene passes through everything between, in order.
-The land changes by scrolling in, thinning from green to dry to ash a tile at a time; a change of
-biome is never painted over land already on screen. The clouds are the one exception, being so
+The land changes by scrolling in, thinning from green through straw and cracked earth to ash a few
+tiles at a time, each stage blotting into the next; a change of biome is never painted over land
+already on screen. The clouds are the one exception, being so
 slow to leave: white and black ones are both always up there, and the walk fades one set into the
 other.
 
@@ -145,7 +146,8 @@ other.
 - *Moving scene*, the theme's own setting, off stops it where it stands, and
   `prefers-reduced-motion` shows one still frame. A still frame cannot walk, so it dissolves into
   the next one over 4 s when a reading moves it, and the accent eases across with it. It stays on
-  the same stretch of land unless hell, the scorching or the terminus has come or gone.
+  the same stretch of land unless hell, the scorching or the terminus has come or gone, or the land
+  has dried half a stage further or come back.
 - A hidden tab stops the scene, and the walk picks up where it was: a reading that landed
   meanwhile still has to be walked to when the tab comes back.
 - The ring shakes while over pace as it does in Glass, by the same rule and on the same switch, in

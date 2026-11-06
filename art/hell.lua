@@ -138,9 +138,9 @@ reserve("bat", 9, 6, 3, "flaps, loops")
 reserve("brazier", 10, 18, 1, "iron fire-basket; flame in lights")
 reserve("skulls", 16, 8, 1, "heap of skulls")
 reserve("bones", 14, 6, 1, "scattered bones")
-reserve("field3", 32, 26, 4, "biome 3 land behind the track; lava loops")
-reserve("front3", 32, 16, 4, "biome 3 foreground; lava loops")
-reserve("track3", 32, 10, 1, "biome 3 viaduct deck")
+reserve("field7", 32, 26, 4, "biome 7 land behind the track; lava loops")
+reserve("front7", 32, 16, 4, "biome 7 foreground; lava loops")
+reserve("track7", 32, 10, 1, "biome 7 viaduct deck")
 
 local function blitTo(name, f, base, light)
   local x, y = S[name](f)
@@ -1069,7 +1069,7 @@ do
   blitTo("brazier", 0, nil, glow)
 end
 ---------------------------------------------------------------------------------------------------
--- Ground, biome 3. Lava motion is a wave: a pixel's colour depends on (x / 2 + frame) mod 4, so
+-- Ground, biome 7. Lava motion is a wave: a pixel's colour depends on (x / 2 + frame) mod 4, so
 -- bright blobs travel left 2 px a frame, and after 4 frames every pixel is back where it began. The
 -- tile is 32 wide, a multiple of the wave's 8, so it also repeats without a seam.
 ---------------------------------------------------------------------------------------------------
@@ -1153,7 +1153,7 @@ do
       end
       P.pix(img, x, y, c)
     end end
-    blitTo("field3", f, img, glow)
+    blitTo("field7", f, img, glow)
   end
 end
 ---------------------------------------------------------------------------------------------------
@@ -1228,12 +1228,12 @@ do
       elseif isRock(x, y + 2) then P.pix(img, x, y, "red"); P.pix(glow, x, y, nil) end
     end end
     P.map(img, 0, 0, rocks, legend)
-    blitTo("front3", f, img, glow)
+    blitTo("front7", f, img, glow)
   end
 end
 ---------------------------------------------------------------------------------------------------
 -- Track: a stone viaduct. Rails and sleepers stay exactly in step with the other biomes. Below the
--- deck a coping course and two low arches a tile, with lava under them. front3 covers row 9.
+-- deck a coping course and two low arches a tile, with lava under them. front7 covers row 9.
 ---------------------------------------------------------------------------------------------------
 do
   local legend = { i = "ice", t = "stone", g = "grey", m = "smoke", s = "slate", k = "ink", b = "black", W = "wood", B = "bark", p = "plum", S = "sand", r = "red", o = "rust" }
@@ -1251,7 +1251,7 @@ do
     "mkbprrrrpbkmmgmmmkbprrrrpbkmmgmm",
   }, legend)
   for _, x in ipairs({ 4, 5, 6, 7, 20, 21, 22, 23 }) do P.pix(glow, x, 8, "rust"); P.pix(glow, x, 9, "rust") end
-  blitTo("track3", 0, img, glow)
+  blitTo("track7", 0, img, glow)
 end
 ---------------------------------------------------------------------------------------------------
 -- The terminus: the one station in the world, burnt out, with its clock stopped at the cap. A vault

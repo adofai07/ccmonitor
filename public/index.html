@@ -4054,8 +4054,11 @@ function matrixMotion() {
    The story is told by the served cut points, so it lands on the marks
    the ring prints: evening comes at the warning floor, and the sun then
    sinks as the reading climbs, setting at the third of the band's quarter
-   points. There the land scorches, the village gives out, and a demon's
-   mouth takes the train down into hell. At the cap the only station in
+   points. All that way the summer dries out with the reading, a stage at
+   a time: the grass yellows and goes to straw, the trees thin, and the
+   village wears down and empties. At the sunset the fire takes what is
+   left, the village burns out, and a demon's mouth takes the train down
+   into hell. At the cap the only station in
    the world comes into sight, the end of the line, and the train brakes
    to a stand at it while the fire goes on burning around it.
 
@@ -4122,37 +4125,99 @@ const SPR = {
   cloud1: [80, 119, 44, 14, 1, 0],
   cloud2: [125, 119, 30, 10, 1, 0],
   cloud3: [156, 119, 58, 18, 1, 0],
-  field0: [215, 119, 32, 26, 2, 0],
-  field1: [280, 119, 32, 26, 2, 0],
-  field2: [345, 119, 32, 26, 2, 1],
-  track0: [410, 119, 32, 10, 2, 0],
-  track1: [0, 156, 32, 10, 2, 0],
-  track2: [65, 156, 32, 10, 2, 0],
-  front0: [130, 156, 32, 16, 2, 0],
-  front1: [195, 156, 32, 16, 2, 0],
-  front2: [260, 156, 32, 16, 2, 0],
-  mouthBack: [0, 173, 152, 104, 1, 1],
-  mouthFront: [153, 173, 152, 104, 1, 1],
-  flameL: [306, 173, 20, 28, 6, 1],
-  ash1: [427, 173, 48, 14, 1, 0],
-  ash2: [476, 173, 34, 10, 1, 0],
-  spire3: [0, 278, 26, 44, 1, 1],
-  charred2: [27, 278, 22, 30, 1, 1],
-  charred1: [50, 278, 18, 26, 1, 1],
-  ruin1: [69, 278, 32, 24, 1, 1],
-  ruin2: [102, 278, 28, 20, 1, 1],
-  spire1: [131, 278, 16, 32, 1, 1],
-  spire2: [148, 278, 12, 22, 1, 0],
-  flameM: [161, 278, 12, 16, 6, 1],
-  flameS: [234, 278, 8, 10, 6, 1],
-  bat: [283, 278, 9, 6, 3, 1],
-  brazier: [311, 278, 10, 18, 1, 1],
-  skulls: [322, 278, 16, 8, 1, 0],
-  bones: [339, 278, 14, 6, 1, 0],
-  field3: [354, 278, 32, 26, 4, 1],
-  front3: [0, 323, 32, 16, 4, 1],
-  track3: [129, 323, 32, 10, 1, 1],
-  terminus: [162, 323, 176, 64, 1, 1],
+  field0: [0, 156, 32, 26, 2, 0],
+  field1: [65, 156, 32, 26, 2, 0],
+  field2: [130, 156, 32, 26, 2, 0],
+  field3: [195, 156, 32, 26, 2, 0],
+  field4: [260, 156, 32, 26, 2, 0],
+  field5: [325, 156, 32, 26, 2, 1],
+  field6: [390, 156, 32, 26, 2, 1],
+  track0: [0, 183, 32, 10, 2, 0],
+  track1: [65, 183, 32, 10, 2, 0],
+  track2: [130, 183, 32, 10, 2, 0],
+  track3: [195, 183, 32, 10, 2, 0],
+  track4: [260, 183, 32, 10, 2, 0],
+  track5: [325, 183, 32, 10, 2, 0],
+  track6: [390, 183, 32, 10, 2, 0],
+  front0: [0, 194, 32, 16, 2, 0],
+  front1: [65, 194, 32, 16, 2, 0],
+  front2: [130, 194, 32, 16, 2, 0],
+  front3: [195, 194, 32, 16, 2, 0],
+  front4: [260, 194, 32, 16, 2, 0],
+  front5: [325, 194, 32, 16, 2, 0],
+  front6: [390, 194, 32, 16, 2, 0],
+  mouthBack: [0, 211, 152, 104, 1, 1],
+  mouthFront: [153, 211, 152, 104, 1, 1],
+  flameL: [306, 211, 20, 28, 6, 1],
+  ash1: [427, 211, 48, 14, 1, 0],
+  ash2: [476, 211, 34, 10, 1, 0],
+  spire3: [0, 316, 26, 44, 1, 1],
+  charred2: [27, 316, 22, 30, 1, 1],
+  charred1: [50, 316, 18, 26, 1, 1],
+  ruin1: [69, 316, 32, 24, 1, 1],
+  ruin2: [102, 316, 28, 20, 1, 1],
+  spire1: [131, 316, 16, 32, 1, 1],
+  spire2: [148, 316, 12, 22, 1, 0],
+  flameM: [161, 316, 12, 16, 6, 1],
+  flameS: [234, 316, 8, 10, 6, 1],
+  bat: [283, 316, 9, 6, 3, 1],
+  brazier: [311, 316, 10, 18, 1, 1],
+  skulls: [322, 316, 16, 8, 1, 0],
+  bones: [339, 316, 14, 6, 1, 0],
+  field7: [354, 316, 32, 26, 4, 1],
+  front7: [0, 361, 32, 16, 4, 1],
+  track7: [129, 361, 32, 10, 1, 1],
+  terminus: [162, 361, 176, 64, 1, 1],
+  house1_1: [0, 426, 34, 32, 1, 1],
+  house1_2: [35, 426, 34, 32, 1, 0],
+  house1_3: [70, 426, 34, 32, 1, 1],
+  house2_1: [105, 426, 30, 36, 1, 1],
+  house2_2: [136, 426, 30, 36, 1, 0],
+  house2_3: [167, 426, 30, 36, 1, 1],
+  house3_1: [198, 426, 28, 24, 1, 1],
+  house3_2: [227, 426, 28, 24, 1, 0],
+  house3_3: [256, 426, 28, 24, 1, 1],
+  house4_1: [285, 426, 24, 40, 1, 1],
+  house4_2: [310, 426, 24, 40, 1, 0],
+  house4_3: [335, 426, 24, 40, 1, 1],
+  house5_1: [360, 426, 38, 28, 1, 1],
+  house5_2: [399, 426, 38, 28, 1, 0],
+  house5_3: [438, 426, 38, 28, 1, 1],
+  church_1: [0, 467, 36, 60, 1, 1],
+  church_2: [37, 467, 36, 60, 1, 0],
+  church_3: [74, 467, 36, 60, 1, 1],
+  windmill_1: [111, 467, 22, 42, 1, 1],
+  windmill_2: [134, 467, 22, 42, 1, 0],
+  windmill_3: [157, 467, 22, 42, 1, 1],
+  sails_1: [180, 467, 40, 40, 4, 0],
+  sails_2: [341, 467, 40, 40, 1, 0],
+  sails_3: [382, 467, 40, 40, 1, 0],
+  lamp_2: [423, 467, 6, 22, 1, 0],
+  oak1_1: [0, 528, 22, 28, 1, 0],
+  oak2_1: [23, 528, 26, 30, 1, 0],
+  oak1_2: [50, 528, 22, 28, 1, 0],
+  oak2_2: [73, 528, 26, 30, 1, 0],
+  poplar_1: [100, 528, 10, 32, 1, 0],
+  poplar_2: [111, 528, 10, 32, 1, 0],
+  pine_1: [122, 528, 14, 28, 1, 0],
+  pine_2: [137, 528, 14, 28, 1, 0],
+  bush1_1: [152, 528, 12, 8, 1, 0],
+  bush1_2: [165, 528, 12, 8, 1, 0],
+  bush2_1: [178, 528, 16, 10, 1, 0],
+  bush2_2: [195, 528, 16, 10, 1, 0],
+  dead1: [212, 528, 18, 26, 1, 0],
+  dead2: [231, 528, 22, 30, 1, 0],
+  tuft1_1: [254, 528, 8, 5, 1, 0],
+  tuft1_2: [263, 528, 8, 5, 1, 0],
+  tuft1_3: [272, 528, 8, 5, 1, 0],
+  tuft2_1: [281, 528, 8, 6, 1, 0],
+  tuft2_2: [290, 528, 8, 6, 1, 0],
+  tuft2_3: [299, 528, 8, 6, 1, 0],
+  tuft3_1: [308, 528, 10, 6, 1, 0],
+  tuft3_2: [319, 528, 10, 6, 1, 0],
+  tuft3_3: [330, 528, 10, 6, 1, 0],
+  fence_1: [341, 528, 16, 7, 1, 0],
+  fence_2: [358, 528, 16, 7, 1, 0],
 };
 const CARS = ["coach", "coachB", "coach", "tender", "loco"];   // left to right
 /* The light. Sprites are drawn in day colours and multiplied by these, depth by depth; the sky's
@@ -4162,6 +4227,7 @@ const SKY = { dayTop: [38, 132, 176], dayLow: [236, 255, 240], eveTop: [74, 42, 
 const LIGHT = { day: [255, 255, 255], eveHigh: [255, 212, 172], eveLow: [170, 94, 102], pit: [214, 84, 72],
                 cloudEve: [255, 178, 142], cloudPit: [150, 44, 44] };
 const HILL = { far: [116, 170, 142], near: [72, 132, 92], rimFar: [150, 198, 164], rimNear: [108, 172, 112],
+               dryFar: [168, 160, 118], dryNear: [138, 116, 58], dryRimFar: [198, 186, 140], dryRimNear: [176, 150, 82],
                pit: [38, 16, 22], pitRim: [146, 46, 30] };
 /* its inks, and how far past either end of its arc it is, on the other side of the world: 1.2 and
    -0.2 are both well under the land */
@@ -4178,6 +4244,74 @@ const toward = (v, to, by) => (v < to ? Math.min(to, v + by) : Math.max(to, v - 
 const lerp = (a, b, t) => a + (b - a) * t;
 /* the 4×4 Bayer matrix, as fractions: added to a level before it is floored, it dithers it */
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((n) => (n + 0.5) / 16);
+/* The ground's biomes short of hell, which only ever meets them inside the beast: 0 green, 1 turning,
+   2 dry grass, 3 drought, 4 parched, 5 scorched, 6 ash. Hell is 7. */
+const BIOMES = 7, GROUNDS = ["field", "track", "front"];
+
+/* Soft noise over a w×h grid, two octaves of value noise, ranked so that its values spread evenly
+   over 0–1: a share p of the grid lies under p, in blots and not in a pattern. */
+function blots(w, h, rnd) {
+  const sum = new Float32Array(w * h);
+  for (const [step, weight] of [[4, 1], [2, 0.5]]) {
+    const gw = Math.ceil(w / step) + 2, grid = Array.from({ length: gw * (Math.ceil(h / step) + 2) }, rnd);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const fx = x / step, fy = y / step, x0 = fx | 0, y0 = fy | 0, tx = ease(fx - x0), ty = ease(fy - y0);
+        const at = (i, j) => grid[(y0 + j) * gw + x0 + i];
+        sum[y * w + x] += weight * lerp(lerp(at(0, 0), at(1, 0), tx), lerp(at(0, 1), at(1, 1), tx), ty);
+      }
+    }
+  }
+  const rank = new Float32Array(w * h);
+  [...sum.keys()].sort((p, q) => sum[p] - sum[q]).forEach((p, n) => (rank[p] = (n + 0.5) / rank.length));
+  return rank;
+}
+
+/* The seams between neighbouring biomes, made once from the sheet and added under it: a tile from
+   biome a to biome b is a's at its left edge and b's at its right, and between them b comes in as
+   blots that grow across it, on two-pixel clusters, so one ground thins into the next instead of
+   meeting it at a tile's edge. Each has two variants, from the two grounds' own, with blots of
+   their own. The lights go the same way. Each is in SPR as, say, field2to3. */
+function withSeams(bitmap) {
+  const w = bitmap.width, top = bitmap.height / 2;
+  const across = Math.floor(w / 65), pairs = 2 * (BIOMES - 1), rows = Math.ceil(pairs / across);
+  const extra = GROUNDS.reduce((sum, k) => sum + rows * (SPR[k + "0"][3] + 1), 0), half = top + extra;
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = half * 2;
+  const c = cv.getContext("2d");
+  c.drawImage(bitmap, 0, 0, w, top, 0, 0, w, top);
+  c.drawImage(bitmap, 0, top, w, top, 0, half, w, top);
+  const img = c.getImageData(0, 0, w, half * 2), px = new Uint32Array(img.data.buffer);
+  const rnd = seeded(1830);        // its own, so the seams are the same on every load
+  let y = top;
+  for (const k of GROUNDS) {
+    const tall = SPR[k + "0"][3], ch = Math.ceil(tall / 2);
+    let n = 0;
+    for (let a = 0; a < BIOMES; a++) {
+      for (const b of [a - 1, a + 1]) {
+        if (b < 0 || b >= BIOMES) continue;
+        const A = SPR[k + a], B = SPR[k + b];
+        const x0 = (n % across) * 65, y0 = y + Math.floor(n / across) * (tall + 1);
+        for (let f = 0; f < 2; f++) {
+          const blot = blots(16, ch, rnd);
+          for (let j = 0; j < tall; j++) {
+            for (let i = 0; i < 32; i++) {
+              const ci = i >> 1, s = blot[(j >> 1) * 16 + ci] < clamp((ci - 0.5) / 14, 0, 1) ? B : A;
+              const sx = s[0] + 32 * Math.min(f, s[4] - 1) + i, dx = x0 + 32 * f + i;
+              px[(y0 + j) * w + dx] = px[(s[1] + j) * w + sx];
+              px[(half + y0 + j) * w + dx] = px[(half + s[1] + j) * w + sx];
+            }
+          }
+        }
+        SPR[k + a + "to" + b] = [x0, y0, 32, tall, 2, A[5] || B[5]];
+        n++;
+      }
+    }
+    y += rows * (tall + 1);
+  }
+  c.putImageData(img, 0, 0);
+  return cv;
+}
 
 let train = null, trainBroken = false;
 /* whether the scene is what is on screen — not the same as Train being chosen, if it cannot run */
@@ -4244,30 +4378,59 @@ function makeTrain(canvas) {
     return o;
   };
 
-  /* The land scorches as hell nears: while the village still stands the fields go dry and then
-     to ash, tile by tile at random, so the change comes on as a thinning and not as a line. */
-  const biome = () => {
-    if (beyond) return 3;
-    return Math.min(2, Math.floor((h / TRN.brink) * 2.4 + rand()));
+  /* How far the land has gone. From the warning floor to the sunset the summer dries it out with
+     the reading, and from there the fire takes it; each thing in it is drawn at one of its stages
+     by chance, the next stage in proportion as the land has gone toward it, so a change comes on as
+     a thinning and not as a line. */
+  const dry = () => clamp((v - cut.warn) / (cut.hell - cut.warn), 0, 1);
+  const burn = () => clamp(h / TRN.brink, 0, 1);
+  /* the stages are drawn from a stream of their own, so where things stand is as it always was */
+  const roll = seeded(1830);
+  const stageOf = (at, top, u = roll()) => clamp(Math.floor(at + u), 0, top);
+  const staged = (n, k) => (k ? n + "_" + k : n);
+  /* the village and its plants: kept, worn, derelict, scorched, burnt out; green, turning, dry,
+     dead, charred. Halfway through the summer a house is worn, and by the sunset derelict. */
+  const wear = () => stageOf(2 * dry() + 2 * burn(), 4);
+  const plant = (n) => {
+    const k = wear();
+    return k < 3 ? staged(n, k) : (k === 3 ? "dead" : "charred") + (n === "oak2" ? "2" : "1");
   };
-  const tile = (L, name, up, b) => {
-    const s = SPR[name + b];
+  const shrub = (n) => staged(n, Math.min(2, wear()));
+  const tuft = (n) => staged(n, stageOf(3 * dry() + 2 * burn(), 3));
+  /* the ground goes four biomes in the summer and two more in the fire; see BIOMES */
+  const land = () => 4 * dry() + 2 * burn();
+
+  /* The ground is drawn a few tiles at a time, so a patch of the next biome has a middle and not
+     only edges. A tile is never more than one biome from the tile before it, and where the two
+     differ it is the seam between them, so the ground never changes at a tile's edge. Hell meets
+     the rest only inside the beast, which hides the join. Each tile takes one draw of the layout's
+     stream, as it always has, and a patch takes the first of its own. */
+  const biome = (L) => {
+    if (beyond) { L.run = 0; return 7; }
+    const u = rand(), was = L.biome;
+    if (!(L.run > 0)) { L.run = 2 + ((roll() * 3) | 0); L.draw = stageOf(land(), BIOMES - 1, u); }
+    L.run--;
+    return was === undefined || was === 7 ? L.draw : clamp(L.draw, was - 1, was + 1);
+  };
+  const tile = (L, name, up, was, b) => {
+    const s = SPR[was === undefined || was === 7 || b === 7 || was === b ? name + b : name + was + "to" + b];
     L.items.push({ s, x: L.edge, up, ...(s[4] > 2 ? { fps: 7, ph: 0 } : { f: rnd(s[4]) }) });
   };
-  const spawnField = (L) => { tile(L, "field", 0, biome()); L.edge += 32; };
+  const spawnField = (L) => { const b = biome(L); tile(L, "field", 0, L.biome, b); L.biome = b; L.edge += 32; };
   /* the front tile's top rows are the track's ballast, so the two change biome together */
   function spawnTrack(L) {
-    const b = biome();
-    tile(L, "track", -9, b);
+    const b = biome(L);
+    tile(L, "track", -9, L.biome, b);
     LAYERS.front.edge = L.edge;
-    tile(LAYERS.front, "front", -TRN.rail, b);
+    tile(LAYERS.front, "front", -TRN.rail, L.biome, b);
+    L.biome = b;
     L.edge += 32;
   }
 
   const fire = (L, size, dx, up) => put(L, size, up, { dx, fire: true, fps: 11, ph: rnd(6) });
 
-  /* The main row keeps a rhythm, a stretch of village and then a stretch of country, until the
-     scorching reaches it. Past that it is what the fire has left. */
+  /* The main row keeps a rhythm, a stretch of village and then a stretch of country, all the way
+     down: the same houses worn, then empty, then burning, then burnt out. */
   const HOUSES = ["house1", "house2", "house3", "house4", "house5", "house1", "house3"];
   const COUNTRY = ["oak1", "oak2", "pine", "haystack", "bush2", "poplar", "sheep"];
   function spawnMain(L) {
@@ -4279,49 +4442,61 @@ function makeTrain(canvas) {
       L.edge += SPR[n][2] + 8 + rnd(44);
       return;
     }
-    if (h > TRN.brink * 0.3) {
-      const n = pick(["ruin1", "ruin2", "charred1", "charred2", "ruin1"]);
-      put(L, n, up);
-      if (n.startsWith("ruin")) {
-        fire(L, "flameM", 4 + rnd(10), up + 6);
-        if (rand() < 0.6) fire(L, "flameS", 16 + rnd(8), up + 4);
-      }
-      L.edge += SPR[n][2] + 6 + rnd(30);
-      return;
-    }
     if (!(L.left > 0)) { L.town = !L.town; L.left = L.town ? 5 + rnd(7) : 2 + rnd(4); }
     L.left--;
     if (L.town) {
-      const n = pick(HOUSES);
+      const k = wear();
+      if (k === 4) {
+        const n = pick(["ruin1", "ruin2", "ruin1"]);
+        put(L, n, up);
+        fire(L, "flameM", 4 + rnd(10), up + 6);
+        if (rand() < 0.6) fire(L, "flameS", 16 + rnd(8), up + 4);
+        L.edge += SPR[n][2] + 6 + rnd(30);
+        return;
+      }
+      const n = staged(pick(HOUSES), k);
       put(L, n, up);
+      if (k === 3 && rand() < 0.7) fire(L, "flameS", 3 + rnd(SPR[n][2] - 10), up + 1 + rnd(5));
       L.edge += SPR[n][2] + 2;
-      if (rand() < 0.35) { put(L, pick(["oak1", "poplar", "pine"]), up - 2); L.edge += 6; }
-      if (rand() < 0.3) { put(L, "lamp", up - 3, { dx: 1 }); L.edge += 6; }
+      if (rand() < 0.35) { put(L, plant(pick(["oak1", "poplar", "pine"])), up - 2); L.edge += 6; }
+      if (k < 3 && rand() < 0.3) { put(L, k === 2 ? "lamp_2" : "lamp", up - 3, { dx: 1 }); L.edge += 6; }
       L.edge += rnd(8);
       return;
     }
-    const n = pick(COUNTRY);
-    put(L, n, up - rnd(3), n === "sheep" ? { fps: 2, ph: rnd(2) } : null);
-    L.edge += SPR[n][2] + 8 + rnd(26);
+    let n = pick(COUNTRY);
+    if (n === "sheep" && dry() > 0.2) n = "haystack";     // the flock is taken in as the grass goes
+    const low = n === "haystack" || n.startsWith("bush"), k = low ? wear() : 0;
+    if (k >= 3) {     // the hay and the brush go up first, and burn down to nothing
+      const f = fire(L, k === 3 ? "flameM" : "flameS", 0, up - rnd(3));
+      L.edge += f.s[2] + 8 + rnd(26);
+      return;
+    }
+    const name = n === "sheep" || n === "haystack" ? n : low ? staged(n, Math.min(2, k)) : plant(n);
+    put(L, name, up - rnd(3), n === "sheep" ? { fps: 2, ph: rnd(2) } : null);
+    L.edge += SPR[name][2] + 8 + rnd(26);
   }
 
-  /* The back row: the far side of the village, hazed by distance, and its church and windmill. */
+  /* The back row: the far side of the village, hazed by distance, and its church and windmill. A
+     windmill's sails turn slower once it is worn, and stop when it is abandoned. */
   function spawnBack(L) {
     const up = 24;
     if (beyond) { const n = pick(["spire3", "spire1", "spire2"]); put(L, n, up); L.edge += SPR[n][2] + 10 + rnd(50); return; }
-    if (h > TRN.brink * 0.3) { const n = pick(["charred1", "charred2", "ruin2"]); put(L, n, up); L.edge += SPR[n][2] + 16 + rnd(40); return; }
     L.since = (L.since || 0) + 1;
     if (L.since > 5 + rnd(5)) {
       L.since = 0;
-      if (rand() < 0.5) { put(L, "church", up); L.edge += SPR.church[2] + 8; return; }
-      put(L, "windmill", up);
-      put(L, "sails", up + 18, { dx: -9, fps: 5, ph: rnd(4) });
+      const k = wear();
+      if (k === 4) { const n = pick(["charred1", "charred2", "ruin2"]); put(L, n, up); L.edge += SPR[n][2] + 16 + rnd(40); return; }
+      if (rand() < 0.5) { put(L, staged("church", k), up); L.edge += SPR.church[2] + 8; return; }
+      put(L, staged("windmill", k), up);
+      put(L, staged("sails", k), up + 18, { dx: -9, ...(k < 2 ? { fps: k ? 3 : 5, ph: rnd(4) } : null) });
       L.edge += SPR.windmill[2] + 16;
       return;
     }
     const n = pick(["oak1", "oak2", "poplar", "poplar", "pine", "house3", "house2"]);
-    put(L, n, up);
-    L.edge += SPR[n][2] + 3 + rnd(16);
+    const k = n.startsWith("house") ? wear() : 0;
+    const name = !n.startsWith("house") ? plant(n) : k === 4 ? "ruin2" : staged(n, k);
+    put(L, name, up);
+    L.edge += SPR[name][2] + 3 + rnd(16);
   }
 
   /* By the track: a fence, telegraph poles and bushes, and nothing where the terminus is to stand. */
@@ -4338,18 +4513,22 @@ function makeTrain(canvas) {
       L.edge += SPR[n][2] + 26 + rnd(60);
       return;
     }
-    if (h > TRN.brink * 0.3) {
+    const k = wear();
+    if (k >= 3) {
       if (rand() < 0.5) fire(L, "flameS", 0, up);
-      else put(L, "charred1", up);
+      else put(L, k === 3 ? "dead1" : "charred1", up);
       L.edge += 30 + rnd(50);
       return;
     }
+    /* derelict, a little under half the panels are still only weathered, or a run of broken ones
+       would repeat its break like a pattern */
     const n = pick(["fence", "fence", "fence", "pole", "bush1", "tuft2"]);
-    put(L, n, up);
-    L.edge += SPR[n][2] + (n === "fence" ? 0 : 10 + rnd(16));
+    const name = n === "fence" ? staged(n, k === 2 && roll() < 0.45 ? 1 : k) : n === "bush1" ? shrub(n) : n === "tuft2" ? tuft(n) : n;
+    put(L, name, up);
+    L.edge += SPR[name][2] + (n === "fence" ? 0 : 10 + rnd(16));
   }
 
-  /* Under the track, nearest of all: grass and flowers, and then the flames. */
+  /* Under the track, nearest of all: grass and flowers, going to straw and stubble, and then the flames. */
   function spawnFront(L) {
     if (beyond) {
       fire(L, pick(["flameS", "flameM", "flameM", "flameL"]), 0, -14 - rnd(7));
@@ -4361,7 +4540,7 @@ function makeTrain(canvas) {
       L.edge += 26 + rnd(50);
       return;
     }
-    put(L, pick(["tuft1", "tuft2", "tuft3"]), -14 - rnd(7));
+    put(L, tuft(pick(["tuft1", "tuft2", "tuft3"])), -14 - rnd(7));
     L.edge += 10 + rnd(30);
   }
 
@@ -4416,7 +4595,7 @@ function makeTrain(canvas) {
 
   /* the world made anew for the state the walkers are in, as if it had always been so */
   function rebuild() {
-    for (const L of LIST) { L.items.length = 0; L.edge = Math.floor(offOf(L)) - 72; L.left = 0; L.since = 0; }
+    for (const L of LIST) { L.items.length = 0; L.edge = Math.floor(offOf(L)) - 72; L.left = 0; L.since = 0; L.biome = undefined; L.run = 0; }
     farEdge = Math.floor(dist * 0.07); nearEdge = Math.floor(dist * 0.14);
     jagFar = jagNear = beyond ? 1 : 0;
     mouth = null;
@@ -4425,10 +4604,14 @@ function makeTrain(canvas) {
     puffs.length = embers.length = 0;
     growWorld();
   }
+  /* how far the land has gone, in half biomes, for a still frame to keep to; untouched land is a
+     band of its own, so a frame drawn just past the warning floor is not kept below it */
+  const band = () => { const at = land(); return at > 0 ? Math.floor(at * 2) : -1; };
   /* keep: a still frame stays on the same stretch of land unless hell has come or gone, the
-     scorching it stopped in has passed, or the train has reached the terminus or left it */
+     scorching it stopped in has passed, the land has gone on half a biome or come back, or the
+     train has reached the terminus or left it */
   function snap(keep) {
-    const was = beyond, burnt = h > 0, stood = spd === 0;
+    const was = beyond, burnt = h > 0, stood = spd === 0, gone = band();
     v = goal;
     w = v >= cut.warn ? 1 : 0;
     h = v > cut.hell ? 1 : 0;
@@ -4436,7 +4619,7 @@ function makeTrain(canvas) {
     sun = sunAim(v, w, h);
     sunRound = false;
     beyond = h >= 1;
-    if (!keep || beyond !== was || (burnt && h === 0) || stood !== (spd === 0) || (terminus && spd !== 0)) rebuild();
+    if (!keep || beyond !== was || (burnt && h === 0) || band() !== gone || stood !== (spd === 0) || (terminus && spd !== 0)) rebuild();
     light(true);
   }
 
@@ -4615,10 +4798,11 @@ function makeTrain(canvas) {
     puffInk = mix([236, 236, 232], near, 0.55);
 
     const shade = (ink, thick) => rgbCss(mix(mix(ink, near, 0.5), air, thick));
-    hillFar = shade(mix(HILL.far, HILL.pit, H_), 0.52);
-    hillNear = shade(mix(HILL.near, HILL.pit, H_), 0.28);
-    rimFar = shade(mix(HILL.rimFar, HILL.pitRim, H_), 0.4);
-    rimNear = shade(mix(HILL.rimNear, HILL.pitRim, H_), 0.16);
+    /* the hills dry out with the land under them, and then burn */
+    hillFar = shade(mix(mix(HILL.far, HILL.dryFar, Q), HILL.pit, H_), 0.52);
+    hillNear = shade(mix(mix(HILL.near, HILL.dryNear, Q), HILL.pit, H_), 0.28);
+    rimFar = shade(mix(mix(HILL.rimFar, HILL.dryRimFar, Q), HILL.pitRim, H_), 0.4);
+    rimNear = shade(mix(mix(HILL.rimNear, HILL.dryRimNear, Q), HILL.pitRim, H_), 0.16);
     paintSky();
   }
 
@@ -4869,7 +5053,7 @@ function makeTrain(canvas) {
   }
 
   function ready(bitmap) {
-    atlas = bitmap;
+    atlas = withSeams(bitmap);
     sheetH = atlas.height / 2;
     for (let i = 0; i < 4; i++) {
       const c = document.createElement("canvas");

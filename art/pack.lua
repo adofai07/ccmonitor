@@ -5,7 +5,7 @@
 -- bottom half), art/train.aseprite (the same, as two layers, with a slice per sprite) and
 -- art/sprites.js, the table to paste over SPR in public/index.html.
 local P = dofile(ART .. "/px.lua")
-local FAMILIES = { "train", "village", "hell" }
+local FAMILIES = { "train", "village", "ground", "hell", "worn", "dry" }
 local width, total, parts = 512, 0, {}
 
 for _, name in ipairs(FAMILIES) do
