@@ -6,13 +6,16 @@ The sources of `public/sprites/train.png`. Nothing here is served or shipped.
 | --- | --- |
 | `train.lua`, `village.lua`, `ground.lua`, `hell.lua` | the sprite families, each drawn in code |
 | `worn.lua`, `dry.lua` | the village's buildings, and its plants and props, at each stage of decay, made from `village.png` and `hell.png` |
+| `town.lua`, `farm.lua`, `flora.lua`, `yard.lua` | more of the village and its country, each thing that decays with its stages, and the shells the new buildings leave: the cottage, bakery, inn and town hall; the barn, granary, cart, cows and crops; more trees, the walls, hedges and gates by the track; the well, the washing and the rest of the yards |
+| `tint.lua` | other colourways of the five houses, at every stage, made from `village.png`, `worn.png` and `ground.png` |
 | `px.lua` | the drawing kit they share |
 | `pack.lua` | stacks the families into the sheet the page loads |
 | `train.aseprite` | the packed sheet with `base` and `lights` layers and a slice per sprite, to look at |
 
 To rebuild, run each family and then the packer in Aseprite 1.3, with `ART` set to this folder and
-`OUT` to the repository root. `worn` and `dry` read `village.png` and `hell.png`, so they go after
-those two:
+`OUT` to the repository root. `worn` and `dry` read `village.png` and `hell.png`, and `tint` reads
+`village.png`, `worn.png` and `ground.png`; `town`, `farm`, `flora` and `yard` read the finished
+families for their previews. So run them in this order:
 
     ART = "/path/to/art"; dofile(ART .. "/train.lua")
     ART = "/path/to/art"; dofile(ART .. "/village.lua")
@@ -20,6 +23,11 @@ those two:
     ART = "/path/to/art"; dofile(ART .. "/hell.lua")
     ART = "/path/to/art"; dofile(ART .. "/worn.lua")
     ART = "/path/to/art"; dofile(ART .. "/dry.lua")
+    ART = "/path/to/art"; dofile(ART .. "/town.lua")
+    ART = "/path/to/art"; dofile(ART .. "/farm.lua")
+    ART = "/path/to/art"; dofile(ART .. "/flora.lua")
+    ART = "/path/to/art"; dofile(ART .. "/yard.lua")
+    ART = "/path/to/art"; dofile(ART .. "/tint.lua")
     ART = "/path/to/art"; OUT = "/path/to/repo"; dofile(ART .. "/pack.lua")
 
 Then paste `sprites.js`, which the packer writes here, over `SPR` in `public/index.html`. The
@@ -81,13 +89,26 @@ From the warning floor to the sunset the summer dries the village out with the r
 there the fire takes it. Everything that decays has a sprite per stage, by the same name plus `_1`,
 `_2`, ..., at exactly the size and pivot of the original, and with its frame count unless it has
 stopped (`sails_2` and `sails_3` are one frame), so the page can swap one for the other in place:
-- buildings (`house1`-`house5`, `church`, `windmill`): `_1` worn, `_2` derelict and dark, `_3`
-  scorched, then hell's `ruin1`/`ruin2`. `sails_1` turns ragged, `sails_2` and `sails_3` hang still.
-  `lamp_2` is a dead lamp.
-- plants (`oak1`, `oak2`, `poplar`, `pine`, `bush1`, `bush2`): `_1` turning, `_2` dry; the trees then
-  die as `dead1`/`dead2` and burn as hell's `charred1`/`charred2`.
-- `tuft1`-`tuft3`: `_1` turning, `_2` dry, `_3` stubble. `fence_1` is weathered and `fence_2`
-  broken; both still tile, with `fence` and with each other.
+- buildings (`house1`-`house5` and their colourways `house1b` ... `house5b`, `house1c`, `house3c`,
+  `cottage`, `bakery`, `inn`, `townhall`, `barn`, `granary`, `church`, `windmill`): `_1` worn, `_2`
+  derelict and dark, `_3` scorched, then a burnt-out shell. The barn leaves `ruin3` and the town
+  hall `ruin4`; the cottage and the granary leave `ruin5`, a small house burnt down to its chimney;
+  the other houses, the bakery and the inn leave hell's `ruin1` or `ruin2`, or `ruin5`; the church
+  and the windmill leave `ruin2` or a charred tree. `sails_1` turns ragged, `sails_2` and `sails_3`
+  hang still. `lamp_2` is a dead lamp.
+- plants (`oak1`, `oak2`, `poplar`, `pine`, `birch`, `apple`, `willow`, `cypress`, `bush1`, `bush2`,
+  `hedge`, `wheat`, `sunflowers`): `_1` turning, `_2` dry; the trees then die as `dead1` (`oak2`
+  and the willow as `dead2`) and burn as hell's `charred1`/`charred2`, and the rest burn down to
+  nothing. The wheat is ripe at `_1` and stubble at `_2`.
+- `tuft1`-`tuft3` and `flowers`: `_1` turning, `_2` dry, `_3` stubble.
+- props (`fence`, `wall`, `gate`, `cart`, `scarecrow`, `well`, `barrels`, `woodpile`, `bench`,
+  `signpost`, `flowerbed`): `_1` weathered, `_2` broken (the woodpile half used, then scattered;
+  the flowerbed wilting, then dead). The fence, the wall and the hedge each tile with themselves at
+  any stage, and a gate meets the fence and the wall; past `_2` the fire takes them.
+- `rock`, `rock2`: `_1` the moss dried, `_2` the moss burnt off; the stone itself does not burn.
+- kept only: `cow` and `sheep`, taken in as the grass goes; `laundry` and `beehives`, taken in as
+  the village wears and empties; and `haystack`, which stands where the herds were until the fire
+  takes it.
 
 ## Delivery
 A family is one Lua file at `<ART>/<family>.lua`, run by `mcp__aseprite__run_lua_script` with:
@@ -99,7 +120,8 @@ Load that tool with ToolSearch first (`select:mcp__aseprite__run_lua_script`). T
 `<family>.png`, `<family>-lights.png`, `<family>.json`, and the previews `<family>-day.png`,
 `<family>-dusk.png`, `<family>-lit.png`. The staged families, which build on finished ones, then
 draw a preview of their stages: `ground-stages.png`, `worn-stages.png` and `worn-mill.png`,
-`dry-stages.png`. LOOK at the previews with Read after every change. Pixel art
+`dry-stages.png`, and `town-`, `farm-`, `flora-`, `yard-` and `tint-stages.png`; those five also
+draw `<family>-scene.png`, their sprites among the village's on the field. LOOK at the previews with Read after every change. Pixel art
 is judged by eye, and you are expected to iterate until it is genuinely charming, not just correct.
 Read `px.lua` first: `P.map` (ASCII art) is the best tool for anything under 40 px; `P.rect`, `P.line`
 and `P.disc` for large forms; `P.blit` to compose frames from a shared base.

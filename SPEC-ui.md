@@ -112,7 +112,7 @@ The story turns on the served cut points, so it lands on the marks the ring prin
 | --- | --- |
 | under the warning floor (70%) | day. The sun crosses the sky with the reading |
 | at the warning floor | evening comes: the sun is carried down, the sky turns amber from the horizon up, and windows and lamps light |
-| from there to the band's third quarter point (92.5%) | the sun sinks to the hills and the sky reddens with the reading, and the summer dries out with it: the grass yellows, goes to straw and cracks, the trees thin, the hills brown, the flock is taken in, and the village wears down and empties, its windows going dark |
+| from there to the band's third quarter point (92.5%) | the sun sinks to the hills and the sky reddens with the reading, and the summer dries out with it: the grass yellows, goes to straw and cracks, the trees thin, the hills brown, the flock and the herd are taken in, and the village wears down and empties, its windows going dark |
 | past the third quarter point | the fire takes what the summer left: the fields burn to ash, the empty houses catch and burn out to ruins, the dead trees char, and a horned beast's mouth swallows the train. It comes out at the far end, in hell |
 | at the cap (100%) | once through, the only station in the world comes into sight, the burnt-out terminus at the end of the line, and the train brakes to a stand at its platform. Its smoke stops; the fire goes on burning around it |
 
