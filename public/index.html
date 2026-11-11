@@ -1979,13 +1979,17 @@ function dur(ms) {
   const h = ms / 3600000;
   return (h < 10 ? h.toFixed(1) : Math.round(h)) + "h";
 }
+/* Times, weekdays and amounts are written in English whatever the browser's language, so the page
+   reads the same everywhere and a typeface for it needs only the characters in characters.txt.
+   British English, for its 24-hour clock and its day-before-month dates. */
+const LOCALE = "en-GB";
 function stamp(ms) {
   const d = new Date(ms);
-  const hhmm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const hhmm = d.toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false });
   return d.toDateString() === new Date().toDateString()
-    ? hhmm : d.toLocaleDateString([], { weekday: "short" }) + " " + hhmm;
+    ? hhmm : d.toLocaleDateString(LOCALE, { weekday: "short" }) + " " + hhmm;
 }
-const money = (n) => "$" + Number(num(n, 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n) => "$" + Number(num(n, 0)).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const shortModel = (n) => String(n).replace(/^claude-/, "").replace(/-\d{8}$/, "");
 
 /* ═════════════════════════ ring geometry ═════════════════════════ */
@@ -2729,7 +2733,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   const pixel = trainOn(), T = pixel ? CHART_TYPE.pixel : CHART_TYPE.plain;
   const { PL, PR, PT, PB, CHAR_W } = T;
   /* a label's width: measured in its own face where the caller can, as a saved graph's can, and
-     otherwise counted in glyphs, a Latin count that comes up short for a weekday in CJK or Persian */
+     otherwise counted in glyphs, which holds since the weekdays are always English (LOCALE) */
   const tw = src && src.measure ? src.measure : (t) => t.length * CHAR_W;
   const edge = pixel ? onGrid : (v) => v;
   const { t0, t1, ymax, projX } = m;
@@ -2773,7 +2777,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
       if (d.getTime() >= t1) break;
       const x = edge(X(d.getTime()));
       s += `<line class="day" x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(H - PB).toFixed(1)}"></line>`;
-      days.push([x, d.toLocaleDateString([], { weekday: "short" })]);
+      days.push([x, d.toLocaleDateString(LOCALE, { weekday: "short" })]);
     }
   }
 
@@ -3045,7 +3049,7 @@ function drawGraph(key, h, [sec, , spanWords]) {
     ctx.fillText(t, x, y);
     return ctx.measureText(t).width;
   };
-  const when = (ms) => new Date(ms).toLocaleString([], { weekday: "short", day: "numeric", month: "short",
+  const when = (ms) => new Date(ms).toLocaleString(LOCALE, { weekday: "short", day: "numeric", month: "short",
                                                           hour: "2-digit", minute: "2-digit", hour12: false });
   const L = pad, R = GW - pad, lim = limitOf(key), f = freshness();
   const known = !f.blank && lim && typeof lim.percent === "number";

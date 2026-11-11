@@ -407,6 +407,11 @@ monospaced face. Matrix is set in Fira Code and Train in Jersey 10 whatever the 
 reader's own choice is kept, and returns with Glass or Neumorphism. Jersey 10 is not offered as a choice: it is
 a bitmap face, set at a few fixed sizes that the rest of the page does not keep to.
 
+The page writes its times, weekdays, dates and amounts in English, on a 24-hour clock with the day
+before the month (British English), whatever the browser's language. So it reads the same
+everywhere, and a typeface for it needs only the characters in `characters.txt`: printable ASCII
+and nine more. Matrix's terminal draws more than that, in Fira Code.
+
 ## Footer strip
 
 Shown unless *Settings* hides it (in Neumorphism, its switch on the page): the ccusage cost numbers.
