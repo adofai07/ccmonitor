@@ -369,13 +369,15 @@ longer than the trace. A `span` that is not a positive, finite number is a 400.
   "intervalMs": 60000,
   "capacity": 360,
   "limits": [
-    { "key": "session", "burnPercentPerHour": 1.8, "projectedAt": 1788530000000, "sinceT": 1788509381782,
-      "sampleCount": 41, "spanMs": 2400000, "deltaPercent": 3, "minSampleCount": 3, "minSpanMs": 375000, "minDeltaPercent": 2 },
-    { "key": "weekly", "burnPercentPerHour": null, "projectedAt": null, "sinceT": 1788509381782,
-      "sampleCount": 41, "spanMs": 2400000, "deltaPercent": 1, "minSampleCount": 3, "minSpanMs": 12600000, "minDeltaPercent": 2 },
-    { "key": "fable", "burnPercentPerHour": null, "projectedAt": null, "sinceT": null,
-      "seRatePercentPerHour": 1.31, "etaUncertaintySeconds": 2040,
-      "sampleCount": 10, "spanMs": 1080000, "deltaPercent": 4, "minSampleCount": 3 }
+    { "key": "session", "burnPercentPerHour": 1.8, "seRatePercentPerHour": 0.12, "projectedAt": 1788530000000,
+      "etaUncertaintySeconds": 360, "provisional": false, "sinceT": 1788509381782,
+      "sampleCount": 101, "spanMs": 6000000, "deltaPercent": 3, "minSampleCount": 3 },
+    { "key": "weekly", "burnPercentPerHour": 0.4, "seRatePercentPerHour": 0.05, "projectedAt": null,
+      "etaUncertaintySeconds": null, "provisional": false, "sinceT": 1788509381782,
+      "sampleCount": 101, "spanMs": 6000000, "deltaPercent": 1, "minSampleCount": 3 },
+    { "key": "fable", "burnPercentPerHour": null, "seRatePercentPerHour": null, "projectedAt": null,
+      "etaUncertaintySeconds": null, "provisional": false, "sinceT": null,
+      "sampleCount": 0, "spanMs": 0, "deltaPercent": 0, "minSampleCount": 3 }
   ]
 }
 ```
@@ -485,8 +487,8 @@ A well-sampled flat run is still distinguishable from an absent one. A percent o
 reset, a refill or a re-scale, and the run is cut there, so a flat run reports a real `0.00 %/hr` with a small
 standard error, while too little data to fit reports `null` and the UI says "measuring".
 
-`projectedAt` is the epoch ms at which the limit reaches 100% at that rate. Beyond the gates it
-is deliberately conservative, because a confident wrong date is worse than no date: it is `null`
+`projectedAt` is the epoch ms at which the limit reaches 100% at that rate. It is
+deliberately conservative, because a confident wrong date is worse than no date: it is `null`
 when the rate is flat or falling, when the window resets first, when there is no reset instant
 to check it against, and when the newest sample is older than a gap (the fit describes the past,
 not the present). A `null` on either number means "still measuring", and the UI should say
