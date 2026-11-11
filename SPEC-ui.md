@@ -162,19 +162,38 @@ other.
 Soft clay. The page is one material, a light clay or a dark one, lit from the top left. The plates and the buttons stand
 proud of it, with a light shadow up and to the left and a dark one down and to the right; the wells
 are pressed into it, and in a hollow the two shadows change sides. Whatever is on or open is pressed
-in: a switch that is on, the chosen theme and typeface, the gear while Settings is open, the ring
-while its detail is open, a download while it is drawn.
+in: a switch that is on, the chosen theme, clay and typeface, the gear while Settings is open, the
+dial's plate while its detail is open, a download while it is drawn.
 
-- **The page is the same page as Glass,** so it says the same things and the keyboard and screen
-  readers work the same way. It is only reset in clay, and nothing is drawn behind it.
+- **The page says what Glass's says, in many plates.** Where Glass is one sheet with the cost strip
+  under it, Neumorphism lays each part out as a plate of its own, a gap apart: the header's three
+  (the name and plan, the freshness, the gear); the dial's plate, with the limit's name over the
+  dial and the countdown and verdicts under it, beside the chart's well; the controls' four; and
+  the cost strip's three (what it is and is not, its total, the breakdown). Opening the detail adds
+  its own: its heading beside its four figures (over them where the page is narrower), a plate
+  each, its words under them (in two columns where there is room) and its download under those.
+  The order is the glass page's, with the controls' four stops (Clay, Vibration, Typeface, Local
+  token accounting) after the limit and its detail and before the cost strip, where they are
+  drawn, so the keyboard and screen readers go through it as they do there; nothing is drawn
+  behind it. As the window narrows, the controls go two to a row and the detail's heading goes over
+  its figures; then the chart drops under the dial, whose plate then holds its words beside it;
+  then the figures go two to a row; and at a phone's width the plates stand lower and closer, so
+  their shadows still fall inside the page, and the controls go one to a row.
+- **Its settings are on the page.** Settings lists only the theme. The clay (Light, Dark, System)
+  and the typeface are rows of keys, the chosen one pressed in; the vibration and the cost strip
+  are switches; each on a plate of its own under the row it changes, with the panel's names and
+  hints. They are the same settings as the panel's, kept and followed in the same way, so a
+  choice made here holds when another theme lists it in Settings, and the other way round. With
+  the cost strip switched off its plates go, and its switch stays.
 - **The ring is a dial.** Its face stands proud of the plate, the track is a groove cut into the
   face, and the arc lies in the groove, under the groove's own shading. The numeral sits on the
   hub. The tick is still white, in a dark setting that holds it off the face, light or dark; at the
   cap the hub floods, as the well does in Glass. A held reading's dashed rim lies out on the face's lip,
   where the groove's wall cannot hide it.
-- **The wells are cut alike.** The ring's, while its detail is open, the chart's beside it and the
-  detail's under them share their edges and their corners, at one inset from the plate. The
-  detail's figures stand up in their well as tiles, and wrap rather than lose their ends.
+- **Plates stand, wells sink.** The dial's plate goes down while its detail is open, as a key does,
+  and the chart's well is cut to the dial plate's height, its chart drawn taller to fill it. The
+  detail's figures are set large, with what they are in under them, and wrap rather than lose
+  their ends.
 - **Its palette is its own.** As in Glass, the ground does not follow the ring: the clay is the same
   at 5% as at the cap. On the light clay the arc, the chart and the marks keep the band colours, in
   darker inks for a light ground (teal, ochre, rust and crimson, relative luminance .18 → .12 → .08
@@ -185,21 +204,22 @@ while its detail is open, a download while it is drawn.
   the ring, is taken part of the way to the text's ink, so it reads as text and not only as a mark;
   and over pace the numeral takes on the pace ink in place of Glass's glow (on the light clay a glow
   would only stain the hub). The faintest of the text's inks holds 4.5:1 on either clay.
-- **The dark clay** is the same material at night, chosen in Settings or taken from the system, and
+- **The dark clay** is the same material at night, chosen with the Clay keys or taken from the system, and
   it follows the system as that changes. Its bands and its pace channel are Glass's, which were set
   for a dark ground, the channel starting from a lighter slate so that a mild over-pace verdict
   never reads quieter than the faintest ink. With them comes Glass's bloom, rising with danger so
   that a darker band does not recede, but kept inside the groove, so it lights the channel and not
   the face around it. Its inks hold at least the light clay's contrasts. The theme's patch in
-  Settings shows whichever clay picking it would give.
+  Settings shows whichever clay picking it would give, so it can be seen before the theme is on.
 - **Nothing moves but the shake.** The ring shakes while over pace as it does in Glass, by the same
   rule and on the same switch, and the freshness dot breathes while it waits for a first reading,
-  as in Glass. There is no fluid and no animated background, so Settings lists neither; the
-  reader's typeface is kept.
+  as in Glass. There is no fluid and no animated background, so the controls offer neither; the
+  reader's typeface is kept. The system's reduced-motion setting still stills the ring, and the
+  vibration's plate says so while it is on.
 - Forced colours drop every shadow, and with them every edge the theme has, so there the plates,
-  wells and buttons get their edges back as borders, and the switches a track and a knob. There the
-  ground is the system's, so the clay follows the system's palette whatever Settings says; the
-  choice returns when forced colours are off.
+  wells, keys and buttons get their edges back as borders, and the switches a track and a knob.
+  There the ground is the system's, so the clay follows the system's palette whatever the Clay
+  keys say; the choice returns when forced colours are off.
 - The saved graph is drawn on a clay plate, standing up out of the clay.
 
 ## Primary view — the weekly limit, a ring and its chart
@@ -352,24 +372,26 @@ out of it and floats over the page, so a switch can be flipped while watching th
 changes. The gear again, Escape, a click elsewhere or focus moving away closes it.
 
 The panel lists the theme, then only the settings of the theme on screen, and the one setting that
-belongs to no theme; nothing is shown greyed out.
+belongs to no theme; nothing is shown greyed out. Under Neumorphism it lists only the theme: that
+theme's settings, and the cost strip's, are keys and switches on the page itself (see
+*Neumorphism*), so there it has no reset either.
 
 | theme | setting | choices | default |
 | --- | --- | --- | --- |
 | all | Theme | Glass, Matrix, Train, Neumorphism | Glass |
-| Neumorphism | Clay | Light, Dark, System — System follows the system's dark mode, as it changes | System |
+| Neumorphism, on the page | Clay | Light, Dark, System — System follows the system's dark mode, as it changes | System |
 | Glass | Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
 | Glass | Speed | slow / normal / fast (0.25×, 0.5×, 1×) — listed only while the fluid is on | normal |
-| Glass, Train, Neumorphism | Vibration | on / off — the shake of a ring over pace | on |
+| Glass, Train; Neumorphism on the page | Vibration | on / off — the shake of a ring over pace | on |
 | Glass | Animated background | on / off — off pauses the drifting sky where it stands | on |
-| Glass, Neumorphism | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
+| Glass; Neumorphism on the page | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
 | Matrix | Rain | on / off — off stops the rain where it stands | on |
 | Matrix | Amount | slider, 5–100% of the columns falling at once — listed only while the rain is on | 40% |
 | Matrix | Speed | slider, 0.25×–2.5× of 22 steps a second — listed only while the rain is on | 1× |
 | Matrix | Colour #1 | any colour — the rain; its heads are the colour lit toward white, less so the darker it is | green `#00ff66` |
 | Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
 | Train | Moving scene | on / off — off stops the train, its smoke, the fire and the station clock where they stand | on |
-| all | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
+| all; Neumorphism on the page | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
 
 Settings change how the page looks, never what it measures or how it judges a reading:
 switching the shake off leaves the over-pace verdict in the tick, the caption and the halo (in
@@ -377,7 +399,7 @@ Neumorphism, the numeral's ink).
 They are kept in this browser (only the ones that differ from the default), applied before the
 ring is first drawn, and followed in other open tabs. A slider or a colour is followed on screen
 as it moves, and kept once it is let go. The system's reduced-motion setting still stills
-everything, and the panel says so while it is on.
+everything, and the panel (in Neumorphism, the vibration's plate) says so while it is on.
 
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
 font service. Fira Code also takes over the figures, which are otherwise set in the system's
@@ -387,7 +409,7 @@ a bitmap face, set at a few fixed sizes that the rest of the page does not keep 
 
 ## Footer strip
 
-Shown unless *Settings* hides it: the ccusage cost numbers.
+Shown unless *Settings* hides it (in Neumorphism, its switch on the page): the ccusage cost numbers.
 
 ```
 ccusage · 7d $2,289 · opus $1,869 · fable $415

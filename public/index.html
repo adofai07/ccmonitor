@@ -1091,6 +1091,16 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    moves but the shake and, until the first reading, the freshness dot's
    breath, as on the glass.
 
+   The page is laid out as many plates rather than two: the header's
+   three, the dial's, the chart's well, the controls' four and the cost
+   strip's three, and while the detail is open its heading, its four
+   figures, its words and its download, each a plate of its own. Its own
+   settings, and the cost strip's, are keys and switches on the page, the
+   controls, so Settings lists only the theme. The page still says what
+   the glass page says, in the same order, with one addition: the
+   controls, after the limit (and its detail, while open) and before the
+   cost strip, where they are drawn.
+
    Its palette is its own, as Glass's is: the ground never follows the
    ring. On the light clay the band and pace colours keep the other
    themes' ladder in darker inks for a light ground (STOP_LIGHT and PACE_LIGHT in the
@@ -1099,7 +1109,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    out. A word in a band's colour is taken part of the way to the text's
    ink, so it reads as text and not only as a mark.
    It comes as a light clay and a dark one, on data-clay, which the
-   script sets from Settings or from the system; the dark one reads
+   script sets from the Clay keys on the page or from the system; the dark one reads
    Glass's ladder, which was set for a dark ground.
    All of it keys on data-theme.
    ══════════════════════════════════════════════════════════════════ */
@@ -1133,7 +1143,6 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   --coin-2: #4b558f;
   --cerr:   #9e1b36;
   /* the rest of the clay's own colours, named so the dark clay can recolour them */
-  --plate:   16px 16px 36px var(--shade), -16px -16px 36px var(--lift);
   --float:   16px 18px 36px rgb(140 154 178 / .75), -8px -8px 26px var(--lift);
   --face:    linear-gradient(145deg, #e9edf3, #d6dbe3);
   --groove:  rgb(var(--tint) / .07);
@@ -1145,8 +1154,14 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   --sw-on:   var(--ink-3);
   --sw-on-shade: inset 2px 2px 5px rgb(18 24 34 / .5), inset -1px -1px 3px rgb(255 255 255 / .12);
   --sw-knob-on: #f3f5f9;
+  /* the plates stand low, so their shadows do not run into each other; --reach is how far a
+     plate's shadow falls, and the room a clipped box leaves for it */
+  --tile:    8px 8px 18px var(--shade), -8px -8px 18px var(--lift);
+  --tile-hi: 10px 10px 22px var(--shade), -10px -10px 22px var(--lift);
+  --reach:   26px;
+  --gap:     26px;
 }
-/* The dark clay: the same material at night, chosen in Settings or taken from the system. Its
+/* The dark clay: the same material at night, chosen with the Clay keys or taken from the system. Its
    bands are Glass's, which were set for a dark ground, so with them comes Glass's bloom, rising
    with danger so a darker band does not recede; the script reads Glass's ladder too. */
 :root[data-theme="neumorphism"][data-clay="dark"] {
@@ -1190,67 +1205,97 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-theme="neumorphism"] .grain,
 :root[data-theme="neumorphism"] .vig { display: none; }
 
-/* the plates, standing proud of the ground */
+/* The page is a bed of plates, a gap apart, wide enough for each one's shadow to fall clear of the
+   next. The glass and the cost strip are no longer plates themselves, only what holds them. */
+:root[data-theme="neumorphism"] main {
+  max-width: 1120px; gap: var(--gap);
+  padding: clamp(24px, 3.6vh, 40px) clamp(20px, 3vw, 36px) clamp(28px, 4.4vh, 48px);
+}
 :root[data-theme="neumorphism"] .glass,
 :root[data-theme="neumorphism"] .cost {
-  border: 0; background: var(--clay);
+  border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible;
   backdrop-filter: none; -webkit-backdrop-filter: none;
-  box-shadow: var(--plate);
 }
-:root[data-theme="neumorphism"] .glass { border-radius: 30px; }
 :root[data-theme="neumorphism"] .glass::before { display: none; }
-:root[data-theme="neumorphism"] .cost { border-radius: 24px; padding: 20px 24px 18px; }
-/* the row's two wells, the ring's and the chart's, are cut to one height and one inset from the plate */
-:root[data-theme="neumorphism"] .lrow {
-  align-items: stretch;
-  gap: clamp(28px, 3.4vw, 40px);
-  padding: clamp(20px, 2.4vw, 28px) clamp(24px, 3vw, 34px);
-}
-@media (min-width: 681px) { :root[data-theme="neumorphism"] .lrow { column-gap: clamp(12px, calc(3.4vw - 16px), 24px); } }
+:root[data-theme="neumorphism"] .rings { padding: 0; }
+/* the dial's plate and the chart's well, side by side and of one height */
+:root[data-theme="neumorphism"] .lrow { align-items: stretch; gap: var(--gap); padding: 0; }
 
-/* the header lies on the ground: its chip and pill pressed into it, the gear standing up */
+/* the header is three plates: the name, the freshness and the gear */
+:root[data-theme="neumorphism"] .top { gap: var(--gap); align-items: stretch; padding: 0; min-height: 54px; }
+:root[data-theme="neumorphism"] .grow { display: none; }
+:root[data-theme="neumorphism"] .mark {
+  align-items: center; padding: 12px 20px; border-radius: 18px; background: var(--clay); box-shadow: var(--tile);
+}
 :root[data-theme="neumorphism"] .mark h1 { color: var(--ink-2); }
 :root[data-theme="neumorphism"] .plan { border: 0; background: none; box-shadow: var(--down-sm); border-radius: 8px; padding: 4px 9px; color: var(--ink-3); }
-:root[data-theme="neumorphism"] .fresh { border: 0; background: none; box-shadow: var(--down-sm); padding: 5px 14px 5px 11px; }
-:root[data-theme="neumorphism"] .fresh[data-tone="hold"] { color: var(--hold-ink); background: rgb(var(--warning-rgb) / .07); }
-:root[data-theme="neumorphism"] .fresh[data-tone="down"] { color: var(--down-ink); background: rgb(var(--exhausted-rgb) / .07); }
-/* on the dark clay a crimson tint lightens the pill, which the crimson dot then sinks into */
-:root[data-theme="neumorphism"][data-clay="dark"] .fresh[data-tone="down"] { background: rgb(16 4 9 / .45); }
+:root[data-theme="neumorphism"] .side { flex: 1 1 300px; gap: var(--gap); align-items: stretch; margin-left: 0; }
+/* the plate has the height to say why at length, so a held reading's reason wraps rather than lose its end */
+:root[data-theme="neumorphism"] .fresh {
+  flex: 1 1 auto; gap: 11px; border: 0; border-radius: 18px; padding: 10px 20px 10px 18px;
+  background: var(--clay); box-shadow: var(--tile);
+}
+:root[data-theme="neumorphism"] .fresh span { white-space: normal; overflow: visible; }
+:root[data-theme="neumorphism"] .fresh[data-tone="hold"] { color: var(--hold-ink); background: color-mix(in srgb, rgb(var(--warning-rgb)) 7%, var(--clay)); }
+:root[data-theme="neumorphism"] .fresh[data-tone="down"] { color: var(--down-ink); background: color-mix(in srgb, rgb(var(--exhausted-rgb)) 7%, var(--clay)); }
+/* on the dark clay the plate takes a little more crimson, as the held one takes amber, and the dot's ring is fainter */
+:root[data-theme="neumorphism"][data-clay="dark"] .fresh[data-tone="down"] { background: color-mix(in srgb, rgb(var(--exhausted-rgb)) 8%, var(--clay)); }
 :root[data-theme="neumorphism"][data-clay="dark"] .fresh[data-tone="down"] .dot { box-shadow: 0 0 0 3px rgb(var(--exhausted-rgb) / .12); }
-:root[data-theme="neumorphism"] .gear { width: 30px; height: 30px; border: 0; background: var(--clay); box-shadow: var(--up-sm); color: var(--ink-3); }
+:root[data-theme="neumorphism"] .prefs { display: flex; }
+:root[data-theme="neumorphism"] .gear {
+  width: 54px; height: auto; min-height: 54px; border: 0; border-radius: 18px;
+  background: var(--clay); box-shadow: var(--tile); color: var(--ink-3);
+  transition: box-shadow .15s var(--ease), color .2s var(--ease);
+}
+:root[data-theme="neumorphism"] .gear svg { width: 18px; height: 18px; }
 :root[data-theme="neumorphism"] .gear:hover { background: var(--clay); color: var(--ink); }
-:root[data-theme="neumorphism"] .gear[aria-expanded="true"] { background: var(--clay); color: var(--ink); box-shadow: var(--down-sm); }
+:root[data-theme="neumorphism"] .gear[aria-expanded="true"] { background: var(--clay); color: var(--ink); box-shadow: var(--down); }
 
 /* buttons stand up, and go down while they are pressed or busy */
 :root[data-theme="neumorphism"] .dclose,
-:root[data-theme="neumorphism"] .dxspan,
-:root[data-theme="neumorphism"] .preset {
+:root[data-theme="neumorphism"] .dxspan {
   border: 0; background: var(--clay); color: var(--ink-2); border-radius: 9px; box-shadow: var(--up-sm);
   transition: box-shadow .15s var(--ease), color .15s var(--ease);
 }
 :root[data-theme="neumorphism"] .dclose:hover,
-:root[data-theme="neumorphism"] .dxspan:hover,
-:root[data-theme="neumorphism"] .preset:hover:not(:disabled) { color: var(--ink); }
+:root[data-theme="neumorphism"] .dxspan:hover { color: var(--ink); }
 :root[data-theme="neumorphism"] .dclose:active,
 :root[data-theme="neumorphism"] .dxspan:active,
-:root[data-theme="neumorphism"] .dxspan[aria-busy="true"],
-:root[data-theme="neumorphism"] .preset:active:not(:disabled) { box-shadow: var(--down-sm); color: var(--ink); }
-:root[data-theme="neumorphism"] .dxspan[aria-disabled="true"]:not([aria-busy]),
-:root[data-theme="neumorphism"] .preset:disabled { box-shadow: none; color: var(--ink-4); opacity: 1; }
+:root[data-theme="neumorphism"] .dxspan[aria-busy="true"] { box-shadow: var(--down-sm); color: var(--ink); }
+:root[data-theme="neumorphism"] .dxspan[aria-disabled="true"]:not([aria-busy]) { box-shadow: none; color: var(--ink-4); opacity: 1; }
 :root[data-theme="neumorphism"] .dxspans { gap: 10px; }
 /* a focus ring in the ink: the controls' own shadows would wash out a fainter one */
 :root[data-theme="neumorphism"] :focus-visible,
-:root[data-theme="neumorphism"] .pick:has(input:focus-visible),
-:root[data-theme="neumorphism"] .seg input:focus-visible + span { outline-color: var(--ink); }
+:root[data-theme="neumorphism"] .pick:has(input:focus-visible) { outline-color: var(--ink); }
 
-/* the ring's button rises a little under the pointer, and goes down while its detail is open */
-:root[data-theme="neumorphism"] .ring { border-radius: 22px; padding: 14px 18px 14px 14px;
-  transition: box-shadow .25s var(--ease), opacity .5s var(--ease); }
-:root[data-theme="neumorphism"] .ring:hover { background: none; }
-@media (hover: hover) {
-  :root[data-theme="neumorphism"] .ring:hover:not([aria-expanded="true"]) { box-shadow: var(--up-sm); }
+/* The ring's button is the dial's plate: the limit's name across the top, the dial, and under it
+   the countdown and the verdicts. It rises a little under the pointer, and goes down while its
+   detail is open. Its words are hidden from screen readers, which hear the button's own
+   sentence, so they can be laid out freely. */
+:root[data-theme="neumorphism"] .ring {
+  display: grid; grid-template-columns: minmax(0, 1fr); align-content: center;
+  grid-template-areas: "label" "art" "clock" "pace" "eta";
+  gap: 4px 14px; width: clamp(240px, 25vw, 282px);
+  padding: 18px 22px 22px; border-radius: 28px; background: var(--clay); box-shadow: var(--tile);
+  transition: box-shadow .25s var(--ease), opacity .5s var(--ease);
 }
-:root[data-theme="neumorphism"] .ring[aria-expanded="true"] { background: none; box-shadow: var(--down); }
+:root[data-theme="neumorphism"] .ring .meta { display: contents; }
+:root[data-theme="neumorphism"] .ring .art { grid-area: art; justify-self: center; width: clamp(150px, 15.6vw, 172px); margin: 12px 0 10px; }
+/* the name wraps rather than lose its end: the plate is narrower than the glass's column */
+:root[data-theme="neumorphism"] .mlabel { grid-area: label; white-space: normal; overflow: visible; line-height: 1.45; }
+:root[data-theme="neumorphism"] .mclock { grid-area: clock; justify-self: center; font-size: 17px; }
+:root[data-theme="neumorphism"] .mclock.word { font-size: 13px; }
+:root[data-theme="neumorphism"] .mpace { grid-area: pace; text-align: center; }
+:root[data-theme="neumorphism"] .meta-eta { grid-area: eta; text-align: center; }
+:root[data-theme="neumorphism"] .ring:hover { background: var(--clay); }
+@media (hover: hover) {
+  :root[data-theme="neumorphism"] .ring:hover:not([aria-expanded="true"]) { box-shadow: var(--tile-hi); }
+}
+:root[data-theme="neumorphism"] .ring[aria-expanded="true"] { background: var(--clay); box-shadow: var(--down); }
+/* a dormant, empty limit is quiet in what the plate holds, not in the plate, which stays clay */
+:root[data-theme="neumorphism"] .ring[data-quiet="1"] { opacity: 1; }
+:root[data-theme="neumorphism"] .ring[data-quiet="1"] :is(.art, .mlabel, .mclock, .mpace, .meta-eta) { opacity: .5; transition: opacity .5s var(--ease); }
+:root[data-theme="neumorphism"] .ring[data-quiet="1"]:is(:hover, [aria-expanded="true"], :focus-visible) :is(.art, .mlabel, .mclock, .mpace, .meta-eta) { opacity: .78; }
 /* the verdicts wrap rather than lose their ends, as Train's do */
 :root[data-theme="neumorphism"] .mpace,
 :root[data-theme="neumorphism"] .meta-eta { white-space: normal; overflow: visible; }
@@ -1310,26 +1355,53 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    over the margin it is given, rather than padding it sideways. */
 :root[data-theme="neumorphism"] .spark {
   position: relative; isolation: isolate;
-  margin-inline: 16px; padding-block: 12px;
+  margin-inline: 24px; padding-block: 20px 18px;
   display: flex; flex-direction: column; justify-content: center;
 }
 :root[data-theme="neumorphism"] .spark::before {
-  content: ""; position: absolute; z-index: -1; inset: 0 -16px; border-radius: 22px;
+  content: ""; position: absolute; z-index: -1; inset: 0 -24px; border-radius: 28px;
   box-shadow: var(--down); pointer-events: none;
 }
+/* as tall as the dial's plate leaves room for; the script draws to the same heights (NEU_CHART_H) */
+:root[data-theme="neumorphism"] .chart,
+:root[data-theme="neumorphism"] .chartempty { height: 240px; }
 :root[data-theme="neumorphism"] .chart .lbl { stroke: var(--clay); }
 :root[data-theme="neumorphism"] .chartempty { border: 0; background: none; }
 /* the history is fainter than the fitted run, as on the glass, but no fainter than the glass makes it */
 :root[data-theme="neumorphism"] .chart .full { stroke: rgb(var(--ink-rgb) / .5); }
 :root[data-theme="neumorphism"] .chart .warnln { stroke: rgb(var(--warning-rgb) / .75); }
 
-/* the detail is a well pressed into the plate, at the row's inset, and its figures stand up in it */
+/* The detail opens as plates of its own under the row: its heading beside its four figures (over
+   them where the page is narrower), its words under them and its download under those. The box that opens it clips what it holds, so
+   it is widened by a shadow's reach on either side and padded by as much, for the plates' shadows
+   to fall inside it; the reach it leaves below is taken back from the gap after it as it opens. */
+:root[data-theme="neumorphism"] .detailWrap { transition: grid-template-rows .36s var(--ease), margin-bottom .36s var(--ease); }
+:root[data-theme="neumorphism"] .detailWrap.open { margin-bottom: calc(-1 * var(--reach)); }
+:root[data-theme="neumorphism"] .detailOuter { margin-inline: calc(-1 * var(--reach)); padding-inline: var(--reach); }
 :root[data-theme="neumorphism"] .detailInner {
-  border-top: 0; background: none; border-radius: 22px; box-shadow: var(--down);
-  margin: 2px clamp(24px, 3vw, 34px) clamp(20px, 2.4vw, 28px);
-  padding: 20px clamp(16px, 2.4vw, 24px) 18px;
+  border-top: 0; background: none; border-radius: 0; box-shadow: none; margin: 0;
+  padding: var(--gap) 0 var(--reach);
 }
 :root[data-theme="neumorphism"] .seam { display: none; }
+:root[data-theme="neumorphism"] #detail { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(0, 3fr); gap: var(--gap); }
+:root[data-theme="neumorphism"] .dhead {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "title title" "band close";
+  align-content: space-between; gap: 16px 10px; margin: 0;
+  padding: 18px 20px; border-radius: 22px; background: var(--clay); box-shadow: var(--tile);
+}
+:root[data-theme="neumorphism"] .dtitle { grid-area: title; line-height: 1.45; }
+:root[data-theme="neumorphism"] .dband { grid-area: band; justify-self: start; align-self: center; }
+:root[data-theme="neumorphism"] .dclose { grid-area: close; justify-self: end; align-self: center; margin: 0; }
+/* the words run in two columns where the plate is wide enough, rather than in lines too long to read */
+:root[data-theme="neumorphism"] .dfoot {
+  grid-column: 1 / -1; margin: 0; max-width: none; columns: 2 36ch; column-gap: 44px;
+  padding: 20px 24px 22px; border-radius: 22px; background: var(--clay); box-shadow: var(--tile);
+  font-size: 11.5px; line-height: 1.6;
+}
+:root[data-theme="neumorphism"] .dexport {
+  margin-top: var(--gap); padding: 16px 22px; border-top: 0; border-radius: 22px;
+  background: var(--clay); box-shadow: var(--tile);
+}
 :root[data-theme="neumorphism"] .dband { border: 0; border-radius: 7px; padding: 4px 9px; opacity: 1; box-shadow: var(--down-sm); }
 @supports (color: color-mix(in srgb, red, blue)) {
   /* words in a band's colour: its ink, taken part of the way to the text's, so they read at 5:1 */
@@ -1338,29 +1410,96 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 }
 /* a held reading steps back in a fainter ink, not by fading, which costs more on a light ground */
 :root[data-theme="neumorphism"] body[data-hold="1"] :is(.mclock, .dtitle) { opacity: 1; color: var(--ink-3); }
-:root[data-theme="neumorphism"] .readouts { gap: 14px; background: none; border: 0; border-radius: 0; overflow: visible; }
-:root[data-theme="neumorphism"] .ro { background: var(--clay); border-radius: 14px; box-shadow: var(--up-sm); padding: 10px 14px 11px; }
-/* the tiles are narrower than the glass's joined grid, so a figure wraps rather than lose its end */
-:root[data-theme="neumorphism"] .ro dd { white-space: normal; overflow: visible; }
+/* the four figures, a plate each: the figure large, and what it is in under it */
+:root[data-theme="neumorphism"] .readouts {
+  grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); margin: 0;
+  background: none; border: 0; border-radius: 0; overflow: visible;
+}
+:root[data-theme="neumorphism"] .ro {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--clay); border-radius: 22px; box-shadow: var(--tile); padding: 16px 18px 18px;
+}
+/* the plates are narrower than the glass's joined grid, so a figure wraps rather than lose its end */
+:root[data-theme="neumorphism"] .ro dd { margin: 0; font-size: 18px; line-height: 1.25; white-space: normal; overflow: visible; }
+:root[data-theme="neumorphism"] .ro dd small { display: block; margin: 5px 0 0; line-height: 1.4; }
+:root[data-theme="neumorphism"] .ro dd.est { font-size: 14px; }
+@media (max-width: 960px) {
+  :root[data-theme="neumorphism"] #detail { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme="neumorphism"] .dhead { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "title band close"; align-items: center; }
+}
+@media (max-width: 680px) {
+  :root[data-theme="neumorphism"] .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 /* a rule is cut into the clay: a dark line with the light catching the edge below it */
-:root[data-theme="neumorphism"] .dexport,
-:root[data-theme="neumorphism"] .psec + .psec,
-:root[data-theme="neumorphism"] .pfoot { border-top-color: var(--cut); box-shadow: inset 0 1px 0 var(--lift); }
 :root[data-theme="neumorphism"] .rule .ln { height: 2px; background: linear-gradient(var(--cut) 50%, var(--lift) 50%);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000); mask-image: linear-gradient(90deg, transparent, #000); }
 :root[data-theme="neumorphism"] .rule .ln.r { -webkit-mask-image: linear-gradient(90deg, #000, transparent); mask-image: linear-gradient(90deg, #000, transparent); }
 :root[data-theme="neumorphism"] .rule .tag { color: var(--ink-3); }
 
-/* at a phone's width the glass page's narrow rules give the ring room, and these outrank them, so
-   they give it back; the detail's well keeps to the row's inset */
-@media (max-width: 560px) {
-  :root[data-theme="neumorphism"] .lrow { padding: 18px; }
-  :root[data-theme="neumorphism"] .ring { padding: 8px; }
-  :root[data-theme="neumorphism"] .detailInner { margin: 2px 18px 18px; padding-inline: 14px; }
+/* Too narrow for the chart beside the dial (a little wider than the glass page's cut, since the
+   dial's plate is wider than its ring), the chart drops under it, and the dial's plate, now
+   the row's width, holds its words beside the dial. At a phone's width the plates stand lower
+   and closer, so their shadows still fall inside the page's margin. The page's margin is never
+   less than a shadow's reach, or the detail's widened box would run off the page. */
+@media (max-width: 760px) {
+  :root[data-theme="neumorphism"] .lrow { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme="neumorphism"] .ring {
+    width: auto; grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto auto auto 1fr;
+    grid-template-areas: "art ." "art label" "art clock" "art pace" "art eta" "art ."; align-content: stretch;
+    gap: 4px clamp(16px, 4vw, 26px); padding: 18px 22px;
+  }
+  :root[data-theme="neumorphism"] .ring .art { width: clamp(124px, 30vw, 156px); margin: 0; }
+  :root[data-theme="neumorphism"] .mclock { justify-self: start; }
+  :root[data-theme="neumorphism"] :is(.mpace, .meta-eta) { text-align: left; }
+  :root[data-theme="neumorphism"] .chart,
+  :root[data-theme="neumorphism"] .chartempty { height: 150px; }
 }
+@media (max-width: 560px) {
+  :root[data-theme="neumorphism"] {
+    --tile:    6px 6px 12px var(--shade), -6px -6px 12px var(--lift);
+    --tile-hi: 7px 7px 14px var(--shade), -7px -7px 14px var(--lift);
+    --reach:   18px;
+    --gap:     18px;
+  }
+  :root[data-theme="neumorphism"] main { padding-inline: 20px; }
+  :root[data-theme="neumorphism"] .ring { padding: 16px 18px; }
+  :root[data-theme="neumorphism"] .ring .art { width: 116px; }
+  :root[data-theme="neumorphism"] .spark { margin-inline: 18px; }
+  :root[data-theme="neumorphism"] .spark::before { inset: 0 -18px; }
+  :root[data-theme="neumorphism"] .chart,
+  :root[data-theme="neumorphism"] .chartempty { height: 120px; }
+  :root[data-theme="neumorphism"] :is(.cwhy, .ctot, .cright) { padding-inline: 18px; }
+}
+@media (min-width: 561px) { :root[data-theme="neumorphism"] main { padding-inline: clamp(28px, 3vw, 36px); } }
 
-/* the cost strip keeps its own family (--coin, --coin-2, --cerr), in inks set for each clay: darker on
-   the light one, lighter than Glass's on the dark; its bar lies in a pressed channel */
+/* The cost strip is three plates, held apart from the rest by the rule over it: what it is and is
+   not, its total, and the breakdown. It keeps its own family (--coin, --coin-2, --cerr), in inks
+   set for each clay: darker on the light one, lighter than Glass's on the dark; its bar lies in a
+   pressed channel. */
+:root[data-theme="neumorphism"] .cost { padding: 0; gap: var(--gap); }
+/* the head's two parts are plates of the strip's own, so the head itself is only their order */
+:root[data-theme="neumorphism"] .chead { display: contents; }
+@media (min-width: 760px) {
+  :root[data-theme="neumorphism"] .cost {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); grid-template-areas: "why right" "tot right";
+    gap: var(--gap); align-items: stretch;
+  }
+  :root[data-theme="neumorphism"] .cwhy { grid-area: why; }
+  :root[data-theme="neumorphism"] .ctot { grid-area: tot; }
+  :root[data-theme="neumorphism"] .cright { grid-area: right; }
+}
+@media (min-width: 961px) {
+  :root[data-theme="neumorphism"] .cost {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, .6fr) minmax(0, 1.35fr); grid-template-areas: "why tot right";
+  }
+}
+:root[data-theme="neumorphism"] :is(.cwhy, .ctot, .cright) {
+  border-radius: 24px; padding: 20px 24px; background: var(--clay); box-shadow: var(--tile);
+}
+:root[data-theme="neumorphism"] .ctot { margin: 0; display: flex; flex-direction: column; justify-content: center; padding-block: 16px 18px; }
+:root[data-theme="neumorphism"] .cright { display: flex; flex-direction: column; }
+:root[data-theme="neumorphism"] .cnote { margin-top: auto; padding-top: 10px; }
 :root[data-theme="neumorphism"] .chead h2 { color: var(--coin); }
 :root[data-theme="neumorphism"] .chead h2 .sl { color: var(--ink-4); opacity: 1; }
 :root[data-theme="neumorphism"] .cwarn b { color: var(--ink); }
@@ -1376,7 +1515,6 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   backdrop-filter: none; -webkit-backdrop-filter: none;
   box-shadow: var(--float);
 }
-:root[data-theme="neumorphism"] .pnote { color: var(--hold-ink); }
 :root[data-theme="neumorphism"] .switch { width: 38px; height: 22px; border: 0; background: var(--clay); box-shadow: var(--down-sm); }
 :root[data-theme="neumorphism"] .switch::before {
   top: 3px; left: 3px; width: 16px; height: 16px; background: var(--clay);
@@ -1393,17 +1531,57 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-theme="neumorphism"] .pick:has(input:checked) { background: var(--clay); box-shadow: inset 0 0 0 1.5px var(--ink-3), var(--down-sm); }
 :root[data-theme="neumorphism"] .pick:has(input:checked) .fn { color: var(--ink); }
 :root[data-theme="neumorphism"] .pick .swatch { border: 0; }
-:root[data-theme="neumorphism"] .seg { gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; }
-:root[data-theme="neumorphism"] .seg span { padding: 3px 11px; border-radius: 8px; background: var(--clay); box-shadow: var(--up-sm); color: var(--ink-3); }
-:root[data-theme="neumorphism"] .seg input:checked + span { background: var(--clay); box-shadow: inset 0 0 0 1.5px var(--ink-3), var(--down-sm); color: var(--ink); }
+
+/* The controls: the theme's own settings and the cost strip's, as four plates on the page, under
+   the row they change, where Settings lists only the theme. The clay and the typeface are keys,
+   the one chosen pressed in; the vibration and the cost strip are switches, larger than the
+   panel's. Elsewhere the ones that apply stay in Settings, so the plates are there only in this one. */
+.console { display: none; }
+:root[data-theme="neumorphism"] .console { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+@media (max-width: 960px) { :root[data-theme="neumorphism"] .console { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { :root[data-theme="neumorphism"] .console { grid-template-columns: minmax(0, 1fr); } }
+.knob {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-width: 0;
+  padding: 16px 20px 18px; border-radius: 24px; background: var(--clay); box-shadow: var(--tile);
+}
+.khead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; min-width: 0; }
+.kh { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; color: var(--ink-3); }
+.kval { min-width: 0; font-size: 11.5px; line-height: 1.2; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a switch's plate: its name at the top, as on the keys' plates, its hint and the switch at the foot */
+.krow {
+  flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "kh kh" "hint sw";
+  align-content: space-between; align-items: end; gap: 14px; cursor: pointer;
+}
+.ktext { display: contents; }
+/* While reduced motion is said on the vibration's plate, the note goes under the heading and the
+   hint and switch stay at the foot, level with the other plates'. The note stays outside the
+   label, so the switch keeps the panel's name for it. */
+.knob:has(> .knote:not([hidden])) {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto;
+  grid-template-areas: "kh kh" "note note" "hint sw"; align-items: end; gap: 10px 14px;
+}
+.knob:has(> .knote:not([hidden])) > .krow { display: contents; }
+.knob > .knote { grid-area: note; align-self: start; }
+.krow .kh { grid-area: kh; }
+.khint { grid-area: hint; font-size: 12px; line-height: 1.4; color: var(--ink-4); }
+.krow .switch { grid-area: sw; }
+.knote { margin: 0; font-size: 11px; line-height: 1.4; color: var(--hold-ink); }
+.keys { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; }
+:root[data-theme="neumorphism"] .keys .pick { justify-content: center; gap: 4px; min-height: 52px; padding: 8px 2px 7px; cursor: pointer; }
+.keys .pick svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; color: var(--ink-3); }
+.keys .pick .fill { fill: currentColor; stroke: none; }
+.keys .pick:has(input:checked) svg { color: var(--ink); }
+.keys .pick .fs { font-size: 19px; }
+:root[data-theme="neumorphism"] .knob .switch { width: 50px; height: 28px; }
+:root[data-theme="neumorphism"] .knob .switch::before { top: 4px; left: 4px; width: 20px; height: 20px; }
+:root[data-theme="neumorphism"] .knob .switch:checked::before { transform: translateX(22px); }
 
 /* Forced colours drop every shadow, and with them every edge this theme has, so the edges come
    back as borders and the switches as a track and a knob */
 @media (forced-colors: active) {
-  :root[data-theme="neumorphism"] :is(.glass, .cost, .panel, .detailInner, .ro, .fresh, .plan) { border: 1px solid CanvasText; }
+  :root[data-theme="neumorphism"] :is(.mark, .fresh, .plan, .dhead, .ro, .dfoot, .dexport, .knob, .cwhy, .ctot, .cright, .panel) { border: 1px solid CanvasText; }
   :root[data-theme="neumorphism"] .spark::before { border: 1px solid CanvasText; }
-  :root[data-theme="neumorphism"] :is(.gear, .dclose, .dxspan, .preset, .pick, .seg span) { border: 1px solid ButtonText; }
-  :root[data-theme="neumorphism"] .seg input:checked + span { border: 2px solid Highlight; }
+  :root[data-theme="neumorphism"] :is(.ring, .gear, .dclose, .dxspan, .pick) { border: 1px solid ButtonText; }
   :root[data-theme="neumorphism"] .ring[aria-expanded="true"] { outline: 1px solid CanvasText; }
   :root[data-theme="neumorphism"] .pick:has(input:checked) { border: 3px solid Highlight; }
   :root[data-theme="neumorphism"] .switch { border: 1px solid ButtonText; }
@@ -1497,16 +1675,21 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
     </div>
   </section>
 
+  <!-- Neumorphism's settings, and the cost strip's, as keys and switches on the page; drawn by the script -->
+  <section class="console" id="console" aria-label="Controls"></section>
+
   <div class="rule" aria-hidden="true">
     <span class="ln"></span><span class="tag">different source · different meaning</span><span class="ln r"></span>
   </div>
 
   <footer class="cost" aria-labelledby="costh">
     <div class="chead">
-      <h2 id="costh">Local token accounting <span class="sl">/ ccusage</span></h2>
-      <p class="cwarn"><b>Not your quota.</b> Tokens counted from local transcripts and priced at public
-        API list rates. The subscription does not meter against these dollars — the <span id="cwGauge">ring</span> above is the
-        only thing that does, and the two can never be added together.</p>
+      <div class="cwhy">
+        <h2 id="costh">Local token accounting <span class="sl">/ ccusage</span></h2>
+        <p class="cwarn"><b>Not your quota.</b> Tokens counted from local transcripts and priced at public
+          API list rates. The subscription does not meter against these dollars — the <span id="cwGauge">ring</span> above is the
+          only thing that does, and the two can never be added together.</p>
+      </div>
       <div class="ctot">
         <div class="v" id="costTotal">—</div>
         <div class="k" id="costKey">7-day total · usd · estimate</div>
@@ -2704,13 +2887,19 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
    snapshot changes, when the layout resizes, and every CHART_REFRESH_MS so "now" keeps
    moving; a chart whose markup came out the same is left alone. */
 const CHART_REFRESH_MS = 20000;
+/* Neumorphism's chart fills the well beside the dial's plate, which is taller than the glass's row:
+   at a phone's width, while it lies under the dial, and beside it */
+const NEU_CHART_H = [120, 150, 240];
 const chartMarkup = {};
 function renderCharts() {
   S.chartsDirty = false;
   S.chartsAt = Date.now();
   const th = S.snap ? S.snap.thresholds : null, f = freshness();
   /* the .chart height in CSS */
-  const H = trainOn() ? CHART_TYPE.pixel.tall : matchMedia("(max-width: 560px)").matches ? 100 : 118;
+  const narrow = matchMedia("(max-width: 560px)").matches;
+  const H = trainOn() ? CHART_TYPE.pixel.tall
+    : neuOn() ? (narrow ? NEU_CHART_H[0] : matchMedia("(max-width: 760px)").matches ? NEU_CHART_H[1] : NEU_CHART_H[2])
+    : narrow ? 100 : 118;
   for (const key of ORDER) {
     const host = $("spark-" + key);
     if (!host) continue;
@@ -5832,7 +6021,9 @@ function trainMotion() {
    Neumorphism's clay, light, dark or as the system is, and its shake
    and typeface, which share Glass's. One belongs to no theme:
    whether the cost strip is shown. The
-   panel lists only the settings of the theme on screen, and that one. Kept
+   panel lists only the settings of the theme on screen, and that one;
+   under Neumorphism it lists only the theme, and the rest are keys and
+   switches on the page itself (the controls, below the panel's). Kept
    in this browser, applied before the ring is first drawn so a
    chosen look never flashes in the default one, and followed in other
    open tabs. Only choices that differ from the defaults are stored, so
@@ -5927,13 +6118,8 @@ function buildPrefs() {
       <div class="phead" id="ph-theme">Theme</div>
       <div class="picks" role="radiogroup" aria-labelledby="ph-theme">${THEMES.map(([k, label, sample]) =>
         `<label class="pick" data-pick="${k}"><input type="radio" name="theme" value="${k}"><span class="swatch" aria-hidden="true">${sample}</span><span class="fn">${label}</span></label>`).join("")}</div>
-      <div class="prow" data-for="neumorphism">
-        <span class="pname" id="pn-clay">Clay</span>
-        <div class="seg" role="radiogroup" aria-labelledby="pn-clay">${CLAYS.map(([k, label]) =>
-          `<label><input type="radio" name="clay" value="${k}"><span>${label}</span></label>`).join("")}</div>
-      </div>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-motion">
+    <div class="psec" role="group" aria-labelledby="ph-motion" data-for="glass matrix train">
       <div class="phead" id="ph-motion">Motion</div>
       ${sw(SWITCHES[0])}
       <div class="prow sub" id="prefsSpeed" data-for="glass">
@@ -5948,7 +6134,7 @@ function buildPrefs() {
       ${SLIDERS.map(slider).join("")}
       <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-page">
+    <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train">
       <div class="phead" id="ph-page">Page</div>
       ${sw(SWITCHES[5])}
     </div>
@@ -5956,12 +6142,12 @@ function buildPrefs() {
       <div class="phead" id="ph-colour">Colours</div>
       ${COLOURS.map(colour).join("")}
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-font" data-for="glass neumorphism">
+    <div class="psec" role="group" aria-labelledby="ph-font" data-for="glass">
       <div class="phead" id="ph-font">Typeface</div>
       <div class="picks" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
         `<label class="pick"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
-    <div class="pfoot"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
+    <div class="pfoot" data-for="glass matrix train"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
 
   /* a slider or a colour, read into the settings: put on its steps, or refused if it is no colour;
      false for any other control */
@@ -5975,7 +6161,6 @@ function buildPrefs() {
     const t = e.target;
     if (SWITCHES.some(([k]) => k === t.name)) PREFS[t.name] = t.checked;
     else if (t.name === "speed") PREFS.speed = Number(t.value);
-    else if (t.name === "clay") PREFS.clay = t.value;
     else if (t.name === "font") PREFS.font = t.value;
     else if (t.name === "theme") PREFS.theme = t.value;
     else if (!knob(t)) return;
@@ -5997,13 +6182,54 @@ function buildPrefs() {
   });
 }
 
+/* Neumorphism's controls: its own settings, and the cost strip's, as keys and switches on the page,
+   where Settings lists only the theme. They are the panel's settings, kept and followed as those
+   are; only their names differ ("k-" before the setting's), so that no radio of theirs is taken
+   for one of the panel's group. */
+const CLAY_ICON = {
+  light:  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>',
+  dark:   '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.6 14.7A8 8 0 0 1 9.3 4.4a8 8 0 1 0 10.3 10.3z"/></svg>',
+  system: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path class="fill" d="M12 4a8 8 0 0 1 0 16z"/></svg>',
+};
+function buildConsole() {
+  const sw = (name) => {
+    const [, label, hint] = SWITCHES.find(([k]) => k === name);
+    return `
+    <div class="knob">
+      <label class="krow">
+        <span class="ktext"><span class="kh">${label}</span><span class="khint">${hint}</span></span>
+        <input class="switch" type="checkbox" role="switch" name="k-${name}">
+      </label>${name === "shake"
+        ? `<p class="knote" id="kStill" hidden>Your system asks for reduced motion, so the ring stays still whatever this says.</p>` : ""}
+    </div>`;
+  };
+  $("console").innerHTML = `
+    <div class="knob" role="radiogroup" aria-labelledby="kh-clay">
+      <span class="khead"><span class="kh" id="kh-clay">Clay</span></span>
+      <div class="keys">${CLAYS.map(([k, label]) =>
+        `<label class="pick"><input type="radio" name="k-clay" value="${k}">${CLAY_ICON[k]}<span class="fn">${label}</span></label>`).join("")}</div>
+    </div>${sw("shake")}
+    <div class="knob" role="radiogroup" aria-labelledby="kh-font">
+      <span class="khead"><span class="kh" id="kh-font">Typeface</span><span class="kval" id="kFont" aria-hidden="true"></span></span>
+      <div class="keys">${FONTS.map(([k, label, v]) =>
+        `<label class="pick" title="${label}"><input type="radio" name="k-font" value="${k}" aria-label="${label}"><span class="fs" style="font-family:var(${v})" aria-hidden="true">Aa</span></label>`).join("")}</div>
+    </div>${sw("cost")}`;
+  $("console").addEventListener("change", (e) => {
+    const t = e.target, k = t.name.slice(2);
+    if (k === "clay" || k === "font") PREFS[k] = t.value;
+    else if (k === "shake" || k === "cost") PREFS[k] = t.checked;
+    else return;
+    savePrefs();
+    showPrefs();
+  });
+}
+
 /* the controls show what is in force, whoever changed it — this tab, another one, or a reset */
 function syncPrefs() {
   const panel = $("prefsPanel");
   panel.querySelectorAll('input[name="theme"]').forEach((r) => { r.checked = r.value === PREFS.theme; });
   for (const [k] of SWITCHES) panel.querySelector(`input[name="${k}"]`).checked = PREFS[k];
   panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; });
-  panel.querySelectorAll('input[name="clay"]').forEach((r) => { r.checked = r.value === PREFS.clay; });
   panel.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === PREFS.font; });
   /* a value is written only when it differs, so a slider being dragged or an open picker is left alone */
   for (const [k, , lo, hi, , show, say] of SLIDERS) {
@@ -6030,6 +6256,12 @@ function syncPrefs() {
   if (!PREFS.rain) panel.querySelectorAll("[data-rain]").forEach((el) => { el.hidden = true; });
   $("prefsStill").hidden = !REDUCE.matches;
   $("prefsReset").disabled = Object.keys(PREF_DEFAULTS).every((k) => PREFS[k] === PREF_DEFAULTS[k]);
+  /* and so do Neumorphism's, on the page */
+  const con = $("console");
+  for (const k of ["clay", "font"]) con.querySelectorAll(`input[name="k-${k}"]`).forEach((r) => { r.checked = r.value === PREFS[k]; });
+  for (const k of ["shake", "cost"]) con.querySelector(`input[name="k-${k}"]`).checked = PREFS[k];
+  $("kFont").textContent = FONTS.find(([k]) => k === PREFS.font)[1];
+  $("kStill").hidden = !REDUCE.matches;
 }
 
 function applyPrefs() {
@@ -6143,6 +6375,7 @@ function renderCost() {
 /* ═════════════════════════ wiring ═════════════════════════ */
 buildRings();
 buildPrefs();
+buildConsole();
 buildGraphSpans();
 applyPrefs();   // before the first render, so the first frame is already in the chosen look
 $("detailOuter").inert = true;
