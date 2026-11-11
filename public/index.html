@@ -16,8 +16,8 @@
    backdrop and to the ring's interior: the sky drifts on a ~30s loop
    and warms when the limit heats up, and the ring holds a small fluid
    stirred by the same heat. The arc, tick and chart move only when
-   data moves. Settings offers two more themes, Matrix and Train, at
-   the end of this sheet.
+   data moves. Settings offers three more themes, Matrix, Train and
+   Neumorphism, at the end of this sheet.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -245,6 +245,8 @@ main {
 /* a setting's own settings sit under it, and are there only while it is on: the fluid's speed,
    the rain's amount and speed */
 .prow.sub { cursor: default; padding: 0 0 6px 12px; }
+/* a row that is not itself a label holds its own controls; only they take a click */
+div.prow { cursor: default; }
 .prow.sub .pname { font-size: 12px; color: var(--ink-2); }
 
 /* a switch is a checkbox underneath, so Space flips it and it is announced as one */
@@ -303,7 +305,6 @@ main {
 .range:focus-visible, .pcolour:focus-visible { outline: 2px solid rgb(var(--tint) / .7); outline-offset: 2px; }
 
 .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 4px 0 2px; }
-[aria-labelledby="ph-theme"].picks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pick {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px;
   padding: 8px 4px 6px; border-radius: 10px; border: 1px solid var(--hair); background: rgb(var(--tint) / .025);
@@ -1077,6 +1078,364 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
     16px 0 #ac3232, 18px 0 #ac3232, 20px 0 #d9a066, 0 2px #222034, 4px 2px #ac3232, 8px 2px #ac3232, 12px 2px #222034,
     16px 2px #222034, 20px 2px #222034, 4px -2px #222034, 18px -2px #222034, 18px -4px #222034, 16px -6px #fff, 14px -8px #fff;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Neumorphism — the fourth theme, chosen in Settings: soft clay.
+
+   The page is one material, a light clay or a dark one, lit from the
+   top left. The plates
+   and the buttons stand proud of it, with a light shadow up and to the
+   left and a dark one down and to the right; the wells are pressed into
+   it, and in a hollow the two shadows change sides. A button that is on,
+   or open, is pressed in. Nothing is drawn behind the page, and nothing
+   moves but the shake and, until the first reading, the freshness dot's
+   breath, as on the glass.
+
+   Its palette is its own, as Glass's is: the ground never follows the
+   ring. On the light clay the band and pace colours keep the other
+   themes' ladder in darker inks for a light ground (STOP_LIGHT and PACE_LIGHT in the
+   script hold the same values): their lightness still falls with
+   danger, which here means the worse the reading, the harder it stands
+   out. A word in a band's colour is taken part of the way to the text's
+   ink, so it reads as text and not only as a mark.
+   It comes as a light clay and a dark one, on data-clay, which the
+   script sets from Settings or from the system; the dark one reads
+   Glass's ladder, which was set for a dark ground.
+   All of it keys on data-theme.
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-theme="neumorphism"] {
+  color-scheme: light;
+  --clay:    #e0e5ec;
+  --lift:    rgb(255 255 255 / .9);    /* the light, from the top left */
+  --shade:   rgb(163 177 198 / .68);   /* and the shadow it casts */
+  --up:      9px 9px 20px var(--shade), -9px -9px 20px var(--lift);
+  --up-sm:   4px 4px 9px var(--shade), -4px -4px 9px var(--lift);
+  --down:    inset 6px 6px 12px var(--shade), inset -6px -6px 12px var(--lift);
+  --down-sm: inset 3px 3px 6px var(--shade), inset -3px -3px 6px var(--lift);
+  --tint:    52 62 80;
+  --ink-rgb: 42 51 66;
+  --hi:      #232b38;
+  --ink:     #2a3342;   /* 10:1 on the clay */
+  --ink-2:   #404a5b;   /* 7.1 */
+  --ink-3:   #4e5869;   /* 5.7 */
+  --ink-4:   #5b6576;   /* 4.65: the faintest ink still carries readings, so it holds 4.5 */
+  --base:    var(--clay);
+  --hair:    rgb(var(--tint) / .12);
+  --edge:    rgb(var(--tint) / .2);
+  /* each band holds 3:1 against the groove's floor, which is darker than the clay */
+  --steady:    #17866f;   --steady-rgb:    23 134 111;
+  --warning:   #835a05;   --warning-rgb:  131  90   5;
+  --critical:  #88370b;   --critical-rgb: 136  55  11;
+  --exhausted: #781227;   --exhausted-rgb:120  18  39;
+  --unknown:   #6f7786;   --unknown-rgb:  111 119 134;
+  --pace-hot:  #934009;   --pace-hot-rgb: 147  64   9;
+  --coin:   #56609e;
+  --coin-2: #4b558f;
+  --cerr:   #9e1b36;
+  /* the rest of the clay's own colours, named so the dark clay can recolour them */
+  --plate:   16px 16px 36px var(--shade), -16px -16px 36px var(--lift);
+  --float:   16px 18px 36px rgb(140 154 178 / .75), -8px -8px 26px var(--lift);
+  --face:    linear-gradient(145deg, #e9edf3, #d6dbe3);
+  --groove:  rgb(var(--tint) / .07);
+  --groove-held: rgb(var(--tint) / .045);
+  --setting: rgb(var(--ink-rgb) / .85);
+  --cut:     rgb(var(--tint) / .13);
+  --hold-ink: #6f4e05;
+  --down-ink: #82162d;
+  --sw-on:   var(--ink-3);
+  --sw-on-shade: inset 2px 2px 5px rgb(18 24 34 / .5), inset -1px -1px 3px rgb(255 255 255 / .12);
+  --sw-knob-on: #f3f5f9;
+}
+/* The dark clay: the same material at night, chosen in Settings or taken from the system. Its
+   bands are Glass's, which were set for a dark ground, so with them comes Glass's bloom, rising
+   with danger so a darker band does not recede; the script reads Glass's ladder too. */
+:root[data-theme="neumorphism"][data-clay="dark"] {
+  color-scheme: dark;
+  --clay:    #2a2f37;
+  --lift:    rgb(255 255 255 / .065);
+  --shade:   rgb(6 8 12 / .55);
+  --tint:    210 220 238;
+  --ink-rgb: 226 231 239;
+  --hi:      #f3f5f9;
+  --ink:     #e2e7ef;   /* 10.8:1 on the clay */
+  --ink-2:   #c0c7d2;   /* 7.9 */
+  --ink-3:   #a4acb9;   /* 5.9 */
+  --ink-4:   #939cab;   /* 4.9 */
+  --steady:    #72ead0;   --steady-rgb:   114 234 208;
+  --warning:   #e0a52e;   --warning-rgb:  224 165  46;
+  --critical:  #ef6a3a;   --critical-rgb: 239 106  58;
+  --exhausted: #e0304f;   --exhausted-rgb:224  48  79;
+  --unknown:   #7d8ca3;   --unknown-rgb:  125 140 163;
+  --pace-hot:  #ff8f5a;   --pace-hot-rgb: 255 143  90;
+  --coin:   #c3c9ea;
+  --coin-2: #b6bee0;
+  --cerr:   #f0b9c4;
+  --float:   16px 18px 40px rgb(0 0 0 / .6), -8px -8px 26px var(--lift);
+  --face:    linear-gradient(145deg, #323842, #262a31);
+  --groove:  rgb(0 0 0 / .2);
+  --groove-held: rgb(0 0 0 / .13);
+  --setting: rgb(8 10 14 / .75);
+  --cut:     rgb(0 0 0 / .38);
+  --hold-ink: #f4dfb2;
+  --down-ink: #f7c6cf;
+  --sw-knob-on: var(--clay);
+  --sw-on-shade: inset 2px 2px 5px rgb(0 0 0 / .35), inset -1px -1px 3px rgb(255 255 255 / .2);
+}
+/* clipped at the groove's outer wall (circle(50%) of the bloom's stroke box is r 55.5, the bevel's
+   inset): the glow lights the channel and falls in onto the hub's wall, but never over the face */
+:root[data-theme="neumorphism"][data-clay="dark"] .arc.bloom { display: inline; clip-path: circle(50%); }
+/* at the cap the flood steps as far from a plain hub, by lightness, as Glass's does */
+:root[data-theme="neumorphism"][data-clay="dark"] .ring[data-band="exhausted"] .well { fill: rgb(var(--band-rgb) / .25); }
+:root[data-theme="neumorphism"] .sky,
+:root[data-theme="neumorphism"] .grain,
+:root[data-theme="neumorphism"] .vig { display: none; }
+
+/* the plates, standing proud of the ground */
+:root[data-theme="neumorphism"] .glass,
+:root[data-theme="neumorphism"] .cost {
+  border: 0; background: var(--clay);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: var(--plate);
+}
+:root[data-theme="neumorphism"] .glass { border-radius: 30px; }
+:root[data-theme="neumorphism"] .glass::before { display: none; }
+:root[data-theme="neumorphism"] .cost { border-radius: 24px; padding: 20px 24px 18px; }
+/* the row's two wells, the ring's and the chart's, are cut to one height and one inset from the plate */
+:root[data-theme="neumorphism"] .lrow {
+  align-items: stretch;
+  gap: clamp(28px, 3.4vw, 40px);
+  padding: clamp(20px, 2.4vw, 28px) clamp(24px, 3vw, 34px);
+}
+@media (min-width: 681px) { :root[data-theme="neumorphism"] .lrow { column-gap: clamp(12px, calc(3.4vw - 16px), 24px); } }
+
+/* the header lies on the ground: its chip and pill pressed into it, the gear standing up */
+:root[data-theme="neumorphism"] .mark h1 { color: var(--ink-2); }
+:root[data-theme="neumorphism"] .plan { border: 0; background: none; box-shadow: var(--down-sm); border-radius: 8px; padding: 4px 9px; color: var(--ink-3); }
+:root[data-theme="neumorphism"] .fresh { border: 0; background: none; box-shadow: var(--down-sm); padding: 5px 14px 5px 11px; }
+:root[data-theme="neumorphism"] .fresh[data-tone="hold"] { color: var(--hold-ink); background: rgb(var(--warning-rgb) / .07); }
+:root[data-theme="neumorphism"] .fresh[data-tone="down"] { color: var(--down-ink); background: rgb(var(--exhausted-rgb) / .07); }
+/* on the dark clay a crimson tint lightens the pill, which the crimson dot then sinks into */
+:root[data-theme="neumorphism"][data-clay="dark"] .fresh[data-tone="down"] { background: rgb(16 4 9 / .45); }
+:root[data-theme="neumorphism"][data-clay="dark"] .fresh[data-tone="down"] .dot { box-shadow: 0 0 0 3px rgb(var(--exhausted-rgb) / .12); }
+:root[data-theme="neumorphism"] .gear { width: 30px; height: 30px; border: 0; background: var(--clay); box-shadow: var(--up-sm); color: var(--ink-3); }
+:root[data-theme="neumorphism"] .gear:hover { background: var(--clay); color: var(--ink); }
+:root[data-theme="neumorphism"] .gear[aria-expanded="true"] { background: var(--clay); color: var(--ink); box-shadow: var(--down-sm); }
+
+/* buttons stand up, and go down while they are pressed or busy */
+:root[data-theme="neumorphism"] .dclose,
+:root[data-theme="neumorphism"] .dxspan,
+:root[data-theme="neumorphism"] .preset {
+  border: 0; background: var(--clay); color: var(--ink-2); border-radius: 9px; box-shadow: var(--up-sm);
+  transition: box-shadow .15s var(--ease), color .15s var(--ease);
+}
+:root[data-theme="neumorphism"] .dclose:hover,
+:root[data-theme="neumorphism"] .dxspan:hover,
+:root[data-theme="neumorphism"] .preset:hover:not(:disabled) { color: var(--ink); }
+:root[data-theme="neumorphism"] .dclose:active,
+:root[data-theme="neumorphism"] .dxspan:active,
+:root[data-theme="neumorphism"] .dxspan[aria-busy="true"],
+:root[data-theme="neumorphism"] .preset:active:not(:disabled) { box-shadow: var(--down-sm); color: var(--ink); }
+:root[data-theme="neumorphism"] .dxspan[aria-disabled="true"]:not([aria-busy]),
+:root[data-theme="neumorphism"] .preset:disabled { box-shadow: none; color: var(--ink-4); opacity: 1; }
+:root[data-theme="neumorphism"] .dxspans { gap: 10px; }
+/* a focus ring in the ink: the controls' own shadows would wash out a fainter one */
+:root[data-theme="neumorphism"] :focus-visible,
+:root[data-theme="neumorphism"] .pick:has(input:focus-visible),
+:root[data-theme="neumorphism"] .seg input:focus-visible + span { outline-color: var(--ink); }
+
+/* the ring's button rises a little under the pointer, and goes down while its detail is open */
+:root[data-theme="neumorphism"] .ring { border-radius: 22px; padding: 14px 18px 14px 14px;
+  transition: box-shadow .25s var(--ease), opacity .5s var(--ease); }
+:root[data-theme="neumorphism"] .ring:hover { background: none; }
+@media (hover: hover) {
+  :root[data-theme="neumorphism"] .ring:hover:not([aria-expanded="true"]) { box-shadow: var(--up-sm); }
+}
+:root[data-theme="neumorphism"] .ring[aria-expanded="true"] { background: none; box-shadow: var(--down); }
+/* the verdicts wrap rather than lose their ends, as Train's do */
+:root[data-theme="neumorphism"] .mpace,
+:root[data-theme="neumorphism"] .meta-eta { white-space: normal; overflow: visible; }
+
+/* The ring is a dial. Its face stands proud of the plate, out to r = 58.5 of the 120-unit ring;
+   the track is a groove in it, from the rim at 55.5 in to the hub at 44.5, and the arc lies in the
+   groove: the groove's shading is laid over it, so its walls overhang the arc the way they
+   overhang the floor. The two are children of .art like the drawing, so they shake with it; they
+   are hidden in the other themes, not undisplayed, as the fluid's canvas is, so their shake keeps
+   running on the drawing's clock and a ring already over pace when the theme comes on shakes in
+   one piece. */
+.art > .dial, .art > .bevel { position: absolute; border-radius: 50%; pointer-events: none; visibility: hidden; }
+:root[data-theme="neumorphism"] .art > .dial,
+:root[data-theme="neumorphism"] .art > .bevel { visibility: visible; }
+:root[data-theme="neumorphism"] .art > .dial {
+  z-index: 0; inset: 1.25%;
+  background: var(--face);
+  box-shadow: 7px 7px 16px var(--shade), -7px -7px 16px var(--lift);
+}
+:root[data-theme="neumorphism"] .art > .bevel { z-index: 2; inset: 3.75%; box-shadow: inset 3px 3px 5px var(--shade), inset -3px -3px 5px var(--lift); }
+:root[data-theme="neumorphism"] .art > .bevel::after {
+  content: ""; position: absolute; inset: 9.91%; border-radius: 50%;
+  box-shadow: 3px 3px 5px var(--shade), -3px -3px 5px var(--lift);
+}
+:root[data-theme="neumorphism"] .readout { z-index: 3; }
+:root[data-theme="neumorphism"] .track { stroke: var(--groove); stroke-width: 11; }
+:root[data-theme="neumorphism"] body[data-hold="1"] .track { stroke: var(--groove-held); }
+:root[data-theme="neumorphism"] .ring[data-state="unknown"] .track { stroke-width: 2.5; stroke: rgb(var(--tint) / .3); }
+/* a held reading's dashed rim goes out onto the face's lip, where the groove's wall cannot hide it;
+   at the cap it keeps the band's colour */
+:root[data-theme="neumorphism"] body[data-hold="1"] .rim { r: 57.1px; }
+:root[data-theme="neumorphism"] body[data-hold="1"] .ring:not([data-band="exhausted"]) .rim { stroke: rgb(var(--tint) / .38); stroke-width: 1.2; }
+/* the bloom keeps a dark arc from receding into a dark ground; on the light clay it stands out anyway */
+:root[data-theme="neumorphism"] .arc.bloom { display: none; }
+/* a served cut point at Glass's .5 falls under 3:1 on either clay's groove; the stations already read as faintly as on the glass */
+:root[data-theme="neumorphism"] .thmark:not(.station) { opacity: .85; }
+/* an overrun starts from the ink at a strength that already shows on the groove */
+:root[data-theme="neumorphism"] .ring[data-pace="over"] .gap { opacity: calc(.6 + .4 * var(--psev)); }
+/* the tick is still white, in a dark setting that holds it off the face, light or dark */
+:root[data-theme="neumorphism"] .nb { stroke: var(--setting); stroke-width: 5; }
+:root[data-theme="neumorphism"] .nl { stroke-width: 2; }
+:root[data-theme="neumorphism"] .ring[data-pace="over"] .nl { stroke-width: calc(2px + 1.6px * var(--psev)); }
+:root[data-theme="neumorphism"] .ring[data-pace="over"] .nb { stroke-width: calc(5px + 1.6px * var(--psev)); }
+/* the numeral is pressed into the hub: lit along its lower edges, as a cut is. Over pace, on
+   either clay, the numeral itself takes on the pace ink, since on the light one a glow would only
+   stain the hub; at the cap the flooded hub already says it */
+:root[data-theme="neumorphism"] .num { font-weight: 350; text-shadow: 1px 1px 1px var(--lift); }
+:root[data-theme="neumorphism"] .ring[data-pace="over"] .num { text-shadow: 1px 1px 1px var(--lift); }
+@supports (color: color-mix(in srgb, red, blue)) {
+  :root[data-theme="neumorphism"] .ring[data-pace="over"]:not([data-band="exhausted"]) .num {
+    color: color-mix(in srgb, var(--pace-ink) calc(var(--psev) * 85%), var(--hi));
+  }
+}
+:root[data-theme="neumorphism"] .pctsign { text-shadow: none; }
+
+/* The chart lies in a well. It is drawn as wide as its box, so the well is laid around the box,
+   over the margin it is given, rather than padding it sideways. */
+:root[data-theme="neumorphism"] .spark {
+  position: relative; isolation: isolate;
+  margin-inline: 16px; padding-block: 12px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+:root[data-theme="neumorphism"] .spark::before {
+  content: ""; position: absolute; z-index: -1; inset: 0 -16px; border-radius: 22px;
+  box-shadow: var(--down); pointer-events: none;
+}
+:root[data-theme="neumorphism"] .chart .lbl { stroke: var(--clay); }
+:root[data-theme="neumorphism"] .chartempty { border: 0; background: none; }
+/* the history is fainter than the fitted run, as on the glass, but no fainter than the glass makes it */
+:root[data-theme="neumorphism"] .chart .full { stroke: rgb(var(--ink-rgb) / .5); }
+:root[data-theme="neumorphism"] .chart .warnln { stroke: rgb(var(--warning-rgb) / .75); }
+
+/* the detail is a well pressed into the plate, at the row's inset, and its figures stand up in it */
+:root[data-theme="neumorphism"] .detailInner {
+  border-top: 0; background: none; border-radius: 22px; box-shadow: var(--down);
+  margin: 2px clamp(24px, 3vw, 34px) clamp(20px, 2.4vw, 28px);
+  padding: 20px clamp(16px, 2.4vw, 24px) 18px;
+}
+:root[data-theme="neumorphism"] .seam { display: none; }
+:root[data-theme="neumorphism"] .dband { border: 0; border-radius: 7px; padding: 4px 9px; opacity: 1; box-shadow: var(--down-sm); }
+@supports (color: color-mix(in srgb, red, blue)) {
+  /* words in a band's colour: its ink, taken part of the way to the text's, so they read at 5:1 */
+  :root[data-theme="neumorphism"] .dband { color: color-mix(in srgb, var(--band) 60%, var(--ink)) !important; }
+  :root[data-theme="neumorphism"] .meta-eta b { color: color-mix(in srgb, var(--band) 60%, var(--ink)); }
+}
+/* a held reading steps back in a fainter ink, not by fading, which costs more on a light ground */
+:root[data-theme="neumorphism"] body[data-hold="1"] :is(.mclock, .dtitle) { opacity: 1; color: var(--ink-3); }
+:root[data-theme="neumorphism"] .readouts { gap: 14px; background: none; border: 0; border-radius: 0; overflow: visible; }
+:root[data-theme="neumorphism"] .ro { background: var(--clay); border-radius: 14px; box-shadow: var(--up-sm); padding: 10px 14px 11px; }
+/* the tiles are narrower than the glass's joined grid, so a figure wraps rather than lose its end */
+:root[data-theme="neumorphism"] .ro dd { white-space: normal; overflow: visible; }
+/* a rule is cut into the clay: a dark line with the light catching the edge below it */
+:root[data-theme="neumorphism"] .dexport,
+:root[data-theme="neumorphism"] .psec + .psec,
+:root[data-theme="neumorphism"] .pfoot { border-top-color: var(--cut); box-shadow: inset 0 1px 0 var(--lift); }
+:root[data-theme="neumorphism"] .rule .ln { height: 2px; background: linear-gradient(var(--cut) 50%, var(--lift) 50%);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000); mask-image: linear-gradient(90deg, transparent, #000); }
+:root[data-theme="neumorphism"] .rule .ln.r { -webkit-mask-image: linear-gradient(90deg, #000, transparent); mask-image: linear-gradient(90deg, #000, transparent); }
+:root[data-theme="neumorphism"] .rule .tag { color: var(--ink-3); }
+
+/* at a phone's width the glass page's narrow rules give the ring room, and these outrank them, so
+   they give it back; the detail's well keeps to the row's inset */
+@media (max-width: 560px) {
+  :root[data-theme="neumorphism"] .lrow { padding: 18px; }
+  :root[data-theme="neumorphism"] .ring { padding: 8px; }
+  :root[data-theme="neumorphism"] .detailInner { margin: 2px 18px 18px; padding-inline: 14px; }
+}
+
+/* the cost strip keeps its own family (--coin, --coin-2, --cerr), in inks set for each clay: darker on
+   the light one, lighter than Glass's on the dark; its bar lies in a pressed channel */
+:root[data-theme="neumorphism"] .chead h2 { color: var(--coin); }
+:root[data-theme="neumorphism"] .chead h2 .sl { color: var(--ink-4); opacity: 1; }
+:root[data-theme="neumorphism"] .cwarn b { color: var(--ink); }
+:root[data-theme="neumorphism"] .ctot .v { color: var(--coin-2); }
+:root[data-theme="neumorphism"] .cbar { height: 11px; padding: 2px; border-radius: 6px; background: none; box-shadow: var(--down-sm); }
+:root[data-theme="neumorphism"] .cbar span:first-child { border-radius: 4px 0 0 4px; }
+:root[data-theme="neumorphism"] .cbar span:last-child { border-radius: 0 4px 4px 0; }
+:root[data-theme="neumorphism"] .cbar span:only-child { border-radius: 4px; }
+
+/* Settings: a plate floating higher than the rest, so its shadow falls further */
+:root[data-theme="neumorphism"] .panel {
+  border: 0; border-radius: 20px; background: var(--clay);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: var(--float);
+}
+:root[data-theme="neumorphism"] .pnote { color: var(--hold-ink); }
+:root[data-theme="neumorphism"] .switch { width: 38px; height: 22px; border: 0; background: var(--clay); box-shadow: var(--down-sm); }
+:root[data-theme="neumorphism"] .switch::before {
+  top: 3px; left: 3px; width: 16px; height: 16px; background: var(--clay);
+  box-shadow: 2px 2px 4px var(--shade), -1px -1px 3px var(--lift);
+}
+/* off is a slate knob lying in the pressed track; on is the ink, not a band colour, as it is white elsewhere */
+:root[data-theme="neumorphism"] .switch:not(:checked)::before { background: var(--ink-4); box-shadow: none; }
+:root[data-theme="neumorphism"] .switch:checked { background: var(--sw-on); border: 0; box-shadow: var(--sw-on-shade); }
+:root[data-theme="neumorphism"] .switch:checked::before { transform: translateX(16px); background: var(--sw-knob-on); }
+:root[data-theme="neumorphism"] .picks { gap: 12px; padding: 8px 2px 6px; }
+:root[data-theme="neumorphism"] .pick { border: 0; border-radius: 12px; background: var(--clay); box-shadow: var(--up-sm); }
+/* the chosen pick is pressed in and ringed in the ink: a shadow alone barely tells the two apart.
+   The ring goes first, since the first shadow paints on top */
+:root[data-theme="neumorphism"] .pick:has(input:checked) { background: var(--clay); box-shadow: inset 0 0 0 1.5px var(--ink-3), var(--down-sm); }
+:root[data-theme="neumorphism"] .pick:has(input:checked) .fn { color: var(--ink); }
+:root[data-theme="neumorphism"] .pick .swatch { border: 0; }
+:root[data-theme="neumorphism"] .seg { gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; }
+:root[data-theme="neumorphism"] .seg span { padding: 3px 11px; border-radius: 8px; background: var(--clay); box-shadow: var(--up-sm); color: var(--ink-3); }
+:root[data-theme="neumorphism"] .seg input:checked + span { background: var(--clay); box-shadow: inset 0 0 0 1.5px var(--ink-3), var(--down-sm); color: var(--ink); }
+
+/* Forced colours drop every shadow, and with them every edge this theme has, so the edges come
+   back as borders and the switches as a track and a knob */
+@media (forced-colors: active) {
+  :root[data-theme="neumorphism"] :is(.glass, .cost, .panel, .detailInner, .ro, .fresh, .plan) { border: 1px solid CanvasText; }
+  :root[data-theme="neumorphism"] .spark::before { border: 1px solid CanvasText; }
+  :root[data-theme="neumorphism"] :is(.gear, .dclose, .dxspan, .preset, .pick, .seg span) { border: 1px solid ButtonText; }
+  :root[data-theme="neumorphism"] .seg input:checked + span { border: 2px solid Highlight; }
+  :root[data-theme="neumorphism"] .ring[aria-expanded="true"] { outline: 1px solid CanvasText; }
+  :root[data-theme="neumorphism"] .pick:has(input:checked) { border: 3px solid Highlight; }
+  :root[data-theme="neumorphism"] .switch { border: 1px solid ButtonText; }
+  :root[data-theme="neumorphism"] .switch:checked { background: Highlight; border-color: Highlight; }
+  :root[data-theme="neumorphism"] .switch::before,
+  :root[data-theme="neumorphism"] .switch:not(:checked)::before { forced-color-adjust: none; background: ButtonText; box-shadow: none; }
+  :root[data-theme="neumorphism"] .switch:checked::before { background: HighlightText; }
+}
+
+/* the theme's patch of itself, in Settings: a small dial standing up out of the clay, a steady
+   arc lying in its groove. The teal is fixed, so the patch looks the same at any reading */
+.pick[data-pick="neumorphism"] .swatch { position: relative; background: linear-gradient(160deg, #eef1f5 0%, #e0e5ec 45%, #cdd4de 100%); }
+.pick[data-pick="neumorphism"] .swatch::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+  background: radial-gradient(closest-side, #e3e8ee 60%, transparent 63% 87%, #e3e8ee 90%),
+              conic-gradient(#17866f 0 62%, #c9d0da 0);
+  box-shadow: 2px 2px 4px rgb(140 155 180 / .9), -2px -2px 4px #fff;
+}
+.pick[data-pick="neumorphism"] .swatch::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+  background: radial-gradient(closest-side, transparent 60%, rgb(90 105 130 / .28) 64%, transparent 76%);
+}
+/* and the dark clay's, wherever the clay in force would be dark, so the patch shows what picking it gives */
+:root[data-clay="dark"] .pick[data-pick="neumorphism"] .swatch { background: linear-gradient(160deg, #363c46 0%, #2a2f37 45%, #1f2329 100%); }
+:root[data-clay="dark"] .pick[data-pick="neumorphism"] .swatch::before {
+  background: radial-gradient(closest-side, #2d323a 60%, transparent 63% 87%, #2d323a 90%),
+              conic-gradient(#72ead0 0 62%, #1d2026 0);
+  box-shadow: 2px 2px 4px rgb(0 0 0 / .6), -2px -2px 4px rgb(255 255 255 / .08);
+}
+:root[data-clay="dark"] .pick[data-pick="neumorphism"] .swatch::after {
+  background: radial-gradient(closest-side, transparent 60%, rgb(0 0 0 / .4) 64%, transparent 76%);
+}
 </style>
 </head>
 <body data-hold="0">
@@ -1257,11 +1616,23 @@ const STOP = {
    derived from the served floor and cap, not invented. */
 const WARN_STATIONS = 4;
 const BLOOM_STOP = { steady: .3, warning: .45, critical: .62, exhausted: .78, unknown: 0 };
+/* Neumorphism's light clay reads the same ladder in darker inks (the dark clay reads STOP): luminance .18 → .12 →
+   .08 → .05, falling with danger by about the same steps, so on the clay the worse a reading, the
+   harder it stands out, and the steady arc shows at 3:1 against the groove's floor, which is darker
+   than the clay. Its stylesheet spells out the same values as --steady and the rest. */
+const STOP_LIGHT = {
+  steady:    [ 23, 134, 111], warning:  [131,  90,  5], critical: [136, 55, 11],
+  exhausted: [120,  18,  39], unknown:  [111, 119, 134],
+};
+const neuOn = () => document.documentElement.dataset.theme === "neumorphism";
+/* the light clay reads the light ladder; the dark clay reads Glass's, which was set for a dark ground */
+const neuLight = () => neuOn() && document.documentElement.dataset.clay !== "dark";
 const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
 const rgbCss = (c) => "rgb(" + c[0] + " " + c[1] + " " + c[2] + ")";
 
 function rampOf(pct, th, band) {
-  if (band === "unknown" || typeof pct !== "number") return { rgb: STOP.unknown, bloom: BLOOM_STOP.unknown };
+  const P = neuLight() ? STOP_LIGHT : STOP;
+  if (band === "unknown" || typeof pct !== "number") return { rgb: P.unknown, bloom: BLOOM_STOP.unknown };
   const warn = num(th && th.warningFloorPercent, 70);
   const crit = num(th && th.criticalPercent, 95);
   const exh  = num(th && th.exhaustedPercent, 100);
@@ -1269,9 +1640,9 @@ function rampOf(pct, th, band) {
      the darker stop rather than dividing by zero */
   const seg = (a, b, lo, hi) => {
     const t = hi > lo ? clamp((pct - lo) / (hi - lo), 0, 1) : 1;
-    return { rgb: mix(STOP[a], STOP[b], t), bloom: BLOOM_STOP[a] + (BLOOM_STOP[b] - BLOOM_STOP[a]) * t };
+    return { rgb: mix(P[a], P[b], t), bloom: BLOOM_STOP[a] + (BLOOM_STOP[b] - BLOOM_STOP[a]) * t };
   };
-  if (pct >= exh)  return { rgb: STOP.exhausted, bloom: BLOOM_STOP.exhausted };
+  if (pct >= exh)  return { rgb: P.exhausted, bloom: BLOOM_STOP.exhausted };
   /* Runs the whole way to --exhausted across the band, rather than stopping at --critical.
      On this tier the critical cut is 99.75, so amber → orange had to cover 70 → 99.75 and
      only 0.138 of luminance was available to spend on it: 75% and 95% were a hundredth apart
@@ -1283,7 +1654,7 @@ function rampOf(pct, th, band) {
      changes here is only the colour partway up; the band boundaries are still exactly the
      ones the API serves, and --critical keeps its own mark at its served position. */
   if (pct >= warn) return seg("warning", "exhausted", warn, exh);
-  return { rgb: STOP.steady, bloom: BLOOM_STOP.steady };
+  return { rgb: P.steady, bloom: BLOOM_STOP.steady };
 }
 
 /* Recomputed from the absolute instant, so it stays true between polls
@@ -1351,6 +1722,14 @@ function paceMultiple(pct, el) {
    --ink-4: an over-pace verdict is a verdict even when it is mild, and
    it should read at least as clearly as the label above it. */
 const PACE_INK_COLD = [141, 151, 166], PACE_MARK_COLD = [255, 255, 255], PACE_HOT = [255, 143, 90];
+/* The same, on Neumorphism's light ground: a darker slate to a deep orange whose lightness sits
+   between its warning and critical inks, so a caption keeps 4.5:1 on the clay at either end and the
+   overrun line 3:1 on the groove. The mark starts from the ink rather than from white. */
+const PACE_LIGHT = { inkCold: [88, 98, 114], ink: [147, 64, 9], markCold: [42, 51, 66], mark: [147, 64, 9] };
+/* the dark clay's slate: above its faintest ink, so a mild verdict never reads quieter than "on pace" */
+const PACE_DARK_COLD = [153, 162, 177];
+const paceInk  = (sev) => (neuLight() ? mix(PACE_LIGHT.inkCold, PACE_LIGHT.ink, sev) : mix(neuOn() ? PACE_DARK_COLD : PACE_INK_COLD, PACE_HOT, sev));
+const paceMark = (sev) => (neuLight() ? mix(PACE_LIGHT.markCold, PACE_LIGHT.mark, sev) : mix(PACE_MARK_COLD, PACE_HOT, sev));
 
 /* The instant a pace judgement is made against. A countdown is a real
    clock and keeps running through a hold, but anything that COMPARES the
@@ -1494,6 +1873,7 @@ function buildRings() {
             aria-expanded="false" aria-controls="detail" data-state="unknown" data-pace="none">
       <span class="art">
         <canvas class="fluid" data-r="fluid" aria-hidden="true"></canvas>
+        <span class="dial"></span>
         <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
           <circle class="well" cx="60" cy="60" r="44.5"></circle>
           <circle class="rim" cx="60" cy="60" r="55.2"></circle>
@@ -1512,6 +1892,7 @@ function buildRings() {
             <circle class="ncap" cx="60" cy="1" r="2.3"></circle>
           </g>
         </svg>
+        <span class="bevel"></span>
         <span class="readout" aria-hidden="true">
           <span class="numrow"><span class="num" data-r="num">—</span><span class="pctsign" data-r="sign">%</span></span>
         </span>
@@ -1658,8 +2039,8 @@ function paintRing(key, th, f) {
        it is at 90% */
     btn.dataset.hot = sev >= PACE_LOUD ? "1" : "0";
     btn.style.setProperty("--psev", sev.toFixed(3));
-    btn.style.setProperty("--pace-ink", rgbCss(mix(PACE_INK_COLD, PACE_HOT, sev)));
-    btn.style.setProperty("--pace-mark", rgbCss(mix(PACE_MARK_COLD, PACE_HOT, sev)));
+    btn.style.setProperty("--pace-ink", rgbCss(paceInk(sev)));
+    btn.style.setProperty("--pace-mark", rgbCss(paceMark(sev)));
     /* the headroom / overshoot span, drawn as a length rather than
        left to arithmetic */
     gap.setAttribute("d", arcPath(41.5, Math.min(frac, el), Math.max(frac, el)));
@@ -1744,7 +2125,7 @@ function marksAhead(th, pct) {
 function paintThresholds(key, th, on, pct) {
   const host = q(key, "thmarks");
   const marks = on && th && typeof pct === "number" ? marksAhead(th, pct) : [];
-  const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",");
+  const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",") + (neuLight() ? " light" : "");
   if (host.dataset.k === stamp) return;
   host.dataset.k = stamp;
   host.innerHTML = marks.map(({ v, served }) => {
@@ -1896,7 +2277,7 @@ function renderDetail(key) {
     const sev = d > PACE_DEAD ? paceSeverity(lim.percent, el) : 0;
     const mult = sev >= PACE_LOUD ? " · " + paceMultiple(lim.percent, el) + " clock" : "";
     const ink = sev > 0
-      ? ` style="color:${rgbCss(mix(PACE_INK_COLD, PACE_HOT, sev))}${sev >= PACE_LOUD ? ";font-weight:600" : ""}"`
+      ? ` style="color:${rgbCss(paceInk(sev))}${sev >= PACE_LOUD ? ";font-weight:600" : ""}"`
       : "";
     paceHtml = `<dd${ink}>${d > PACE_DEAD ? "▲ " + g : d < -PACE_DEAD ? "▼ " + g : "◆ 0"}<small${ink}>${
       d > PACE_DEAD ? "over pace" + mult : d < -PACE_DEAD ? "under pace" : "on pace"}${f.hold ? " · held" : ""}</small></dd>`;
@@ -2014,11 +2395,16 @@ function renderDetail(key) {
      markup; only touch the DOM when something actually changed */
   if (html !== S.lastDetail) {
     S.lastDetail = html;
+    /* a rebuild (a new reading, or the clay turning with the system) must not drop the keyboard's place */
+    const wasOnClose = !!document.activeElement && document.activeElement === $("dclose");
     detailEl.innerHTML = html;
     detailEl.style.setProperty("--band", rgbCss(ramp.rgb));
     detailEl.style.setProperty("--band-rgb", ramp.rgb.join(" "));
     const close = $("dclose");
-    if (close) close.addEventListener("click", () => { toggle(key); $("ring-" + key).focus(); });
+    if (close) {
+      close.addEventListener("click", () => { toggle(key); $("ring-" + key).focus(); });
+      if (wasOnClose) close.focus({ preventScroll: true });
+    }
   }
 }
 
@@ -2408,7 +2794,7 @@ function graphName(key, span) {
 }
 
 function drawGraph(key, h, [sec, , spanWords]) {
-  const { w: GW, h: GH, pad, scale, chartTop, chartH } = GRAPH, pixel = trainOn(), terminal = tuiOn();
+  const { w: GW, h: GH, pad, scale, chartTop, chartH } = GRAPH, pixel = trainOn(), terminal = tuiOn(), soft = neuOn();
   const canvas = document.createElement("canvas");
   canvas.width = GW * scale; canvas.height = GH * scale;
   const ctx = canvas.getContext("2d");
@@ -2420,11 +2806,12 @@ function drawGraph(key, h, [sec, , spanWords]) {
   const probe = document.createElement("span");
   row.appendChild(probe);
   const colour = (v) => { probe.style.color = v; return getComputedStyle(probe).color; };
-  let ink, dim, faint, hi, bg, frame;
+  let ink, dim, faint, hi, bg, frame, lift, shade;
   try {
     ink = colour("var(--ink)"); dim = colour("var(--ink-3)"); faint = colour("var(--ink-4)"); hi = colour("var(--hi)");
-    bg = pixel ? colour("var(--plate)") : terminal ? "#000" : "#10131a";
+    bg = pixel ? colour("var(--plate)") : terminal ? "#000" : soft ? colour("var(--clay)") : "#10131a";
     frame = pixel ? colour("var(--band)") : terminal ? MX_INK.line : colour("var(--edge)");
+    if (soft) { lift = colour("var(--lift)"); shade = colour("var(--shade)"); }
   } finally {
     probe.remove();
   }
@@ -2434,9 +2821,22 @@ function drawGraph(key, h, [sec, , spanWords]) {
   /* a bitmap face is crisp only at its own sizes */
   const size = pixel ? { small: 20, title: 40, big: 60 } : { small: 14, title: 28, big: 60 };
 
-  /* the plate: Train's with stepped corners, as its plates have; the others square */
+  /* the plate: Train's with stepped corners, as its plates have; Neumorphism's standing up out of
+     the clay, lit from the top left, with room around it for its shadow to fade out inside the
+     picture (a shadow's blur and offset are in the canvas's own pixels, so twice the page's); the
+     others square */
   ctx.fillStyle = bg;
-  if (pixel) {
+  if (soft) {
+    ctx.fillRect(0, 0, GW, GH);
+    const m = 24;
+    const plate = () => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(m, m, GW - 2 * m, GH - 2 * m, 26); else ctx.rect(m, m, GW - 2 * m, GH - 2 * m); ctx.fill(); };
+    ctx.save();
+    ctx.shadowBlur = 14 * scale;
+    /* the light first, so the dark falls over it, as the page's box-shadows stack */
+    ctx.shadowColor = lift;  ctx.shadowOffsetX = ctx.shadowOffsetY = -6 * scale; plate();
+    ctx.shadowColor = shade; ctx.shadowOffsetX = ctx.shadowOffsetY = 6 * scale; plate();
+    ctx.restore();
+  } else if (pixel) {
     ctx.fillRect(3, 0, GW - 6, GH);
     ctx.fillRect(0, 3, GW, GH - 6);
     ctx.fillStyle = frame;
@@ -3053,8 +3453,8 @@ function fluidTick(ts) {
    Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
    through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
-  /* the terminal and the scene have no fluid, so under them the loop stops too */
-  const on = PREFS.fluid && !tuiOn() && !trainOn();
+  /* the terminal, the scene and the clay have no fluid, so under them the loop stops too */
+  const on = PREFS.fluid && !tuiOn() && !trainOn() && !neuOn();
   for (const key of ORDER) {
     if (!FLUIDS[key]) continue;
     const canvas = q(key, "fluid");
@@ -5428,8 +5828,10 @@ function trainMotion() {
    theme's own — Glass's fluid, its speed, the shake, the moving
    background and the typeface; the Matrix terminal's rain, how much
    of it falls, how fast, and its two colours; whether Train's scene
-   moves, and its own shake, which shares Glass's switch. One belongs
-   to no theme: whether the cost strip is shown. The
+   moves, and its own shake, which shares Glass's switch; and
+   Neumorphism's clay, light, dark or as the system is, and its shake
+   and typeface, which share Glass's. One belongs to no theme:
+   whether the cost strip is shown. The
    panel lists only the settings of the theme on screen, and that one. Kept
    in this browser, applied before the ring is first drawn so a
    chosen look never flashes in the default one, and followed in other
@@ -5439,16 +5841,24 @@ function trainMotion() {
    everything, whatever these say.                                    */
 const PREFS_KEY = "ccquota.prefs";
 const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true,
-                        rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", scene: true, cost: true, font: "system" };
+                        rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", scene: true, cost: true, font: "system",
+                        clay: "system" };
 /* key, label, and the glyphs on its swatch */
-const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""]];
+const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""], ["neumorphism", "Neumorphism", ""]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
+/* Neumorphism's clay: light, dark, or whichever the system asks for, followed as it changes. Under
+   forced colours the ground is the system's, so the clay follows the system's palette whatever
+   was chosen, and the choice returns when they are off. */
+const CLAYS = [["light", "Light"], ["dark", "Dark"], ["system", "System"]];
+const DARK = matchMedia("(prefers-color-scheme: dark)");
+const FORCED = matchMedia("(forced-colors: active)");
+const clayOf = (p) => (p.clay === "system" || FORCED.matches ? (DARK.matches ? "dark" : "light") : p.clay);
 /* key, label, and the stylesheet variable holding its stack */
 const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source Serif 4", "--font-serif"],
                ["noto-sans", "Noto Sans", "--font-noto"], ["fira-code", "Fira Code", "--font-code"]];
 /* key, label, hint, and the themes it belongs to, or "all" */
 const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "glass"],
-                  ["shake", "Vibration", "The ring shakes while over pace", "glass train"],
+                  ["shake", "Vibration", "The ring shakes while over pace", "glass train neumorphism"],
                   ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
                   ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"],
                   ["scene", "Moving scene", "The train, its smoke and the fire", "train"],
@@ -5475,6 +5885,7 @@ function loadPrefs() {
   if (!saved || typeof saved !== "object") return p;
   for (const [k] of SWITCHES) if (typeof saved[k] === "boolean") p[k] = saved[k];
   if (SPEEDS.some(([v]) => v === saved.speed)) p.speed = saved.speed;
+  if (CLAYS.some(([k]) => k === saved.clay)) p.clay = saved.clay;
   for (const [k, , lo, hi, step] of SLIDERS) {
     if (typeof saved[k] === "number" && saved[k] >= lo && saved[k] <= hi) p[k] = onStep(saved[k], lo, hi, step);
   }
@@ -5516,6 +5927,11 @@ function buildPrefs() {
       <div class="phead" id="ph-theme">Theme</div>
       <div class="picks" role="radiogroup" aria-labelledby="ph-theme">${THEMES.map(([k, label, sample]) =>
         `<label class="pick" data-pick="${k}"><input type="radio" name="theme" value="${k}"><span class="swatch" aria-hidden="true">${sample}</span><span class="fn">${label}</span></label>`).join("")}</div>
+      <div class="prow" data-for="neumorphism">
+        <span class="pname" id="pn-clay">Clay</span>
+        <div class="seg" role="radiogroup" aria-labelledby="pn-clay">${CLAYS.map(([k, label]) =>
+          `<label><input type="radio" name="clay" value="${k}"><span>${label}</span></label>`).join("")}</div>
+      </div>
     </div>
     <div class="psec" role="group" aria-labelledby="ph-motion">
       <div class="phead" id="ph-motion">Motion</div>
@@ -5540,7 +5956,7 @@ function buildPrefs() {
       <div class="phead" id="ph-colour">Colours</div>
       ${COLOURS.map(colour).join("")}
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-font" data-for="glass">
+    <div class="psec" role="group" aria-labelledby="ph-font" data-for="glass neumorphism">
       <div class="phead" id="ph-font">Typeface</div>
       <div class="picks" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
         `<label class="pick"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
@@ -5559,6 +5975,7 @@ function buildPrefs() {
     const t = e.target;
     if (SWITCHES.some(([k]) => k === t.name)) PREFS[t.name] = t.checked;
     else if (t.name === "speed") PREFS.speed = Number(t.value);
+    else if (t.name === "clay") PREFS.clay = t.value;
     else if (t.name === "font") PREFS.font = t.value;
     else if (t.name === "theme") PREFS.theme = t.value;
     else if (!knob(t)) return;
@@ -5586,6 +6003,7 @@ function syncPrefs() {
   panel.querySelectorAll('input[name="theme"]').forEach((r) => { r.checked = r.value === PREFS.theme; });
   for (const [k] of SWITCHES) panel.querySelector(`input[name="${k}"]`).checked = PREFS[k];
   panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; });
+  panel.querySelectorAll('input[name="clay"]').forEach((r) => { r.checked = r.value === PREFS.clay; });
   panel.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === PREFS.font; });
   /* a value is written only when it differs, so a slider being dragged or an open picker is left alone */
   for (const [k, , lo, hi, , show, say] of SLIDERS) {
@@ -5604,7 +6022,7 @@ function syncPrefs() {
   /* Only the settings of the theme on screen are listed — the glass page's when a theme cannot
      run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
      and the rain's amount and speed only while the rain is on. */
-  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : "glass";
+  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : neuOn() ? "neumorphism" : "glass";
   panel.querySelectorAll("[data-for]").forEach((el) => {
     el.hidden = el.dataset.for !== "all" && !el.dataset.for.split(" ").includes(shown);
   });
@@ -5617,6 +6035,8 @@ function syncPrefs() {
 function applyPrefs() {
   const root = document.documentElement;
   root.dataset.theme = PREFS.theme;
+  /* set whatever the theme, so the theme's patch in Settings can show the clay picking it would give */
+  root.dataset.clay = clayOf(PREFS);
   root.dataset.font = faceOf(PREFS);
   root.dataset.shake = PREFS.shake ? "on" : "off";
   root.dataset.sky = PREFS.sky ? "on" : "off";
@@ -5629,7 +6049,7 @@ function applyPrefs() {
   trainMotion();
   /* the scene's face goes with the scene, so a browser that cannot run it keeps the reader's own */
   if (trainOn()) root.dataset.font = "jersey-10";
-  if (PREFS.fluid && !tuiOn() && !trainOn()) startFluids();
+  if (PREFS.fluid && !tuiOn() && !trainOn() && !neuOn()) startFluids();
   fluidMotion();
   /* the cost strip points at the gauge above it, which is a bar in the terminal */
   $("cwGauge").textContent = tuiOn() ? "bar" : "ring";
@@ -5670,14 +6090,21 @@ addEventListener("storage", (e) => {
   showPrefs();
 });
 if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); syncPrefs(); });
+/* the system turning dark or light turns a clay that follows it, at once */
+if (DARK.addEventListener) DARK.addEventListener("change", () => { if (PREFS.clay === "system" || FORCED.matches) showPrefs(); });
+if (FORCED.addEventListener) FORCED.addEventListener("change", () => showPrefs());
 
 /* ═════════════════════════ cost ═════════════════════════
    A different data source with a different meaning, in a colour
    family that appears in no band, with no circular form anywhere. */
 const CRAMP = ["#9aa4dc", "#828cc4", "#6c75a8", "#585f8b", "#464b6d"];
+/* on Neumorphism's light clay the same family runs the other way, so the largest share still stands out most;
+   the dark clay keeps the glass's order */
+const CRAMP_LIGHT = ["#464b6d", "#585f8b", "#6c75a8", "#828cc4", "#9aa4dc"];
 function renderCost() {
   const c = S.cost;
   if (!c) { $("costNote").textContent = "waiting for ccusage…"; return; }
+  const ramp = neuLight() ? CRAMP_LIGHT : CRAMP;
   const total = num(c.sevenDayTotal, 0);
   const models = Array.isArray(c.models) ? c.models : [];
   /* "ccusage reports zero" and "we could not ask ccusage" are different
@@ -5690,7 +6117,7 @@ function renderCost() {
 
   $("costBar").innerHTML = models.map((m, i) => {
     const p = total > 0 ? (num(m.cost, 0) / total) * 100 : 0;
-    return `<span style="width:${p.toFixed(3)}%;background:${CRAMP[Math.min(i, 4)]}"></span>`;
+    return `<span style="width:${p.toFixed(3)}%;background:${ramp[Math.min(i, 4)]}"></span>`;
   }).join("");
 
   $("costRows").innerHTML = dead
@@ -5698,13 +6125,13 @@ function renderCost() {
     : models.length
       ? models.map((m, i) => {
           const p = total > 0 ? (num(m.cost, 0) / total) * 100 : 0;
-          return `<tr><td class="mn"><span class="sw" style="background:${CRAMP[Math.min(i,4)]}"></span>${esc(shortModel(m.name))}</td>` +
+          return `<tr><td class="mn"><span class="sw" style="background:${ramp[Math.min(i, 4)]}"></span>${esc(shortModel(m.name))}</td>` +
                  `<td class="r">${money(m.cost)}</td><td class="r" style="color:var(--ink-4)">${p.toFixed(1)}%</td></tr>`;
         }).join("")
       : `<tr><td class="mn" colspan="3" style="color:var(--ink-4)">ccusage reports no local usage in the last seven days</td></tr>`;
 
   if (c.error) {
-    $("costNote").innerHTML = `<span style="color:#f0b9c4">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota ${tuiOn() ? "bar" : "ring"} above is unaffected.`;
+    $("costNote").innerHTML = `<span style="color:var(--cerr, #f0b9c4)">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota ${tuiOn() ? "bar" : "ring"} above is unaffected.`;
   } else if (c.stale) {
     $("costNote").textContent = "Cached copy while a refresh runs. Recomputed at most every 5 minutes.";
   } else {

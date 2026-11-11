@@ -9,8 +9,8 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 ## Theme
 
-Three themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, and **Train**,
-a pixel scene.
+Four themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, **Train**, a
+pixel scene, and **Neumorphism**, soft clay, light or dark.
 
 **Glass: dark glass over an animated gradient.**
 
@@ -19,7 +19,8 @@ a pixel scene.
 - Motion is confined to the backdrop, the ring's interior (see *Ring interior* below) and
   one alarm, the shake of the ring while it is over pace (see *Over pace*). The arc, tick and
   chart otherwise only move when the data moves. Each of the three can be switched off in
-  *Settings*. (Matrix and Train have motion of their own; see below.)
+  *Settings*. (Matrix and Train have motion of their own, and Neumorphism only the shake; see
+  below.)
 - `prefers-reduced-motion` freezes the gradient, holds the ring's fluid as a still frame and
   stops the shake.
 
@@ -156,6 +157,51 @@ other.
   browser that cannot draw it, or a sheet that will not load, keeps the glass page, its
   settings and the reader's own typeface.
 
+### Neumorphism
+
+Soft clay. The page is one material, a light clay or a dark one, lit from the top left. The plates and the buttons stand
+proud of it, with a light shadow up and to the left and a dark one down and to the right; the wells
+are pressed into it, and in a hollow the two shadows change sides. Whatever is on or open is pressed
+in: a switch that is on, the chosen theme and typeface, the gear while Settings is open, the ring
+while its detail is open, a download while it is drawn.
+
+- **The page is the same page as Glass,** so it says the same things and the keyboard and screen
+  readers work the same way. It is only reset in clay, and nothing is drawn behind it.
+- **The ring is a dial.** Its face stands proud of the plate, the track is a groove cut into the
+  face, and the arc lies in the groove, under the groove's own shading. The numeral sits on the
+  hub. The tick is still white, in a dark setting that holds it off the face, light or dark; at the
+  cap the hub floods, as the well does in Glass. A held reading's dashed rim lies out on the face's lip,
+  where the groove's wall cannot hide it.
+- **The wells are cut alike.** The ring's, while its detail is open, the chart's beside it and the
+  detail's under them share their edges and their corners, at one inset from the plate. The
+  detail's figures stand up in their well as tiles, and wrap rather than lose their ends.
+- **Its palette is its own.** As in Glass, the ground does not follow the ring: the clay is the same
+  at 5% as at the cap. On the light clay the arc, the chart and the marks keep the band colours, in
+  darker inks for a light ground (teal, ochre, rust and crimson, relative luminance .18 → .12 → .08
+  → .05), whose lightness still falls with danger, so on the clay the worse the reading, the harder
+  it stands out; each holds 3:1 against the groove's floor, which is darker than the clay. Its pace
+  channel runs from slate to a deep orange whose lightness falls between the ochre's and the
+  rust's. On either clay a word in a band's colour, the band's name in the detail and *cap* beside
+  the ring, is taken part of the way to the text's ink, so it reads as text and not only as a mark;
+  and over pace the numeral takes on the pace ink in place of Glass's glow (on the light clay a glow
+  would only stain the hub). The faintest of the text's inks holds 4.5:1 on either clay.
+- **The dark clay** is the same material at night, chosen in Settings or taken from the system, and
+  it follows the system as that changes. Its bands and its pace channel are Glass's, which were set
+  for a dark ground, the channel starting from a lighter slate so that a mild over-pace verdict
+  never reads quieter than the faintest ink. With them comes Glass's bloom, rising with danger so
+  that a darker band does not recede, but kept inside the groove, so it lights the channel and not
+  the face around it. Its inks hold at least the light clay's contrasts. The theme's patch in
+  Settings shows whichever clay picking it would give.
+- **Nothing moves but the shake.** The ring shakes while over pace as it does in Glass, by the same
+  rule and on the same switch, and the freshness dot breathes while it waits for a first reading,
+  as in Glass. There is no fluid and no animated background, so Settings lists neither; the
+  reader's typeface is kept.
+- Forced colours drop every shadow, and with them every edge the theme has, so there the plates,
+  wells and buttons get their edges back as borders, and the switches a track and a knob. There the
+  ground is the system's, so the clay follows the system's palette whatever Settings says; the
+  choice returns when forced colours are off.
+- The saved graph is drawn on a clay plate, standing up out of the clay.
+
 ## Primary view — the weekly limit, a ring and its chart
 
 ```
@@ -231,7 +277,9 @@ Shape of the rule (values pending the probe):
 | near cap | red — act now |
 
 Colorblind safety: the bands must differ in **lightness** as well as hue, and the pace
-marker carries the same warning independent of color.
+marker carries the same warning independent of color. Neumorphism's light clay reads the same
+ladder in darker inks whose lightness still falls with danger; its dark clay reads the ladder as it
+is (see *Neumorphism*).
 
 ## Dormant limits
 
@@ -277,7 +325,8 @@ DOWNLOAD THE GRAPH   [1h] [12h] [1d] [3d] [7d]   saved quota-week-7d-2026-11-04-
   was saved. On it: the limit's name, the span and its dates, the reading now and its reset, the
   cap's time and how far off it is, the chart, and the burn rate as the chart's caption gives it.
 - The chart is the page's own, laid out again at the picture's size, so the picture is in the
-  theme on screen: its colours, its type and, in Train, its pixels and stepped corners. A span of
+  theme on screen: its colours, its type, in Train its pixels and stepped corners, and in
+  Neumorphism its clay. A span of
   a day or more marks each midnight with the name of the day, wherever the name, measured in its
   own face, clears the axis' two ends and the other names.
 - The axis always covers the whole span. The server keeps about twenty days of readings (see the
@@ -307,12 +356,13 @@ belongs to no theme; nothing is shown greyed out.
 
 | theme | setting | choices | default |
 | --- | --- | --- | --- |
-| all | Theme | Glass, Matrix, Train | Glass |
+| all | Theme | Glass, Matrix, Train, Neumorphism | Glass |
+| Neumorphism | Clay | Light, Dark, System — System follows the system's dark mode, as it changes | System |
 | Glass | Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
 | Glass | Speed | slow / normal / fast (0.25×, 0.5×, 1×) — listed only while the fluid is on | normal |
-| Glass, Train | Vibration | on / off — the shake of a ring over pace | on |
+| Glass, Train, Neumorphism | Vibration | on / off — the shake of a ring over pace | on |
 | Glass | Animated background | on / off — off pauses the drifting sky where it stands | on |
-| Glass | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
+| Glass, Neumorphism | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
 | Matrix | Rain | on / off — off stops the rain where it stands | on |
 | Matrix | Amount | slider, 5–100% of the columns falling at once — listed only while the rain is on | 40% |
 | Matrix | Speed | slider, 0.25×–2.5× of 22 steps a second — listed only while the rain is on | 1× |
@@ -322,7 +372,8 @@ belongs to no theme; nothing is shown greyed out.
 | all | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
 
 Settings change how the page looks, never what it measures or how it judges a reading:
-switching the shake off leaves the over-pace verdict in the tick, the caption and the halo.
+switching the shake off leaves the over-pace verdict in the tick, the caption and the halo (in
+Neumorphism, the numeral's ink).
 They are kept in this browser (only the ones that differ from the default), applied before the
 ring is first drawn, and followed in other open tabs. A slider or a colour is followed on screen
 as it moves, and kept once it is let go. The system's reduced-motion setting still stills
@@ -331,7 +382,7 @@ everything, and the panel says so while it is on.
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
 font service. Fira Code also takes over the figures, which are otherwise set in the system's
 monospaced face. Matrix is set in Fira Code and Train in Jersey 10 whatever the typeface says; the
-reader's own choice is kept, and returns with Glass. Jersey 10 is not offered as a choice: it is
+reader's own choice is kept, and returns with Glass or Neumorphism. Jersey 10 is not offered as a choice: it is
 a bitmap face, set at a few fixed sizes that the rest of the page does not keep to.
 
 ## Footer strip
