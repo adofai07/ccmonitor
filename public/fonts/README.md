@@ -2,8 +2,8 @@
 
 The typefaces the dashboard uses beyond the system's own, served by the dashboard itself so they
 look the same on every machine and nothing is fetched from anywhere else. Three are offered in the
-Settings panel, and the Train theme sets itself in the fourth. All four are under the SIL Open
-Font License 1.1; each licence sits beside its font.
+Settings panel, the Train theme sets itself in the fourth and Broadsheet in the fifth. All five are
+under the SIL Open Font License 1.1; each licence sits beside its font.
 
 | File | Source | Changes |
 | --- | --- | --- |
@@ -11,6 +11,7 @@ Font License 1.1; each licence sits beside its font.
 | `FiraCode-VF.woff2` | [Fira Code 6.2](https://github.com/tonsky/FiraCode/releases/tag/6.2), `Fira_Code_v6.2.zip` → `woff2/` | none |
 | `NotoSans-Latin.woff2` | [google/fonts](https://github.com/google/fonts/tree/main/ofl/notosans) `ofl/notosans/NotoSans[wdth,wght].ttf` | width fixed at 100 and cut to Latin (below); no reserved name |
 | `Jersey10-Latin.woff2` | [google/fonts](https://github.com/google/fonts/tree/main/ofl/jersey10) `ofl/jersey10/Jersey10-Regular.ttf` | cut to Latin (below); no reserved name |
+| `Caveat-Latin.woff2` | [google/fonts](https://github.com/google/fonts/tree/main/ofl/caveat) `ofl/caveat/Caveat[wght].ttf` | cut to Latin (below); no reserved name |
 
 `NotoSans-Latin.woff2` was made with fontTools 4.65:
 
@@ -30,5 +31,9 @@ from the next face in the stack.
 marks and arrows it does not have, at 13 KB. It has no ▲ ▼ ◆ → or ± of its own, so those also come
 from the next face in the stack. A bitmap face looks its best at a few fixed sizes, so the Train
 theme keeps to 20, 40 and 60px.
+
+`Caveat-Latin.woff2` was made the same way with fontTools 4.68, from the full list above, keeping
+the weight axis (400 to 700), at 78 KB. Its figures are all of one width. It has no ▲ ▼ ◆ of its
+own, so those come from the next face in the stack, Source Serif 4.
 
 Only the `.woff2` files are served, each by name in `src/server.js`'s allowlist.

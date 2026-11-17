@@ -9,8 +9,9 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 ## Theme
 
-Four themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, **Train**, a
-pixel scene, and **Neumorphism**, soft clay, light or dark.
+Five themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, **Train**, a
+pixel scene, **Neumorphism**, soft clay, light or dark, and **Broadsheet**, a newspaper written and
+drawn by hand.
 
 **Glass: dark glass over an animated gradient.**
 
@@ -19,8 +20,8 @@ pixel scene, and **Neumorphism**, soft clay, light or dark.
 - Motion is confined to the backdrop, the ring's interior (see *Ring interior* below) and
   one alarm, the shake of the ring while it is over pace (see *Over pace*). The arc, tick and
   chart otherwise only move when the data moves. Each of the three can be switched off in
-  *Settings*. (Matrix and Train have motion of their own, and Neumorphism only the shake; see
-  below.)
+  *Settings*. (Matrix, Train and Broadsheet have motion of their own, and Neumorphism only the
+  shake; see below.)
 - `prefers-reduced-motion` freezes the gradient, holds the ring's fluid as a still frame and
   stops the shake.
 
@@ -222,6 +223,88 @@ dial's plate while its detail is open, a download while it is drawn.
   keys say; the choice returns when forced colours are off.
 - The saved graph is drawn on a clay plate, standing up out of the clay.
 
+### Broadsheet
+
+The page as a newspaper, written and drawn by hand: ink on newsprint. The words are handwritten,
+in Caveat, and everything drawn is inked by hand: the rules, the boxes, the ring's edges and its
+hatched track, and the chart's grid and hatching. The ink boils.
+
+```
+ [MAX · 20×]                    Quota                              ⚙
+ ════════════════════════════════════════════════════════════════════
+ THURSDAY 12 NOVEMBER 2026                      ● live · updated 13s ago
+ ────────────────────────────────────────────────────────────────────
+   ◜◞   CURRENT WEEK (ALL MODELS)  │ LAST 12H OF HISTORY      burn +0.80 %/hr
+  (62%) 6d 5h 59m                  │ 100 ┤        ▁▂▃▅▆▇▇██
+        [STOP PRESS]               │  50 ┤ ╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱╱
+        ▲ 51 pts over pace · 5.8×  │   0 ┤ 03:26             now
+```
+
+- **The page says what Glass's says, laid out as a front page.** The header is a masthead: the name
+  large in the middle, the plan in a boxed ear on its left and the gear on its right, a double rule
+  under them, and a dateline under that, with today's date on the left and the freshness on the
+  right, closed by a thin rule. The date is drawn only here, and is not read out: it dresses the
+  page and is not a reading. The limit is the lead, its ring and chart with a column rule between
+  them; its detail opens under it as an article, with the limit as its headline, the band and
+  *close* in boxes beside it, the four figures between column rules, and the words in columns
+  opening on a dropped initial, ragged as a hand runs; the download sits under a rule. The cost
+  strip is a boxed notice under its rule, in its own family's inks. The order, and so the
+  keyboard's and screen readers' path through it, is the glass page's.
+- **The hand is the same every time.** A rule is a fixed drawing, a filled stroke thicker where the
+  pen came down and thinner where it lifted; a box is four strokes running past each other at the
+  corners, whose corners keep their size as the box grows. The ring's two edges are circles drawn
+  freehand, a little out of round, each running on past its start and coming round a pen's width
+  off it; they are seeded from the limit they belong to, never from the clock or chance, so a
+  reading that has not moved draws the same ring, and the page opened again draws the same page.
+  The pen's roughness is a fixed noise.
+- **Readings keep their places.** The arc and the trace are drawn exactly where they are, and the
+  pen roughens their edges by under a pixel; the threshold marks and the tick are drawn clean. The
+  boil moves any of them by about a pixel at most, and back. Only what is not a reading wanders
+  further: the ring's edges, and the chart's pencilled grid.
+- **The ring is engraved.** Its track is hatched in the ink between the two edges; the arc is laid
+  over the hatching in the band's ink, and the edges are inked again over the arc. The tick is the
+  ink, as it is white on the glass, and the detail calls it the inked tick; over pace the numeral
+  takes on the pace ink, as on Neumorphism. At the cap the hub is cross-hatched in the band's ink,
+  a different shape as the flooded well is in Glass, with the numeral knocked out of the
+  hatching. A held reading's rim is a dashed circle outside the edges; an unknown reading has no
+  hatching, broken edges and a dash.
+- **The chart is drawn by hand.** The grid is pencilled, the trace is in pen, the fitted run is
+  hatched in the band's ink, and the fit's upright, the warning floor and the projection are
+  dashed unevenly, as a pen dashes. The chart stands taller than the glass's: 150px, and 120px at
+  a phone's width.
+- **Its palette is its own.** The paper is the same at 5% as at the cap, and the page's own
+  colours are one ink on it, so any colour on the page is a reading: the bands, the pace channel,
+  the hold and down tones and the cost strip's family keep Neumorphism's light-clay inks, set for a
+  light ground, whose lightness still falls with danger. A word in a band's colour is taken part
+  of the way to the ink, as on the clay. The steady and unknown inks hold 3:1 on the paper and the
+  faintest text 4.5:1, where the paper is darkest.
+- **Nothing moves by itself but the ink, which boils.** As a drawn film's lines tremble from one
+  drawing to the next, the whole page, words and drawings, steps through three fixed roughenings
+  about seven times a second, each moving a line by about a pixel at most. It loops and goes
+  nowhere, so it holds at any reading; the paper's grain stays still. *Boiling ink* in Settings
+  switches it off, and the system's reduced-motion setting, forced colours and a hidden tab stop
+  it. There is no fluid, no shake and no animated background, and the freshness dot does not
+  breathe; the arc and the chart move only when a reading does, and the detail and Settings open as
+  they do on the glass. A loud overrun, the one that also states its multiple of the clock, is
+  headed **STOP PRESS** in a box over its pace line instead of shaking; the box adds nothing to
+  what is read out, and at the cap it goes, as the shake does there, since the hatched hub already
+  says it. Settings lists the theme, the boil and the cost strip.
+- **Its hand is its own.** It is written in Caveat whatever the typeface says, figures included,
+  which are all of one width in this hand, so a countdown does not shift as it runs; the reader's
+  own choice returns with Glass or Neumorphism. The hand is drawn a fifth larger than its nominal
+  size, as its small letters are short, and runs larger than the glass page's type, with its
+  capitals closer together than letter-spaced type would set them. It has no ▲ ▼ ◆, which come from
+  Source Serif 4, and no italic, so nothing is slanted.
+- As the window narrows, the figures go two to a row and the freshness goes under the date, then
+  the chart drops under the ring with a rule over it in place of the column rule, and at a phone's
+  width the plan and the gear go up over the name and the rule's words wrap.
+- Forced colours keep the words and drop the drawings' fixed ink, so there the rules and boxes
+  come back as plain lines in the system's colours, the chosen theme and the switches that are on
+  are marked in the system's highlight, and the ink holds still. On a dark forced palette the
+  readings take Glass's inks, set for a dark ground.
+- The saved graph is drawn on the paper, in a frame inked by hand with a double rule under its
+  heading, its run hatched as on the page.
+
 ## Primary view — the weekly limit, a ring and its chart
 
 ```
@@ -374,11 +457,12 @@ changes. The gear again, Escape, a click elsewhere or focus moving away closes i
 The panel lists the theme, then only the settings of the theme on screen, and the one setting that
 belongs to no theme; nothing is shown greyed out. Under Neumorphism it lists only the theme: that
 theme's settings, and the cost strip's, are keys and switches on the page itself (see
-*Neumorphism*), so there it has no reset either.
+*Neumorphism*), so there it has no reset either. Under Broadsheet it lists the theme, the boil and
+the cost strip.
 
 | theme | setting | choices | default |
 | --- | --- | --- | --- |
-| all | Theme | Glass, Matrix, Train, Neumorphism | Glass |
+| all | Theme | Glass, Matrix, Train, Neumorphism, Broadsheet | Glass |
 | Neumorphism, on the page | Clay | Light, Dark, System — System follows the system's dark mode, as it changes | System |
 | Glass | Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
 | Glass | Speed | slow / normal / fast (0.25×, 0.5×, 1×) — listed only while the fluid is on | normal |
@@ -391,6 +475,7 @@ theme's settings, and the cost strip's, are keys and switches on the page itself
 | Matrix | Colour #1 | any colour — the rain; its heads are the colour lit toward white, less so the darker it is | green `#00ff66` |
 | Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
 | Train | Moving scene | on / off — off stops the train, its smoke, the fire and the station clock where they stand | on |
+| Broadsheet | Boiling ink | on / off — off holds the ink still, on the plain drawing | on |
 | all; Neumorphism on the page | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
 
 Settings change how the page looks, never what it measures or how it judges a reading:
@@ -403,8 +488,9 @@ everything, and the panel (in Neumorphism, the vibration's plate) says so while 
 
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
 font service. Fira Code also takes over the figures, which are otherwise set in the system's
-monospaced face. Matrix is set in Fira Code and Train in Jersey 10 whatever the typeface says; the
-reader's own choice is kept, and returns with Glass or Neumorphism. Jersey 10 is not offered as a choice: it is
+monospaced face. Matrix is set in Fira Code, Train in Jersey 10 and Broadsheet in Caveat, a
+handwriting face, whatever the typeface says; the reader's own choice is kept, and returns with
+Glass or Neumorphism. Jersey 10 is not offered as a choice: it is
 a bitmap face, set at a few fixed sizes that the rest of the page does not keep to.
 
 The page writes its times, weekdays, dates and amounts in English, on a 24-hour clock with the day

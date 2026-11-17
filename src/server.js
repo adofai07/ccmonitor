@@ -65,6 +65,7 @@ const ASSETS = new Map([
   ['/fonts/NotoSans-Latin.woff2', 'fonts/NotoSans-Latin.woff2'],
   ['/fonts/FiraCode-VF.woff2', 'fonts/FiraCode-VF.woff2'],
   ['/fonts/Jersey10-Latin.woff2', 'fonts/Jersey10-Latin.woff2'],
+  ['/fonts/Caveat-Latin.woff2', 'fonts/Caveat-Latin.woff2'],
   ['/sprites/train.png', 'sprites/train.png'],
 ]);
 

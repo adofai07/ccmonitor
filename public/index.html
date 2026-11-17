@@ -16,14 +16,14 @@
    backdrop and to the ring's interior: the sky drifts on a ~30s loop
    and warms when the limit heats up, and the ring holds a small fluid
    stirred by the same heat. The arc, tick and chart move only when
-   data moves. Settings offers three more themes, Matrix, Train and
-   Neumorphism, at the end of this sheet.
+   data moves. Settings offers four more themes, Matrix, Train,
+   Neumorphism and Broadsheet, at the end of this sheet.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
 
-/* The typefaces the page uses beyond the system's own: those Settings offers and the Train theme's
-   bitmap face, bundled under public/fonts (each with its licence) and served by this same server,
+/* The typefaces the page uses beyond the system's own: those Settings offers, the Train theme's
+   bitmap face and Broadsheet's hand, bundled under public/fonts (each with its licence) and served by this same server,
    so they look the same on every machine and nothing is fetched from anywhere else. The three on
    offer are variable fonts: one file covers every weight the page uses. "fallback" waits a moment
    for a face that is on its way instead of flashing the default one first, and from loopback it
@@ -32,6 +32,9 @@
 @font-face { font-family: "Noto Sans";      src: url("/fonts/NotoSans-Latin.woff2") format("woff2");                font-weight: 100 900; font-display: fallback; }
 @font-face { font-family: "Fira Code";      src: url("/fonts/FiraCode-VF.woff2") format("woff2");                   font-weight: 300 700; font-display: fallback; }
 @font-face { font-family: "Jersey 10";      src: url("/fonts/Jersey10-Latin.woff2") format("woff2");                font-weight: 400;     font-display: fallback; }
+/* Caveat's small letters are short for its size, so it is drawn a fifth larger, to stand as tall
+   as the other faces' at the sizes the page sets */
+@font-face { font-family: "Caveat";         src: url("/fonts/Caveat-Latin.woff2") format("woff2");                  font-weight: 400 700; font-display: fallback; size-adjust: 120%; }
 
 :root {
   /* --sans is whichever typeface Settings has chosen; figures that must line up stay in --mono,
@@ -197,6 +200,8 @@ main {
 /* The pill and the settings gear travel as a pair: a narrow header wraps them together, and
    the pill gives way with an ellipsis rather than leaving the gear on a line of its own. */
 .side { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; margin-left: auto; }
+/* the date under a newspaper's masthead: only Broadsheet prints one */
+.dateline { display: none; }
 
 /* ── settings: a gear that opens a small panel over the page ──────
    It floats instead of pushing the rows down, so a switch can be
@@ -1614,6 +1619,494 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-clay="dark"] .pick[data-pick="neumorphism"] .swatch::after {
   background: radial-gradient(closest-side, transparent 60%, rgb(0 0 0 / .4) 64%, transparent 76%);
 }
+/* ══════════════════════════════════════════════════════════════════
+   Broadsheet — the fifth theme, chosen in Settings: the page as a
+   newspaper, written and drawn by hand.
+
+   Ink on newsprint. The words are handwritten, in Caveat, a pen's
+   hand with figures all of one width, so a countdown does not shift as
+   it runs; what is drawn is inked by hand too: the rules, the boxes,
+   the ring's two edges, its hatched track, and the chart's grid and
+   hatching. The hand is the same on every redraw, so a
+   reading that has not moved is drawn the same way: the rules and boxes
+   are fixed drawings, the ring's edges are seeded from the limit they
+   belong to, and the pen's roughness is a fixed noise. What is a
+   reading keeps its exact place: the arc and the trace are drawn where
+   they are, and the pen moves their edges by less than a pixel; the
+   marks and the tick are drawn clean; only the grid and the ring's
+   edges wander further.
+
+   Its palette is its own, as Glass's is: the paper is the same at 5% as
+   at the cap. The page's own colours are one ink on the paper, so any
+   colour on it is a reading: the bands, the pace channel and the cost
+   strip's family keep the light clay's inks (STOP_LIGHT, PACE_LIGHT and
+   CRAMP_LIGHT in the script), set for a light ground. Nothing moves
+   but the ink, which boils as a drawn film's lines do (see the end of
+   the block): no fluid, no shake, no breathing dot. A loud overrun
+   heads its pace line with STOP PRESS instead. All of it keys on
+   data-theme.
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-theme="broadsheet"] {
+  color-scheme: light;
+  --paper:   #f2ede2;
+  --tint:    32 28 22;
+  --ink-rgb: 32 28 22;
+  --hi:      #16130f;
+  --ink:     #201c16;   /* 14.5:1 on the paper */
+  --ink-2:   #3a352d;   /* 10.4 */
+  --ink-3:   #4b453b;   /* 8.1 */
+  --ink-4:   #5c564b;   /* 6.2: the faintest ink carries readings, so it holds 4.5 where the paper is darkest */
+  --base:    var(--paper);
+  --hair:    rgb(var(--tint) / .17);
+  --edge:    rgb(var(--tint) / .32);
+  /* the light clay's inks, which print on a light ground: their lightness still falls with danger */
+  --steady:    #17866f;   --steady-rgb:    23 134 111;
+  --warning:   #835a05;   --warning-rgb:  131  90   5;
+  --critical:  #88370b;   --critical-rgb: 136  55  11;
+  --exhausted: #781227;   --exhausted-rgb:120  18  39;
+  --unknown:   #6f7786;   --unknown-rgb:  111 119 134;
+  --pace-hot:  #934009;   --pace-hot-rgb: 147  64   9;
+  --coin:   #56609e;
+  --coin-2: #4b558f;
+  --cerr:   #9e1b36;
+  --hold-ink: #6f4e05;
+  --down-ink: #82162d;
+  /* the words are handwritten, and the figures in the same hand, all of one width; what the hand
+     lacks (▲ ▼ ◆) comes from the serif */
+  --hand:  "Caveat", var(--font-serif);
+  --sans:  var(--hand);
+  --mono:  var(--hand);
+  /* The hand's drawings, each fixed. A rule is a filled stroke, thicker where the pen came down and
+     thinner where it lifted, drawn as tall as the box it is laid in, so stretched along its length
+     it keeps its weight. The box is four strokes that run past each other at the corners, laid as a
+     border image, so its corners keep their size and only its sides stretch; it is given a size of
+     its own, or a border image is first scaled to the whole box and its slices miss the strokes. */
+  --bs-rule: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 4' preserveAspectRatio='none'%3E%3Cpath fill='%23201c16' d='M1 1.5C130 1.1 270 2.1 430 1.4S770 1 999 1.8L999 2.4C770 2.2 610 2.8 430 2.5S140 2.9 1 2.8Z'/%3E%3C/svg%3E");
+  --bs-rule-2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 4' preserveAspectRatio='none'%3E%3Cpath fill='%23201c16' d='M1 2C200 1.4 330 2.4 520 1.7S820 1.3 999 2.1L999 2.6C820 2.4 700 3 520 2.7S190 2.7 1 3.1Z'/%3E%3C/svg%3E");
+  --bs-double: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 9' preserveAspectRatio='none'%3E%3Cg fill='%23201c16'%3E%3Cpath d='M1 1.2C190 .8 380 1.7 560 1.1S860 .8 999 1.4L999 4C820 3.6 640 4.3 470 3.8S170 3.4 1 4.1Z'/%3E%3Cpath d='M2 6C260 5.6 520 6.4 760 5.9S930 5.7 998 6.1L998 7.1C900 6.9 700 7.4 480 7S180 7.2 2 7.2Z'/%3E%3C/g%3E%3C/svg%3E");
+  --bs-vrule: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 1000' preserveAspectRatio='none'%3E%3Cpath fill='%23201c16' d='M1.5 1C1.1 150 2 330 1.4 520S1.2 820 1.8 999L2.5 999C2.1 820 2.6 640 2.4 470S2.8 160 2.6 1Z'/%3E%3C/svg%3E");
+  --bs-box: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23201c16' stroke-width='1.2' stroke-linecap='round'%3E%3Cpath d='M2.4 4.2Q24 3.4 45.5 3.9'/%3E%3Cpath d='M44.2 2.3Q44.8 24 44 45.8'/%3E%3Cpath d='M46 43.8Q24 44.5 2.7 44.1'/%3E%3Cpath d='M3.8 46Q3.2 24 4 2.5'/%3E%3C/g%3E%3C/svg%3E");
+}
+:root[data-theme="broadsheet"] body {
+  background: var(--paper);
+  font-size: 16px; font-variant-numeric: lining-nums tabular-nums;
+  /* the face has no italic, and a slanted roman is not one */
+  font-synthesis: none;
+}
+:root[data-theme="broadsheet"] .sky,
+:root[data-theme="broadsheet"] .vig { display: none; }
+/* the paper's own grain, under the page: fibres the ink sits on, and a sheet a shade darker
+   towards its edges, laid over the window and holding still as the page scrolls */
+:root[data-theme="broadsheet"] .grain {
+  opacity: 1; mix-blend-mode: multiply;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .3 0 0 0 0 .22 .63 0 0 0 -.31'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23p)'/%3E%3C/svg%3E"),
+    radial-gradient(140% 100% at 50% 24%, transparent 55%, rgb(120 96 60 / .07) 100%);
+}
+/* nothing moves: the dot waits without breathing, and the ring never shakes */
+:root[data-theme="broadsheet"] .fresh .dot,
+:root[data-theme="broadsheet"] .art > * { animation: none !important; }
+
+:root[data-theme="broadsheet"] main {
+  max-width: 1060px; justify-content: flex-start; gap: 22px;
+  padding: clamp(22px, 4vh, 44px) clamp(18px, 3.4vw, 40px) clamp(28px, 5vh, 52px);
+}
+:root[data-theme="broadsheet"] :focus-visible,
+:root[data-theme="broadsheet"] .pick:has(input:focus-visible) { outline-color: var(--ink); }
+
+/* ── the masthead: the name in the middle, the plan and the gear in its ears, the double rule
+   under it, and the date and the freshness on the line under that, closed by a thin rule ── */
+:root[data-theme="broadsheet"] .top {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: "ear name gear" "rule rule rule" "date fresh fresh" "rule2 rule2 rule2";
+  align-items: center; column-gap: 18px; padding: 0; min-height: 0;
+}
+:root[data-theme="broadsheet"] .mark,
+:root[data-theme="broadsheet"] .side { display: contents; }
+:root[data-theme="broadsheet"] .grow { display: none; }
+:root[data-theme="broadsheet"] .mark h1 {
+  grid-area: name; justify-self: center;
+  font: 700 clamp(58px, 8.8vw, 98px)/1 var(--hand); letter-spacing: 0; text-transform: none;
+  color: var(--hi);
+}
+:root[data-theme="broadsheet"] .top::after {
+  content: ""; grid-area: rule; height: 9px; margin: 10px 0 8px;
+  background: var(--bs-double) 0 0 / 100% 100% no-repeat;
+}
+:root[data-theme="broadsheet"] .top::before {
+  content: ""; grid-area: rule2; height: 4px; margin-top: 8px;
+  background: var(--bs-rule-2) 0 0 / 100% 100% no-repeat;
+}
+/* an ear is a small box beside the name */
+:root[data-theme="broadsheet"] .plan {
+  grid-area: ear; justify-self: start;
+  font-size: 13px; font-weight: 700; letter-spacing: .05em; color: var(--ink-2);
+  padding: 5px 10px 4px; border-radius: 0; background: none;
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 3px stretch;
+}
+:root[data-theme="broadsheet"] .prefs { grid-area: gear; justify-self: end; }
+:root[data-theme="broadsheet"] .gear { width: 34px; height: 34px; border: 0; border-radius: 0; background: none; color: var(--ink-2); }
+:root[data-theme="broadsheet"] .gear svg { width: 19px; height: 19px; }
+:root[data-theme="broadsheet"] .gear:hover { background: none; color: var(--ink); }
+:root[data-theme="broadsheet"] .gear[aria-expanded="true"] {
+  background: none; color: var(--ink);
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 1px stretch;
+}
+:root[data-theme="broadsheet"] .dateline {
+  grid-area: date; display: block; min-width: 0;
+  font-size: 14px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+:root[data-theme="broadsheet"] .fresh {
+  grid-area: fresh; justify-self: end; max-width: 100%;
+  padding: 0; border: 0; border-radius: 0; background: none; font-size: 15px; color: var(--ink-2);
+}
+/* the freshness has the line to say why at length, so a held reading's reason wraps rather than lose its end */
+:root[data-theme="broadsheet"] .fresh span { white-space: normal; overflow: visible; }
+:root[data-theme="broadsheet"] .fresh { align-items: baseline; }
+:root[data-theme="broadsheet"] .fresh .dot { box-shadow: none !important; }
+:root[data-theme="broadsheet"] .fresh[data-tone="hold"] { color: var(--hold-ink); background: none; }
+:root[data-theme="broadsheet"] .fresh[data-tone="down"] { color: var(--down-ink); background: none; }
+
+/* ── the lead: the ring and its chart, a column rule between them ── */
+:root[data-theme="broadsheet"] .glass,
+:root[data-theme="broadsheet"] .cost {
+  border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+:root[data-theme="broadsheet"] .glass::before { display: none; }
+:root[data-theme="broadsheet"] .rings { padding: 0; }
+:root[data-theme="broadsheet"] .lrow { padding: 4px 0 6px; gap: 0; align-items: stretch; }
+:root[data-theme="broadsheet"] .ring { padding: 8px 26px 8px 4px; border-radius: 0; align-self: center; }
+:root[data-theme="broadsheet"] .ring:hover { background: rgb(var(--tint) / .035); }
+:root[data-theme="broadsheet"] .ring[aria-expanded="true"] { background: rgb(var(--tint) / .055); }
+:root[data-theme="broadsheet"] .spark {
+  padding: 6px 0 4px 26px; display: flex; flex-direction: column; justify-content: center;
+  background: var(--bs-vrule) 0 0 / 4px 100% no-repeat;
+}
+:root[data-theme="broadsheet"] .art { width: clamp(132px, 15vw, 168px); }
+:root[data-theme="broadsheet"] .ring .meta { width: clamp(156px, 19vw, 220px); gap: 6px; }
+:root[data-theme="broadsheet"] .mlabel { font-size: 13px; font-weight: 700; letter-spacing: .05em; color: var(--ink-2); white-space: normal; overflow: visible; line-height: 1.4; }
+:root[data-theme="broadsheet"] .mclock { font-size: 23px; line-height: 28px; font-weight: 700; letter-spacing: 0; }
+:root[data-theme="broadsheet"] .mclock.word { font-size: 17px; font-weight: 400; letter-spacing: .02em; }
+:root[data-theme="broadsheet"] .mpace,
+:root[data-theme="broadsheet"] .meta-eta { font-size: 15px; line-height: 20px; min-height: 20px; letter-spacing: 0; color: var(--ink-3); white-space: normal; overflow: visible; }
+:root[data-theme="broadsheet"] .meta-eta[data-on="1"] { color: var(--ink-2); }
+:root[data-theme="broadsheet"] .ring[data-pace="over"] .mpace { color: var(--pace-ink); }
+/* A loud overrun is news: its line is headed STOP PRESS, boxed by hand. The words stay the pace
+   line's own, so it says nothing the line does not; the box is in the ink, the words in the pace ink.
+   At the cap it goes, as the shake it stands for does there: the hatched hub already says it. */
+:root[data-theme="broadsheet"] .ring[data-pace="over"][data-hot="1"]:not([data-band="exhausted"]) .mpace::before {
+  content: "Stop press"; display: block; width: max-content; margin: 3px 0 6px;
+  padding: 2px 7px 1px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 3px stretch;
+}
+:root[data-theme="broadsheet"] .mpace .tri { font-size: 9px; }
+@supports (color: color-mix(in srgb, red, blue)) {
+  /* words in a band's colour are taken part of the way to the ink, so they read as text */
+  :root[data-theme="broadsheet"] .meta-eta b { color: color-mix(in srgb, var(--band) 60%, var(--ink)); }
+  :root[data-theme="broadsheet"] .dband { color: color-mix(in srgb, var(--band) 60%, var(--ink)) !important; }
+}
+/* a held reading steps back in a fainter ink, not by fading, which costs more on a light ground */
+:root[data-theme="broadsheet"] body[data-hold="1"] :is(.mclock, .dtitle) { opacity: 1; color: var(--ink-3); }
+:root[data-theme="broadsheet"] body[data-hold="1"] :is(.mlabel, .chartcap, .ro dt) { opacity: 1; color: var(--ink-4); }
+
+/* ── the ring, inked: two edges drawn freehand, the track between them hatched, the arc laid
+   over the hatching in the band's ink and the edges inked again over the arc. The edges run past
+   their own start, as a quick pen circle does, and are the same on every redraw. ── */
+.art .hand { display: none; }
+:root[data-theme="broadsheet"] .art .hand {
+  display: inline; fill: none; stroke: var(--ink); stroke-width: 1.05; stroke-linecap: round;
+  filter: url(#bs-pen);
+}
+:root[data-theme="broadsheet"] .art .hand.inner { stroke-width: .8; }
+:root[data-theme="broadsheet"] .tkx { stroke: rgb(var(--ink-rgb) / .42); stroke-width: .45; }
+:root[data-theme="broadsheet"] .hbx { stroke: var(--band); stroke-width: .5; opacity: .8; }
+:root[data-theme="broadsheet"] .art > .dial,
+:root[data-theme="broadsheet"] .art > .bevel { visibility: hidden; }
+:root[data-theme="broadsheet"] .well { fill: transparent; }
+/* at the cap the hub is cross-hatched in the band's ink: a different shape, as the flooded well is elsewhere */
+:root[data-theme="broadsheet"] .ring[data-band="exhausted"] .well { fill: var(--hb); }
+:root[data-theme="broadsheet"] .rim { r: 58.4px; stroke: none; filter: url(#bs-pen); }
+:root[data-theme="broadsheet"] .ring[data-band="exhausted"] .rim { stroke: var(--band); stroke-width: 1.1; }
+:root[data-theme="broadsheet"] body[data-hold="1"] .rim { stroke: var(--ink-3); stroke-width: .9; stroke-dasharray: 2.4 3.4; }
+:root[data-theme="broadsheet"] .track { stroke: var(--tk); stroke-width: 8.6; }
+:root[data-theme="broadsheet"] body[data-hold="1"] .track { stroke: var(--tk); }
+/* unknown: no hatching, and the edges broken. Never a zero. */
+:root[data-theme="broadsheet"] .ring[data-state="unknown"] .track { stroke: none; }
+:root[data-theme="broadsheet"] .ring[data-state="unknown"] .hand { stroke: var(--ink-4); stroke-dasharray: 1.6 4.2; filter: none; }
+:root[data-theme="broadsheet"] .arc.main { stroke-width: 8.6; filter: url(#bs-pen); }
+:root[data-theme="broadsheet"] .arc.bloom { display: none; }
+:root[data-theme="broadsheet"] .thmark { stroke-linecap: round; }
+:root[data-theme="broadsheet"] .thmark:not(.station) { opacity: .9; stroke-width: 1.5; }
+:root[data-theme="broadsheet"] .thmark.station { opacity: .55; }
+/* the tick is the ink, as it is white on the glass: a statement of where the clock is */
+:root[data-theme="broadsheet"] .nb { display: none; }
+:root[data-theme="broadsheet"] .nl { stroke: var(--ink); stroke-width: 2; }
+:root[data-theme="broadsheet"] .ring[data-pace="over"] .nl { stroke-width: calc(2px + 1.4px * var(--psev)); }
+:root[data-theme="broadsheet"] .gap { stroke: rgb(var(--ink-rgb) / .55); }
+:root[data-theme="broadsheet"] .ring[data-pace="over"] .gap { stroke: var(--pace-mark); opacity: calc(.65 + .35 * var(--psev)); }
+:root[data-theme="broadsheet"] .num {
+  font-size: 31cqi; font-weight: 700; letter-spacing: -.01em; text-shadow: none; color: var(--hi);
+}
+:root[data-theme="broadsheet"] .ring[data-pace="over"] .num { text-shadow: none; }
+@supports (color: color-mix(in srgb, red, blue)) {
+  :root[data-theme="broadsheet"] .ring[data-pace="over"]:not([data-band="exhausted"]) .num {
+    color: color-mix(in srgb, var(--pace-ink) calc(var(--psev) * 85%), var(--hi));
+  }
+}
+:root[data-theme="broadsheet"] .pctsign { font-size: 11cqi; color: var(--ink-3); text-shadow: none; }
+:root[data-theme="broadsheet"] .ring[data-state="unknown"] .num { font-size: 21cqi; color: var(--ink-4); }
+/* over the hatched hub the numeral is knocked out of the hatching, as type is over an engraving, so it
+   is laid over the drawing rather than under it */
+:root[data-theme="broadsheet"] .readout { z-index: 2; }
+:root[data-theme="broadsheet"] .ring[data-band="exhausted"] :is(.num, .pctsign) {
+  text-shadow: 0 0 2px var(--paper), 0 0 4px var(--paper), 0 0 8px var(--paper), 0 0 12px var(--paper);
+}
+
+/* ── the chart, drawn by hand: a pencilled grid, the trace in pen, the fitted run hatched ── */
+:root[data-theme="broadsheet"] .chartcap { font-size: 13px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); margin-bottom: 8px; }
+:root[data-theme="broadsheet"] .chartcap .note { font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--ink-2); }
+/* as tall as the script draws it (BS_CHART_H) */
+:root[data-theme="broadsheet"] .chart,
+:root[data-theme="broadsheet"] .chartempty { height: 150px; }
+:root[data-theme="broadsheet"] .chartempty { border: 0; background: none; font-style: normal; font-size: 14px; }
+:root[data-theme="broadsheet"] .chart .pencil { filter: url(#bs-pencil); }
+:root[data-theme="broadsheet"] .chart .pen { filter: url(#bs-pen); }
+:root[data-theme="broadsheet"] .chart .grid,
+:root[data-theme="broadsheet"] .chart .day { stroke: rgb(var(--ink-rgb) / .3); stroke-width: .9; stroke-linecap: round; }
+:root[data-theme="broadsheet"] .chart .warnln { stroke: rgb(var(--warning-rgb) / .8); stroke-dasharray: 5 3 3 4 6 3; }
+:root[data-theme="broadsheet"] .chart .full { stroke: rgb(var(--ink-rgb) / .62); stroke-width: 1.4; }
+:root[data-theme="broadsheet"] .chart .run { stroke-width: 2.3; }
+:root[data-theme="broadsheet"] .chart .hx { stroke: var(--band); stroke-width: .85; opacity: .7; }
+:root[data-theme="broadsheet"] .chart .since { stroke: rgb(var(--ink-rgb) / .5); stroke-dasharray: 3 2.5 4 3 2 3; }
+:root[data-theme="broadsheet"] .chart .proj { stroke-dasharray: 6 3 4 4 7 3; opacity: .9; }
+:root[data-theme="broadsheet"] .chart .ax { font-size: 13.5px; letter-spacing: 0; fill: var(--ink-3); }
+:root[data-theme="broadsheet"] .chart .lbl { stroke: var(--paper); stroke-width: 4; font-weight: 700; }
+
+/* ── the detail, as an article under the lead: a headline, four figures between column rules,
+   its words in columns opening on a dropped initial, and the download under a rule ── */
+:root[data-theme="broadsheet"] .detailInner {
+  border-top: 0; background: var(--bs-rule) 0 0 / 100% 4px no-repeat; padding: 22px 0 6px;
+}
+:root[data-theme="broadsheet"] .seam { display: none; }
+:root[data-theme="broadsheet"] .detailOuter { margin-inline: -6px; padding-inline: 6px; }
+:root[data-theme="broadsheet"] .dhead { gap: 12px 16px; margin-bottom: 18px; align-items: center; }
+:root[data-theme="broadsheet"] .dtitle { font-size: clamp(24px, 2.9vw, 32px); font-weight: 700; line-height: 1.2; letter-spacing: -.005em; color: var(--ink); }
+:root[data-theme="broadsheet"] .dband {
+  font-size: 12.5px; font-weight: 700; letter-spacing: .05em; padding: 3px 8px 2px; border-radius: 0; opacity: 1;
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 3px stretch;
+}
+:root[data-theme="broadsheet"] .dclose,
+:root[data-theme="broadsheet"] .dxspan {
+  border-radius: 0; background: none; color: var(--ink-2);
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 3px stretch;
+}
+:root[data-theme="broadsheet"] .dclose { font-size: 12.5px; font-weight: 700; padding: 5px 11px 4px; }
+:root[data-theme="broadsheet"] .dxspan { font-size: 15px; padding: 2px 10px; }
+:root[data-theme="broadsheet"] .dclose:hover,
+:root[data-theme="broadsheet"] .dxspan:hover { color: var(--ink); background: rgb(var(--tint) / .05); }
+:root[data-theme="broadsheet"] .dxspan[aria-busy="true"] { color: var(--ink); background: rgb(var(--tint) / .08); }
+:root[data-theme="broadsheet"] .dxspan[aria-disabled="true"]:not([aria-busy]) { color: var(--ink-4); background: none; }
+:root[data-theme="broadsheet"] .readouts {
+  grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0 0 18px;
+  background: none; border: 0; border-radius: 0; overflow: visible;
+}
+:root[data-theme="broadsheet"] .ro { background: none; padding: 2px 18px 4px; }
+:root[data-theme="broadsheet"] .ro:first-child { padding-left: 0; }
+:root[data-theme="broadsheet"] .ro + .ro { background: var(--bs-vrule) 0 0 / 4px 100% no-repeat; }
+:root[data-theme="broadsheet"] .ro dt { font-size: 12.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); }
+/* the figures are set large, and wrap rather than lose their ends */
+:root[data-theme="broadsheet"] .ro dd { margin-top: 6px; font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -.005em; white-space: normal; overflow: visible; }
+:root[data-theme="broadsheet"] .ro dd small { display: block; margin: 4px 0 0; font-size: 14px; font-weight: 400; line-height: 1.4; letter-spacing: 0; color: var(--ink-3); }
+:root[data-theme="broadsheet"] .ro dd.est { font-size: 18px; font-weight: 400; font-style: normal; color: var(--ink-2); }
+:root[data-theme="broadsheet"] .dfoot {
+  max-width: none; margin: 0; columns: 2 30ch; column-gap: 40px;
+  font-size: 15.5px; line-height: 1.5; color: var(--ink-2);
+}
+:root[data-theme="broadsheet"] .dfoot::first-letter {
+  float: left; font-size: 3.4em; line-height: .8; font-weight: 700; color: var(--ink);
+  padding: 4px 19px 0 0;
+}
+:root[data-theme="broadsheet"] .dexport {
+  margin-top: 18px; padding-top: 14px; border-top: 0;
+  background: var(--bs-rule-2) 0 0 / 100% 4px no-repeat;
+}
+:root[data-theme="broadsheet"] .dxh { font-size: 12.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); }
+:root[data-theme="broadsheet"] .dxspans { gap: 10px; }
+:root[data-theme="broadsheet"] .dxnote { font-size: 15px; color: var(--ink-3); }
+
+/* ── the cost strip: a boxed notice under a rule, in its own family's inks ── */
+:root[data-theme="broadsheet"] .rule { padding: 0; }
+:root[data-theme="broadsheet"] .rule .ln,
+:root[data-theme="broadsheet"] .rule .ln.r { height: 4px; background: var(--bs-rule) 0 0 / 100% 100% no-repeat; }
+:root[data-theme="broadsheet"] .rule .ln.r { background-image: var(--bs-rule-2); }
+:root[data-theme="broadsheet"] .rule .tag { font-size: 12.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); }
+:root[data-theme="broadsheet"] .cost {
+  padding: 20px 24px 18px; border-left: 0;
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 3px stretch;
+}
+:root[data-theme="broadsheet"] .chead h2 { font-size: 13.5px; font-weight: 700; letter-spacing: .05em; color: var(--coin); }
+:root[data-theme="broadsheet"] .chead h2 .sl { color: var(--ink-4); opacity: 1; font-weight: 400; }
+:root[data-theme="broadsheet"] .cwarn { font-size: 16px; line-height: 1.6; color: var(--ink-2); }
+:root[data-theme="broadsheet"] .cwarn b { color: var(--ink); font-weight: 700; }
+:root[data-theme="broadsheet"] .ctot .v { font-size: 28px; font-weight: 700; color: var(--coin-2); }
+:root[data-theme="broadsheet"] .ctot .k { font-size: 12.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); }
+:root[data-theme="broadsheet"] .cbar { height: 9px; border-radius: 0; background: rgb(var(--tint) / .07); }
+:root[data-theme="broadsheet"] .ctab { font-size: 15.5px; }
+:root[data-theme="broadsheet"] .ctab th { font-size: 12.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); border-bottom: 0; padding-bottom: 7px; }
+:root[data-theme="broadsheet"] .ctab thead tr { background: var(--bs-rule-2) 0 100% / 100% 3px no-repeat; }
+:root[data-theme="broadsheet"] .ctab td { color: var(--ink-2); border-bottom-color: rgb(var(--ink-rgb) / .1); }
+:root[data-theme="broadsheet"] .ctab col.c2 { width: 110px; } :root[data-theme="broadsheet"] .ctab col.c3 { width: 64px; }
+:root[data-theme="broadsheet"] .sw { border-radius: 0; }
+:root[data-theme="broadsheet"] .cnote { font-size: 14px; color: var(--ink-3); letter-spacing: 0; }
+
+/* ── Settings: a slip of the same paper over the page, boxed by hand ── */
+:root[data-theme="broadsheet"] .panel {
+  background: #f6f2ea; border-radius: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 3px stretch;
+  box-shadow: 0 16px 30px -18px rgb(60 44 24 / .5), 0 2px 6px -3px rgb(60 44 24 / .25);
+}
+:root[data-theme="broadsheet"] .ptitle { font-size: 13.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-2); }
+:root[data-theme="broadsheet"] .phead { font-size: 12.5px; font-weight: 700; letter-spacing: .05em; color: var(--ink-3); }
+:root[data-theme="broadsheet"] .psec + .psec,
+:root[data-theme="broadsheet"] .pfoot { border-top: 0; background: var(--bs-rule-2) 0 0 / 100% 3px no-repeat; }
+:root[data-theme="broadsheet"] .pname { font-size: 16px; }
+:root[data-theme="broadsheet"] .phint { font-size: 14px; color: var(--ink-3); }
+:root[data-theme="broadsheet"] .pfoot { color: var(--ink-3); font-size: 14px; }
+:root[data-theme="broadsheet"] .preset { font-size: 14px; }
+:root[data-theme="broadsheet"] .pnote { font-size: 14px; color: var(--hold-ink); }
+:root[data-theme="broadsheet"] .preset { border-radius: 0; background: none; color: var(--ink-2);
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 2px stretch; }
+:root[data-theme="broadsheet"] .preset:hover:not(:disabled) { color: var(--ink); background: rgb(var(--tint) / .05); }
+:root[data-theme="broadsheet"] .switch { background: none; border: 1.3px solid var(--ink-3); }
+:root[data-theme="broadsheet"] .switch::before { background: var(--ink-3); box-shadow: none; top: 2.7px; left: 2.7px; width: 12.6px; height: 12.6px; }
+:root[data-theme="broadsheet"] .switch:checked { background: var(--ink); border-color: var(--ink); }
+:root[data-theme="broadsheet"] .switch:checked::before { background: var(--paper); }
+:root[data-theme="broadsheet"] .pick { border-radius: 0; background: none; border-color: rgb(var(--tint) / .22); }
+:root[data-theme="broadsheet"] .pick:hover { border-color: rgb(var(--tint) / .45); }
+:root[data-theme="broadsheet"] .pick:has(input:checked) {
+  border: 1px solid transparent; border-image: var(--bs-box) 10 / 10px / 3px stretch; }
+:root[data-theme="broadsheet"] .pick .fn { font-size: 13.5px; color: var(--ink-2); }
+:root[data-theme="broadsheet"] .pick .swatch { border-radius: 0; border-color: rgb(var(--tint) / .2); }
+
+/* ── narrowing: the chart drops under the ring, its column rule turning to a rule over it; the
+   figures go two to a row; at a phone's width the ears go up beside each other, over the name ── */
+@media (max-width: 760px) {
+  :root[data-theme="broadsheet"] .top {
+    grid-template-areas: "ear name gear" "rule rule rule" "date date date" "fresh fresh fresh" "rule2 rule2 rule2";
+  }
+  :root[data-theme="broadsheet"] .fresh { justify-self: start; margin-top: 4px; }
+  :root[data-theme="broadsheet"] .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; }
+  :root[data-theme="broadsheet"] .ro:nth-child(odd) { background: none; padding-left: 0; }
+}
+@media (max-width: 680px) {
+  :root[data-theme="broadsheet"] .ring { padding: 4px 0 14px; align-self: stretch; }
+  :root[data-theme="broadsheet"] .ring .meta { width: auto; }
+  :root[data-theme="broadsheet"] .spark { padding: 16px 0 2px; background: var(--bs-rule) 0 0 / 100% 4px no-repeat; }
+}
+@media (max-width: 560px) {
+  :root[data-theme="broadsheet"] main { gap: 18px; }
+  :root[data-theme="broadsheet"] .top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "ear gear" "name name" "rule rule" "date date" "fresh fresh" "rule2 rule2";
+  }
+  :root[data-theme="broadsheet"] .mark h1 { margin-top: 4px; }
+  :root[data-theme="broadsheet"] .art { width: 112px; }
+  :root[data-theme="broadsheet"] .chart,
+  :root[data-theme="broadsheet"] .chartempty { height: 120px; }
+  :root[data-theme="broadsheet"] .dfoot { columns: auto; }
+  :root[data-theme="broadsheet"] .cost { padding: 16px 16px 14px; }
+  :root[data-theme="broadsheet"] .ctab col.c2 { width: 92px; }
+  :root[data-theme="broadsheet"] .ctab col.c3 { width: 54px; }
+  /* the rule's words wrap, centred, rather than push the page wider than a phone */
+  :root[data-theme="broadsheet"] .rule .tag { white-space: normal; text-align: center; letter-spacing: .05em; min-width: 0; text-wrap: balance; }
+  :root[data-theme="broadsheet"] .rule .ln { min-width: 24px; }
+}
+
+/* The boil: the script steps data-boil through 0, 1 and 2, about seven times a second, while the
+   theme is on, its switch is on, the system allows motion and the tab is in view; each step lays one
+   of three fixed roughenings over the page. It loops and goes nowhere, so it holds at any reading.
+   The paper's grain lies outside the page and stays still: only the ink boils. */
+:root[data-theme="broadsheet"][data-boil="0"] main { filter: url(#bs-boil-0); }
+:root[data-theme="broadsheet"][data-boil="1"] main { filter: url(#bs-boil-1); }
+:root[data-theme="broadsheet"][data-boil="2"] main { filter: url(#bs-boil-2); }
+
+/* Forced colours keep the words and drop the drawings' fixed ink, so the rules and boxes come back
+   as plain lines in the system's colours, and the ink holds still. */
+@media (forced-colors: active) {
+  :root[data-theme="broadsheet"] main { filter: none !important; }
+  :root[data-theme="broadsheet"] :is(.plan, .gear[aria-expanded="true"], .cost, .panel, .dband, .dclose, .dxspan, .preset) {
+    border-image: none; border: 1px solid CanvasText;
+  }
+  :root[data-theme="broadsheet"] .ring[data-pace="over"][data-hot="1"]:not([data-band="exhausted"]) .mpace::before {
+    border-image: none; border: 1px solid CanvasText;
+  }
+  :root[data-theme="broadsheet"] .pick:has(input:checked) { border-image: none; border: 3px solid Highlight; }
+  :root[data-theme="broadsheet"] .switch { border-color: ButtonText; }
+  :root[data-theme="broadsheet"] .switch:checked { background: Highlight; border-color: Highlight; }
+  :root[data-theme="broadsheet"] .switch::before { forced-color-adjust: none; background: ButtonText; }
+  :root[data-theme="broadsheet"] .switch:checked::before { background: HighlightText; }
+  :root[data-theme="broadsheet"] .top::after,
+  :root[data-theme="broadsheet"] .top::before { background: none; border-top: 3px double CanvasText; }
+  :root[data-theme="broadsheet"] .top::before { border-top-width: 1px; border-top-style: solid; }
+  :root[data-theme="broadsheet"] .grain { display: none; }
+  :root[data-theme="broadsheet"] .spark,
+  :root[data-theme="broadsheet"] .ro + .ro { background: none; border-left: 1px solid CanvasText; }
+  :root[data-theme="broadsheet"] .detailInner,
+  :root[data-theme="broadsheet"] .dexport,
+  :root[data-theme="broadsheet"] .rule .ln,
+  :root[data-theme="broadsheet"] .rule .ln.r,
+  :root[data-theme="broadsheet"] .psec + .psec,
+  :root[data-theme="broadsheet"] .pfoot { background: none; border-top: 1px solid CanvasText; }
+  :root[data-theme="broadsheet"] .ctab thead tr { background: none; }
+  :root[data-theme="broadsheet"] .ctab th { border-bottom: 1px solid CanvasText; }
+  :root[data-theme="broadsheet"] .ring[aria-expanded="true"] { outline: 1px solid CanvasText; }
+  /* the ring's and the chart's ink is drawn, not printed, so it takes the system's colours by hand */
+  :root[data-theme="broadsheet"] .art .hand,
+  :root[data-theme="broadsheet"] .ring[data-state="unknown"] .hand,
+  :root[data-theme="broadsheet"] .nl { stroke: CanvasText; }
+  :root[data-theme="broadsheet"] .tkx,
+  :root[data-theme="broadsheet"] .chart .grid,
+  :root[data-theme="broadsheet"] .chart .day,
+  :root[data-theme="broadsheet"] .chart .full,
+  :root[data-theme="broadsheet"] .chart .since { stroke: GrayText; }
+  :root[data-theme="broadsheet"] .chart .ax { fill: CanvasText; }
+  :root[data-theme="broadsheet"] .gap { stroke: GrayText; }
+  :root[data-theme="broadsheet"] .ring[data-pace="over"] .gap { stroke: Highlight; }
+  :root[data-theme="broadsheet"] .ring[data-pace="over"] .ncap { stroke: Highlight; fill: Highlight; }
+  :root[data-theme="broadsheet"] .chart .lbl { stroke: Canvas; }
+}
+/* on a dark forced palette the readings take Glass's inks, set for a dark ground, as the script's ladder does */
+@media (forced-colors: active) and (prefers-color-scheme: dark) {
+  :root[data-theme="broadsheet"] {
+    --steady:    #72ead0;   --steady-rgb:   114 234 208;
+    --warning:   #e0a52e;   --warning-rgb:  224 165  46;
+    --critical:  #ef6a3a;   --critical-rgb: 239 106  58;
+    --exhausted: #e0304f;   --exhausted-rgb:224  48  79;
+    --unknown:   #7d8ca3;   --unknown-rgb:  125 140 163;
+    --pace-hot:  #ff8f5a;   --pace-hot-rgb: 255 143  90;
+    --coin: #c3c9ea; --coin-2: #b6bee0; --cerr: #f0b9c4; --hold-ink: #f4dfb2; --down-ink: #f7c6cf;
+  }
+}
+@media (forced-colors: active) and (max-width: 760px) {
+  :root[data-theme="broadsheet"] .ro:nth-child(odd) { border-left: 0; }
+}
+@media (forced-colors: active) and (max-width: 680px) {
+  :root[data-theme="broadsheet"] .spark { border-left: 0; border-top: 1px solid CanvasText; }
+}
+
+/* the theme's patch of itself, in Settings: a nameplate, its double rule and three columns of type */
+.pick[data-pick="broadsheet"] .swatch {
+  background:
+    linear-gradient(#201c16 0 0) 50% 3px / 38% 5px no-repeat,
+    linear-gradient(#201c16 0 0) 50% 10px / 86% 1.5px no-repeat,
+    linear-gradient(#201c16 0 0) 50% 12.5px / 86% .75px no-repeat,
+    repeating-linear-gradient(#8c8475 0 1px, transparent 1px 3px) 7% 16px / 26% 8px no-repeat,
+    repeating-linear-gradient(#8c8475 0 1px, transparent 1px 3px) 50% 16px / 26% 8px no-repeat,
+    repeating-linear-gradient(#8c8475 0 1px, transparent 1px 3px) 93% 16px / 26% 8px no-repeat,
+    #f2ede2;
+}
 </style>
 </head>
 <body data-hold="0">
@@ -1632,6 +2125,33 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
     <feTile result="grid"/>
     <feComposite in="SourceGraphic" in2="grid" operator="in"/>
     <feMorphology operator="dilate" radius="1"/>
+  </filter>
+  <!-- Broadsheet's pen and pencil: fixed noise, so a line drawn again is roughened the same way.
+       The pen moves an edge by under a pixel, for what is a reading; the pencil lets the grid wander. -->
+  <filter id="bs-pen" x="-4%" y="-4%" width="108%" height="108%">
+    <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="11" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="1" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <!-- Broadsheet's boil: three fixed roughenings of the whole page, taken in turn, so the ink trembles
+       as a drawn film's lines do from one drawing to the next. Each moves a line by about a pixel at
+       most. The noise covers the whole page in one piece: laid in tiles, it steps where they meet. -->
+  <filter id="bs-boil-0" x="-1%" y="-1%" width="102%" height="102%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="1" seed="3" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="bs-boil-1" x="-1%" y="-1%" width="102%" height="102%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="1" seed="17" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="bs-boil-2" x="-1%" y="-1%" width="102%" height="102%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="1" seed="29" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="bs-pencil" x="-2%" y="-20%" width="104%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency=".012 .05" numOctaves="2" seed="4" result="w"/>
+    <feDisplacementMap in="SourceGraphic" in2="w" scale="2.6" xChannelSelector="R" yChannelSelector="G" result="d"/>
+    <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="9" result="g"/>
+    <feDisplacementMap in="d" in2="g" scale=".9" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
 </svg>
 <div class="grain" aria-hidden="true"></div>
@@ -1656,6 +2176,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
         <div class="panel" id="prefsPanel" role="group" aria-label="Settings" inert></div>
       </div>
     </div>
+    <!-- Broadsheet's dateline, under its masthead; the other themes do not draw it -->
+    <span class="dateline" id="dateline" aria-hidden="true"></span>
   </header>
 
   <section class="glass" aria-label="Subscription quota">
@@ -1802,7 +2324,8 @@ const BLOOM_STOP = { steady: .3, warning: .45, critical: .62, exhausted: .78, un
 /* Neumorphism's light clay reads the same ladder in darker inks (the dark clay reads STOP): luminance .18 → .12 →
    .08 → .05, falling with danger by about the same steps, so on the clay the worse a reading, the
    harder it stands out, and the steady arc shows at 3:1 against the groove's floor, which is darker
-   than the clay. Its stylesheet spells out the same values as --steady and the rest. */
+   than the clay. Broadsheet's paper, lighter than the clay, prints the same inks. Both stylesheets
+   spell out the same values as --steady and the rest. */
 const STOP_LIGHT = {
   steady:    [ 23, 134, 111], warning:  [131,  90,  5], critical: [136, 55, 11],
   exhausted: [120,  18,  39], unknown:  [111, 119, 134],
@@ -1810,11 +2333,16 @@ const STOP_LIGHT = {
 const neuOn = () => document.documentElement.dataset.theme === "neumorphism";
 /* the light clay reads the light ladder; the dark clay reads Glass's, which was set for a dark ground */
 const neuLight = () => neuOn() && document.documentElement.dataset.clay !== "dark";
+const paperOn = () => document.documentElement.dataset.theme === "broadsheet";
+/* Broadsheet's paper is a light ground too, so it prints the light clay's inks, unless forced colours
+   have put a dark ground under it, where it reads Glass's ladder as the dark clay does */
+const FORCED_DARK = matchMedia("(forced-colors: active) and (prefers-color-scheme: dark)");
+const lightGround = () => neuLight() || (paperOn() && !FORCED_DARK.matches);
 const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
 const rgbCss = (c) => "rgb(" + c[0] + " " + c[1] + " " + c[2] + ")";
 
 function rampOf(pct, th, band) {
-  const P = neuLight() ? STOP_LIGHT : STOP;
+  const P = lightGround() ? STOP_LIGHT : STOP;
   if (band === "unknown" || typeof pct !== "number") return { rgb: P.unknown, bloom: BLOOM_STOP.unknown };
   const warn = num(th && th.warningFloorPercent, 70);
   const crit = num(th && th.criticalPercent, 95);
@@ -1905,14 +2433,14 @@ function paceMultiple(pct, el) {
    --ink-4: an over-pace verdict is a verdict even when it is mild, and
    it should read at least as clearly as the label above it. */
 const PACE_INK_COLD = [141, 151, 166], PACE_MARK_COLD = [255, 255, 255], PACE_HOT = [255, 143, 90];
-/* The same, on Neumorphism's light ground: a darker slate to a deep orange whose lightness sits
+/* The same, on Neumorphism's light ground and Broadsheet's: a darker slate to a deep orange whose lightness sits
    between its warning and critical inks, so a caption keeps 4.5:1 on the clay at either end and the
    overrun line 3:1 on the groove. The mark starts from the ink rather than from white. */
 const PACE_LIGHT = { inkCold: [88, 98, 114], ink: [147, 64, 9], markCold: [42, 51, 66], mark: [147, 64, 9] };
 /* the dark clay's slate: above its faintest ink, so a mild verdict never reads quieter than "on pace" */
 const PACE_DARK_COLD = [153, 162, 177];
-const paceInk  = (sev) => (neuLight() ? mix(PACE_LIGHT.inkCold, PACE_LIGHT.ink, sev) : mix(neuOn() ? PACE_DARK_COLD : PACE_INK_COLD, PACE_HOT, sev));
-const paceMark = (sev) => (neuLight() ? mix(PACE_LIGHT.markCold, PACE_LIGHT.mark, sev) : mix(PACE_MARK_COLD, PACE_HOT, sev));
+const paceInk  = (sev) => (lightGround() ? mix(PACE_LIGHT.inkCold, PACE_LIGHT.ink, sev) : mix(neuOn() ? PACE_DARK_COLD : PACE_INK_COLD, PACE_HOT, sev));
+const paceMark = (sev) => (lightGround() ? mix(PACE_LIGHT.markCold, PACE_LIGHT.mark, sev) : mix(PACE_MARK_COLD, PACE_HOT, sev));
 
 /* The instant a pace judgement is made against. A countdown is a real
    clock and keeps running through a hold, but anything that COMPARES the
@@ -2044,6 +2572,48 @@ function paintArc(key, frac) {
   }
 }
 
+/* ── Broadsheet's hand ───────────────────────────────────────────
+   A pen's wobble that is the same on every redraw. Each drawing is seeded from what it is (a
+   ring's key and which edge, a saved graph's frame), never from the clock or Math.random, so a
+   reading that has not moved draws the same line, and the page opened again draws the same page. */
+const seedOf = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), a | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/* a curve through the points, as a pen goes through them: Catmull-Rom, written as cubic Béziers */
+function penPath(p) {
+  const f = (v) => v.toFixed(2);
+  let d = "M" + f(p[0][0]) + " " + f(p[0][1]);
+  for (let i = 0; i < p.length - 1; i++) {
+    const a = p[i - 1] || p[i], b = p[i], c = p[i + 1], e = p[i + 2] || c;
+    d += "C" + f(b[0] + (c[0] - a[0]) / 6) + " " + f(b[1] + (c[1] - a[1]) / 6) + " " +
+         f(c[0] - (e[0] - b[0]) / 6) + " " + f(c[1] - (e[1] - b[1]) / 6) + " " + f(c[0]) + " " + f(c[1]);
+  }
+  return d;
+}
+/* A circle drawn freehand: a little out of round, and run on past its start, coming round a
+   pen's width off the line it began on, as a quick circle does. */
+function handLoop(cx, cy, r, seed) {
+  const rnd = seeded(seed);
+  const a0 = rnd() * Math.PI * 2, over = .06 + rnd() * .05;
+  const w2 = .28 + rnd() * .3, p2 = rnd() * Math.PI * 2, w3 = .14 + rnd() * .18, p3 = rnd() * Math.PI * 2;
+  const drift = (rnd() < .5 ? -1 : 1) * (.8 + rnd() * .6);
+  const n = 44, pts = [];
+  for (let i = 0; i <= n; i++) {
+    const u = i / n, a = a0 + Math.PI * 2 * (1 + over) * u;
+    const off = u > .8 ? drift * ((u - .8) / .2) ** 2 : 0;
+    const rr = r + w2 * Math.sin(2 * a + p2) + w3 * Math.sin(3 * a + p3) + off;
+    pts.push([cx + rr * Math.cos(a), cy + rr * Math.sin(a)]);
+  }
+  return penPath(pts);
+}
+
 function arcPath(r, f0, f1) {
   const span = f1 - f0;
   if (span <= 0.0004) return "";
@@ -2055,13 +2625,18 @@ function arcPath(r, f0, f1) {
 
 function buildRings() {
   ringsEl.innerHTML = ORDER.map((key) => `
-   <div class="lrow" id="row-${key}">
+   <div class="lrow" id="row-${key}" style="--tk:url(#tk-${key});--hb:url(#hb-${key})">
     <button class="ring" type="button" id="ring-${key}" data-key="${key}"
             aria-expanded="false" aria-controls="detail" data-state="unknown" data-pace="none">
       <span class="art">
         <canvas class="fluid" data-r="fluid" aria-hidden="true"></canvas>
         <span class="dial"></span>
         <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <!-- Broadsheet's hatching: the track's, in the ink, and the hub's at the cap, in the band's -->
+          <defs>
+            <pattern id="tk-${key}" patternUnits="userSpaceOnUse" width="2.4" height="2.4" patternTransform="rotate(32)"><path class="tkx" d="M-1 1.2H3.4"></path></pattern>
+            <pattern id="hb-${key}" patternUnits="userSpaceOnUse" width="3.4" height="3.4" patternTransform="rotate(45)"><path class="hbx" d="M-1 1.7H4.4M1.7 -1V4.4"></path></pattern>
+          </defs>
           <circle class="well" cx="60" cy="60" r="44.5"></circle>
           <circle class="rim" cx="60" cy="60" r="55.2"></circle>
           <circle class="track" cx="60" cy="60" r="${R}"></circle>
@@ -2072,6 +2647,9 @@ function buildRings() {
             <circle class="arc main" data-r="arc" cx="60" cy="60" r="${R}"
                     stroke-dasharray="${CIRC.toFixed(2)}" stroke-dashoffset="${CIRC.toFixed(2)}"></circle>
           </g>
+          <!-- the track's two edges as Broadsheet draws them, by hand, over the arc; the others do not draw them -->
+          <path class="hand" d="${handLoop(60, 60, R + 4.6, seedOf(key + ":outer"))}"></path>
+          <path class="hand inner" d="${handLoop(60, 60, R - 4.6, seedOf(key + ":inner"))}"></path>
           <path class="gap" data-r="gap" d=""></path>
           <g class="notch" data-r="notch" transform="rotate(0 60 60)" style="display:none">
             <line class="nb" x1="60" y1="2.4" x2="60" y2="17.6"></line>
@@ -2141,6 +2719,11 @@ function render() {
 
   $("fresh").dataset.tone = f.tone;
   $("freshText").textContent = f.text;
+  /* Broadsheet's dateline: today, as a newspaper dates itself */
+  if (paperOn()) {
+    const day = new Date().toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    if ($("dateline").textContent !== day) $("dateline").textContent = day;
+  }
 
   const plan = s && s.plan ? s.plan : null;
   $("plan").textContent = plan && plan.subscriptionType
@@ -2312,7 +2895,7 @@ function marksAhead(th, pct) {
 function paintThresholds(key, th, on, pct) {
   const host = q(key, "thmarks");
   const marks = on && th && typeof pct === "number" ? marksAhead(th, pct) : [];
-  const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",") + (neuLight() ? " light" : "");
+  const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",") + (lightGround() ? " light" : "");
   if (host.dataset.k === stamp) return;
   host.dataset.k = stamp;
   host.innerHTML = marks.map(({ v, served }) => {
@@ -2474,11 +3057,11 @@ function renderDetail(key) {
     : `<dd class="est">no fitted run yet</dd>`;
 
   /* The words name what is drawn: the ring's arc and white tick under Glass, the bar and the ▲
-     under it in the Matrix terminal, which shows this same text. */
+     under it in the Matrix terminal, which shows this same text, and the tick in ink on Broadsheet's paper. */
   const bar = tuiOn();
   const N = bar
     ? { gauge: "bar", tick: "The ▲ under the bar sits at ", round: "of the way along", head: "The bar" }
-    : { gauge: "ring", tick: "The white tick sits at ", round: "of the way round", head: "The arc" };
+    : { gauge: "ring", tick: paperOn() ? "The inked tick sits at " : "The white tick sits at ", round: "of the way round", head: "The arc" };
   /* the notch, said in words — the tick teaches itself on first click */
   let marker;
   if (dormant) marker = "No reset window is running, so there is no clock to pace this " + showPct(lim.percent) +
@@ -2759,9 +3342,17 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${
     esc(SHORT[key])} usage history, ${usable.length} readings, latest ${usable[usable.length-1].v} percent">`;
 
+  /* Broadsheet pencils its grid and draws the trace in pen, a group of each, so each is roughened
+     once; it hatches the fitted run with a pattern of its own (hatchId) in the band's ink. A filter's
+     region is the box of what it draws, and a flat trace's box has no height, so each pen group
+     holds an unpainted rect the size of the plot (plotBox) to give it one. */
+  const paper = paperOn(), hatchId = "hx-" + key + (src ? "-g" : "");
+  const plotBox = `<rect x="${PL}" y="${PT}" width="${W - PL - PR}" height="${H - PT - PB}" fill="none" stroke="none"></rect>`;
+  let pencil = "";
   for (const fr of [0, .5, 1]) {
     const y = Y(ymax * fr);
-    s += `<line class="grid" x1="${PL}" y1="${y.toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
+    const line = `<line class="grid" x1="${PL}" y1="${y.toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
+    if (paper) pencil += line; else s += line;
     s += `<text class="ax" x="${PL - 7}" y="${(y + T.mid).toFixed(1)}" text-anchor="end">${Math.round(ymax * fr)}</text>`;
   }
   const warn = num(th && th.warningFloorPercent, NaN);
@@ -2776,11 +3367,17 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
       d.setHours(24, 0, 0, 0);
       if (d.getTime() >= t1) break;
       const x = edge(X(d.getTime()));
-      s += `<line class="day" x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(H - PB).toFixed(1)}"></line>`;
+      const line = `<line class="day" x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${(H - PB).toFixed(1)}"></line>`;
+      if (paper) pencil += line; else s += line;
       days.push([x, d.toLocaleDateString(LOCALE, { weekday: "short" })]);
     }
   }
 
+  if (paper) {
+    s += `<g class="pencil">${pencil}</g>`;
+    s += `<defs><pattern id="${hatchId}" patternUnits="userSpaceOnUse" width="4.6" height="4.6" patternTransform="rotate(-50)">` +
+         `<path class="hx" d="M-1 2.3H5.6"></path></pattern></defs><g class="pen">${plotBox}`;
+  }
   s += `<path class="full" d="${seg(() => true)}"></path>`;
   if (since !== null) {
     const runD = seg((p) => p.t >= since);
@@ -2789,7 +3386,8 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
       /* a two-sample run is a sliver; shading it would read as an
          artefact, so only a run wide enough to be a shape is filled */
       if (run.length > 1 && X(run[run.length - 1].t) - X(run[0].t) > (W - PL - PR) * 0.08) {
-        s += `<path class="area" d="${runD} L${edge(X(run[run.length-1].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} L${edge(X(run[0].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} Z"></path>`;
+        s += `<path class="area" d="${runD} L${edge(X(run[run.length-1].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} L${edge(X(run[0].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} Z"${
+          paper ? ` style="fill:url(#${hatchId})" data-hatch="${hatchId}"` : ""}></path>`;
       }
       s += `<path class="run" d="${runD}"></path>`;
     }
@@ -2801,6 +3399,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
       fitLabel = { x: X(since) + (room ? -4 : 4), y: H - PB - 4, anchor: room ? "end" : "start" };
     }
   }
+  if (paper) s += `</g>`;
 
   const last = usable[usable.length - 1];
   /* Both floating labels want the top-right corner, and a projection is
@@ -2816,8 +3415,9 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   if (projX !== null) {
     const capText = "cap " + stamp(projX);
     capLeft = X(projX) - 5 - tw(capText);
-    s += `<path class="proj" d="${pixel ? gridDash([X(last.t), Y(last.v)], [X(projX), Y(100)])
+    const projLine = `<path class="proj" d="${pixel ? gridDash([X(last.t), Y(last.v)], [X(projX), Y(100)])
       : `M${X(last.t).toFixed(1)} ${Y(last.v).toFixed(1)}L${X(projX).toFixed(1)} ${Y(100).toFixed(1)}`}"></path>`;
+    s += paper ? `<g class="pen">${plotBox}${projLine}</g>` : projLine;
     s += `<text class="ax lbl" x="${(X(projX) - 5).toFixed(1)}" y="${T.capY}" text-anchor="end" fill="var(--band)">${esc(capText)}</text>`;
   }
   const headX = X(last.t), headY = Y(last.v);
@@ -2894,6 +3494,8 @@ const CHART_REFRESH_MS = 20000;
 /* Neumorphism's chart fills the well beside the dial's plate, which is taller than the glass's row:
    at a phone's width, while it lies under the dial, and beside it */
 const NEU_CHART_H = [120, 150, 240];
+/* Broadsheet's, at a phone's width and wider: the lead's chart is taller than the glass's */
+const BS_CHART_H = [120, 150];
 const chartMarkup = {};
 function renderCharts() {
   S.chartsDirty = false;
@@ -2903,6 +3505,7 @@ function renderCharts() {
   const narrow = matchMedia("(max-width: 560px)").matches;
   const H = trainOn() ? CHART_TYPE.pixel.tall
     : neuOn() ? (narrow ? NEU_CHART_H[0] : matchMedia("(max-width: 760px)").matches ? NEU_CHART_H[1] : NEU_CHART_H[2])
+    : paperOn() ? BS_CHART_H[narrow ? 0 : 1]
     : narrow ? 100 : 118;
   for (const key of ORDER) {
     const host = $("spark-" + key);
@@ -2912,7 +3515,8 @@ function renderCharts() {
     const quiet = !!(known && lim.dormant) && !(lim.percent > 0);
     const band = !known || quiet ? "unknown" : bandOf(lim.percent, th);
     const proj = fit && typeof fit.projectedAt === "number" && isFinite(fit.projectedAt) ? fit.projectedAt : null;
-    const W = Math.max(220, Math.round(host.clientWidth || 480));
+    const cs = getComputedStyle(host), inset = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) || 0;
+    const W = Math.max(220, Math.round((host.clientWidth || 480) - inset));
     const html = chartHTML(key, fit, band, proj, th, W, !known, H);
     if (html !== chartMarkup[key]) { chartMarkup[key] = html; host.innerHTML = html; }
   }
@@ -2987,7 +3591,7 @@ function graphName(key, span) {
 }
 
 function drawGraph(key, h, [sec, , spanWords]) {
-  const { w: GW, h: GH, pad, scale, chartTop, chartH } = GRAPH, pixel = trainOn(), terminal = tuiOn(), soft = neuOn();
+  const { w: GW, h: GH, pad, scale, chartTop, chartH } = GRAPH, pixel = trainOn(), terminal = tuiOn(), soft = neuOn(), paper = paperOn();
   const canvas = document.createElement("canvas");
   canvas.width = GW * scale; canvas.height = GH * scale;
   const ctx = canvas.getContext("2d");
@@ -3002,7 +3606,7 @@ function drawGraph(key, h, [sec, , spanWords]) {
   let ink, dim, faint, hi, bg, frame, lift, shade;
   try {
     ink = colour("var(--ink)"); dim = colour("var(--ink-3)"); faint = colour("var(--ink-4)"); hi = colour("var(--hi)");
-    bg = pixel ? colour("var(--plate)") : terminal ? "#000" : soft ? colour("var(--clay)") : "#10131a";
+    bg = pixel ? colour("var(--plate)") : terminal ? "#000" : soft ? colour("var(--clay)") : paper ? colour("var(--paper)") : "#10131a";
     frame = pixel ? colour("var(--band)") : terminal ? MX_INK.line : colour("var(--edge)");
     if (soft) { lift = colour("var(--lift)"); shade = colour("var(--shade)"); }
   } finally {
@@ -3016,8 +3620,10 @@ function drawGraph(key, h, [sec, , spanWords]) {
 
   /* the plate: Train's with stepped corners, as its plates have; Neumorphism's standing up out of
      the clay, lit from the top left, with room around it for its shadow to fade out inside the
-     picture (a shadow's blur and offset are in the canvas's own pixels, so twice the page's); the
-     others square */
+     picture (a shadow's blur and offset are in the canvas's own pixels, so twice the page's);
+     Broadsheet's a sheet of its paper in a frame inked by hand, with a double rule under the
+     heading, drawn from the limit's own seed so the same graph saved again is framed the same way;
+     the others square */
   ctx.fillStyle = bg;
   if (soft) {
     ctx.fillRect(0, 0, GW, GH);
@@ -3035,6 +3641,16 @@ function drawGraph(key, h, [sec, , spanWords]) {
     ctx.fillStyle = frame;
     ctx.fillRect(3, 0, GW - 6, 3); ctx.fillRect(3, GH - 3, GW - 6, 3);
     ctx.fillRect(0, 3, 3, GH - 6); ctx.fillRect(GW - 3, 3, 3, GH - 6);
+  } else if (paper) {
+    ctx.fillRect(0, 0, GW, GH);
+    const rnd = seeded(seedOf(key + ":frame")), m = 16;
+    ctx.strokeStyle = ink; ctx.lineCap = "round";
+    inkLine(ctx, m, m, GW - m, m, rnd, 1.5);
+    inkLine(ctx, GW - m, m, GW - m, GH - m, rnd, 1.5);
+    inkLine(ctx, GW - m, GH - m, m, GH - m, rnd, 1.5);
+    inkLine(ctx, m, GH - m, m, m, rnd, 1.5);
+    inkLine(ctx, pad, chartTop - 10, GW - pad, chartTop - 10, rnd, 2.2);
+    inkLine(ctx, pad, chartTop - 5, GW - pad, chartTop - 5, rnd, .9);
   } else {
     ctx.fillRect(0, 0, GW, GH);
     ctx.strokeStyle = frame; ctx.lineWidth = 1;
@@ -3120,6 +3736,30 @@ function drawGraph(key, h, [sec, , spanWords]) {
   return canvas;
 }
 
+/* parallel strokes across a w × h box, `gap` apart and turned by `deg`, as the hatching patterns are drawn */
+function hatch(ctx, w, h, gap, deg) {
+  const a = (deg * Math.PI) / 180, ux = Math.cos(a), uy = Math.sin(a), cx = w / 2, cy = h / 2, reach = Math.hypot(w, h) / 2;
+  ctx.beginPath();
+  for (let d = -reach; d <= reach; d += gap) {
+    const px = cx - uy * d, py = cy + ux * d;
+    ctx.moveTo(px - ux * reach, py - uy * reach);
+    ctx.lineTo(px + ux * reach, py + uy * reach);
+  }
+  ctx.stroke();
+}
+
+/* a straight line drawn freehand on a canvas: bowed a little, and run on past its ends */
+function inkLine(ctx, x0, y0, x1, y1, rnd, width) {
+  const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+  const a = 2 + rnd() * 5, b = 2 + rnd() * 5, bow = (rnd() - .5) * Math.min(4, len * .004);
+  const sx = x0 - ux * a, sy = y0 - uy * a, ex = x1 + ux * b, ey = y1 + uy * b;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.quadraticCurveTo((sx + ex) / 2 - uy * bow * 2, (sy + ey) / 2 + ux * bow * 2, ex, ey);
+  ctx.stroke();
+}
+
 /* a canvas set in the type an element is set in */
 function typeset(ctx, s) {
   ctx.font = s.fontStyle + " " + s.fontWeight + " " + s.fontSize + " " + s.fontFamily;
@@ -3130,9 +3770,26 @@ function typeset(ctx, s) {
    text the chart is made of, each with its own computed stroke, fill, dashes, opacity and type. */
 function paintSvg(ctx, svg, ox, oy) {
   const n = (v, d) => { const x = parseFloat(v); return isFinite(x) ? x : d; };
+  const vb = svg.viewBox && svg.viewBox.baseVal;
   for (const el of svg.querySelectorAll("line, path, rect, circle, text")) {
+    /* a pattern's own strokes are drawn only where something is filled with it */
+    if (el.closest("defs")) continue;
     const s = getComputedStyle(el);
     if (s.display === "none" || s.visibility === "hidden") continue;
+    /* Broadsheet's hatching: its pattern's strokes, laid across the chart and kept to the shape */
+    if (el.dataset.hatch && vb) {
+      const hx = svg.querySelector("#" + el.dataset.hatch + " path"), hs = hx && getComputedStyle(hx);
+      if (hs && hs.stroke && hs.stroke !== "none") {
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.clip(new Path2D(el.getAttribute("d")));
+        ctx.globalAlpha = n(s.opacity, 1) * n(hs.opacity, 1) * n(hs.strokeOpacity, 1);
+        ctx.strokeStyle = hs.stroke; ctx.lineWidth = n(hs.strokeWidth, 1);
+        hatch(ctx, vb.width, vb.height, 4.6, -50);
+        ctx.restore();
+      }
+      continue;
+    }
     const at = (a) => n(el.getAttribute(a), 0), op = n(s.opacity, 1), tag = el.tagName.toLowerCase();
     const fill = s.fill && s.fill !== "none" && !s.fill.startsWith("url") ? s.fill : null;
     const stroke = s.stroke && s.stroke !== "none" && !s.stroke.startsWith("url") ? s.stroke : null;
@@ -3642,12 +4299,31 @@ function fluidTick(ts) {
   for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].frame(dt);
   fluidRaf = requestAnimationFrame(fluidTick);
 }
+/* Broadsheet's boil: three fixed roughenings of the page (#bs-boil-0 to 2) taken in turn, a step every
+   BOIL_MS, as a drawn film changes drawings a few times a second. It runs while the theme is on, its
+   switch is on, the system allows motion, forced colours are off and the tab is in view, and
+   otherwise stops on the plain drawing. A step is a change of one attribute, so it costs no layout. */
+const BOIL_MS = 150;
+let boilTimer = 0, boilStep = 0;
+function boilMotion() {
+  const root = document.documentElement;
+  const on = paperOn() && PREFS.boil && !REDUCE.matches && !FORCED.matches && document.visibilityState !== "hidden";
+  if (on && !boilTimer) {
+    boilTimer = setInterval(() => { boilStep = (boilStep + 1) % 3; root.dataset.boil = String(boilStep); }, BOIL_MS);
+  } else if (!on && boilTimer) {
+    clearInterval(boilTimer);
+    boilTimer = 0;
+  }
+  if (!on) delete root.dataset.boil;
+}
+document.addEventListener("visibilitychange", boilMotion);
+
 /* One animation loop for every ring; requestAnimationFrame already stops in a hidden tab.
    Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
    through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
-  /* the terminal, the scene and the clay have no fluid, so under them the loop stops too */
-  const on = PREFS.fluid && !tuiOn() && !trainOn() && !neuOn();
+  /* the terminal, the scene, the clay and the paper have no fluid, so under them the loop stops too */
+  const on = PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn();
   for (const key of ORDER) {
     if (!FLUIDS[key]) continue;
     const canvas = q(key, "fluid");
@@ -6037,9 +6713,10 @@ function trainMotion() {
 const PREFS_KEY = "ccquota.prefs";
 const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true,
                         rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", scene: true, cost: true, font: "system",
-                        clay: "system" };
+                        clay: "system", boil: true };
 /* key, label, and the glyphs on its swatch */
-const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""], ["neumorphism", "Neumorphism", ""]];
+const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""], ["neumorphism", "Neumorphism", ""],
+                ["broadsheet", "Broadsheet", ""]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
 /* Neumorphism's clay: light, dark, or whichever the system asks for, followed as it changes. Under
    forced colours the ground is the system's, so the clay follows the system's palette whatever
@@ -6057,7 +6734,8 @@ const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "g
                   ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
                   ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"],
                   ["scene", "Moving scene", "The train, its smoke and the fire", "train"],
-                  ["cost", "Local token accounting", "The cost strip below the limit", "all"]];
+                  ["cost", "Local token accounting", "The cost strip below the limit", "all"],
+                  ["boil", "Boiling ink", "The lines and letters tremble, as drawn ones do", "broadsheet"]];
 /* The rain's sliders: key, label, the least, the most and the step, then its value as shown and as
    read aloud. Amount is the share of the columns falling at once; Speed, of MX.hz steps a second. */
 const SLIDERS = [["rainAmount", "Amount", 5, 100, 5, (v) => v + "%", (v) => v + " percent of the columns falling"],
@@ -6068,8 +6746,8 @@ const COLOURS = [["rain1", "Colour #1", "The rain"],
 const isHex = (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
 /* a slider's value put on its steps, without the dust of binary fractions */
 const onStep = (v, lo, hi, step) => Number((lo + Math.round((clamp(v, lo, hi) - lo) / step) * step).toFixed(2));
-/* the face in force: Matrix sets its own, and the reader's choice waits for the theme to change back */
-const faceOf = (p) => (p.theme === "matrix" ? "fira-code" : p.font);
+/* the face in force: Matrix and Broadsheet set their own, and the reader's choice waits for the theme to change back */
+const faceOf = (p) => (p.theme === "matrix" ? "fira-code" : p.theme === "broadsheet" ? "caveat" : p.font);
 
 /* Never trusts the stored copy further than it can be checked: a stale or hand-edited entry
    falls back to the default one key at a time instead of breaking the page. */
@@ -6123,7 +6801,7 @@ function buildPrefs() {
       <div class="picks" role="radiogroup" aria-labelledby="ph-theme">${THEMES.map(([k, label, sample]) =>
         `<label class="pick" data-pick="${k}"><input type="radio" name="theme" value="${k}"><span class="swatch" aria-hidden="true">${sample}</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-motion" data-for="glass matrix train">
+    <div class="psec" role="group" aria-labelledby="ph-motion" data-for="glass matrix train broadsheet">
       <div class="phead" id="ph-motion">Motion</div>
       ${sw(SWITCHES[0])}
       <div class="prow sub" id="prefsSpeed" data-for="glass">
@@ -6135,10 +6813,11 @@ function buildPrefs() {
       ${sw(SWITCHES[2])}
       ${sw(SWITCHES[3])}
       ${sw(SWITCHES[4])}
+      ${sw(SWITCHES[6])}
       ${SLIDERS.map(slider).join("")}
       <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train">
+    <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train broadsheet">
       <div class="phead" id="ph-page">Page</div>
       ${sw(SWITCHES[5])}
     </div>
@@ -6151,7 +6830,7 @@ function buildPrefs() {
       <div class="picks" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
         `<label class="pick"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
-    <div class="pfoot" data-for="glass matrix train"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
+    <div class="pfoot" data-for="glass matrix train broadsheet"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
 
   /* a slider or a colour, read into the settings: put on its steps, or refused if it is no colour;
      false for any other control */
@@ -6252,7 +6931,7 @@ function syncPrefs() {
   /* Only the settings of the theme on screen are listed — the glass page's when a theme cannot
      run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
      and the rain's amount and speed only while the rain is on. */
-  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : neuOn() ? "neumorphism" : "glass";
+  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : neuOn() ? "neumorphism" : paperOn() ? "broadsheet" : "glass";
   panel.querySelectorAll("[data-for]").forEach((el) => {
     el.hidden = el.dataset.for !== "all" && !el.dataset.for.split(" ").includes(shown);
   });
@@ -6285,8 +6964,9 @@ function applyPrefs() {
   trainMotion();
   /* the scene's face goes with the scene, so a browser that cannot run it keeps the reader's own */
   if (trainOn()) root.dataset.font = "jersey-10";
-  if (PREFS.fluid && !tuiOn() && !trainOn() && !neuOn()) startFluids();
+  if (PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn()) startFluids();
   fluidMotion();
+  boilMotion();
   /* the cost strip points at the gauge above it, which is a bar in the terminal */
   $("cwGauge").textContent = tuiOn() ? "bar" : "ring";
   syncPrefs();
@@ -6325,7 +7005,7 @@ addEventListener("storage", (e) => {
   PREFS = loadPrefs();
   showPrefs();
 });
-if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); syncPrefs(); });
+if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); boilMotion(); syncPrefs(); });
 /* the system turning dark or light turns a clay that follows it, at once */
 if (DARK.addEventListener) DARK.addEventListener("change", () => { if (PREFS.clay === "system" || FORCED.matches) showPrefs(); });
 if (FORCED.addEventListener) FORCED.addEventListener("change", () => showPrefs());
@@ -6334,13 +7014,13 @@ if (FORCED.addEventListener) FORCED.addEventListener("change", () => showPrefs()
    A different data source with a different meaning, in a colour
    family that appears in no band, with no circular form anywhere. */
 const CRAMP = ["#9aa4dc", "#828cc4", "#6c75a8", "#585f8b", "#464b6d"];
-/* on Neumorphism's light clay the same family runs the other way, so the largest share still stands out most;
-   the dark clay keeps the glass's order */
+/* on Neumorphism's light clay and Broadsheet's paper the same family runs the other way, so the largest share
+   still stands out most; the dark clay keeps the glass's order */
 const CRAMP_LIGHT = ["#464b6d", "#585f8b", "#6c75a8", "#828cc4", "#9aa4dc"];
 function renderCost() {
   const c = S.cost;
   if (!c) { $("costNote").textContent = "waiting for ccusage…"; return; }
-  const ramp = neuLight() ? CRAMP_LIGHT : CRAMP;
+  const ramp = lightGround() ? CRAMP_LIGHT : CRAMP;
   const total = num(c.sevenDayTotal, 0);
   const models = Array.isArray(c.models) ? c.models : [];
   /* "ccusage reports zero" and "we could not ask ccusage" are different
