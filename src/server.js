@@ -66,6 +66,8 @@ const ASSETS = new Map([
   ['/fonts/FiraCode-VF.woff2', 'fonts/FiraCode-VF.woff2'],
   ['/fonts/Jersey10-Latin.woff2', 'fonts/Jersey10-Latin.woff2'],
   ['/fonts/Caveat-Latin.woff2', 'fonts/Caveat-Latin.woff2'],
+  ['/fonts/B612-Regular-Latin.woff2', 'fonts/B612-Regular-Latin.woff2'],
+  ['/fonts/B612-Bold-Latin.woff2', 'fonts/B612-Bold-Latin.woff2'],
   ['/sprites/train.png', 'sprites/train.png'],
 ]);
 

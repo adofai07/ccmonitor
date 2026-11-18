@@ -16,14 +16,14 @@
    backdrop and to the ring's interior: the sky drifts on a ~30s loop
    and warms when the limit heats up, and the ring holds a small fluid
    stirred by the same heat. The arc, tick and chart move only when
-   data moves. Settings offers four more themes, Matrix, Train,
-   Neumorphism and Broadsheet, at the end of this sheet.
+   data moves. Settings offers five more themes, Matrix, Train,
+   Neumorphism, Broadsheet and Gauges, at the end of this sheet.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
 
 /* The typefaces the page uses beyond the system's own: those Settings offers, the Train theme's
-   bitmap face and Broadsheet's hand, bundled under public/fonts (each with its licence) and served by this same server,
+   bitmap face, Broadsheet's hand and Gauges' cockpit face, bundled under public/fonts (each with its licence) and served by this same server,
    so they look the same on every machine and nothing is fetched from anywhere else. The three on
    offer are variable fonts: one file covers every weight the page uses. "fallback" waits a moment
    for a face that is on its way instead of flashing the default one first, and from loopback it
@@ -35,6 +35,9 @@
 /* Caveat's small letters are short for its size, so it is drawn a fifth larger, to stand as tall
    as the other faces' at the sizes the page sets */
 @font-face { font-family: "Caveat";         src: url("/fonts/Caveat-Latin.woff2") format("woff2");                  font-weight: 400 700; font-display: fallback; size-adjust: 120%; }
+/* B612 comes in two weights, not a range, and the page's heavier weights all take the bold */
+@font-face { font-family: "B612";           src: url("/fonts/B612-Regular-Latin.woff2") format("woff2");            font-weight: 400;     font-display: fallback; }
+@font-face { font-family: "B612";           src: url("/fonts/B612-Bold-Latin.woff2") format("woff2");               font-weight: 700;     font-display: fallback; }
 
 :root {
   /* --sans is whichever typeface Settings has chosen; figures that must line up stay in --mono,
@@ -44,6 +47,7 @@
   --font-noto:   "Noto Sans", ui-sans-serif, system-ui, sans-serif;
   --font-code:   "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-pixel:  "Jersey 10", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-b612:   "B612", ui-sans-serif, system-ui, sans-serif;
   --sans: var(--font-system);
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
@@ -103,6 +107,7 @@
 :root[data-font="noto-sans"]      { --sans: var(--font-noto); }
 :root[data-font="fira-code"]      { --sans: var(--font-code); --mono: var(--font-code); }
 :root[data-font="jersey-10"]      { --sans: var(--font-pixel); --mono: var(--font-pixel); }
+:root[data-font="b612"]           { --sans: var(--font-b612); --mono: var(--font-b612); }
 
 html, body { height: 100%; }
 body {
@@ -2107,6 +2112,801 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
     repeating-linear-gradient(#8c8475 0 1px, transparent 1px 3px) 93% 16px / 26% 8px no-repeat,
     #f2ede2;
 }
+/* ══════════════════════════════════════════════════════════════════
+   Gauges — the sixth theme, chosen in Settings: the page as a
+   motorcar's instrument panel.
+
+   A fascia of black wrinkle paint in a chrome moulding holds the limit
+   as a round gauge: an ivory face printed in black, a polished bezel
+   under a domed glass, a needle on a spring. The percent rolls on
+   odometer drums cut into the face and the time to the reset on a drum
+   counter beside it; a brass bug on the bezel stands at the clock's
+   share of the window, and two jewels light for over pace and for the
+   cap. The type is B612, a cockpit face.
+
+   Its palette is fixed. It reads none of the other themes' colours,
+   which follow the reading: here only an instrument's own conventions
+   signal, the zones printed on the face, the jewels and the flags, and
+   nothing else changes colour at any reading. So the band and pace
+   colours the script writes are overruled at the row with one ink.
+   Nothing moves by itself: the needle swings to a new reading and
+   settles, and while the reading runs over pace it trembles, a loop
+   that goes nowhere (gzStep in the script). Held, the instrument's
+   lighting goes out and a flag rises. All of it keys on data-theme.
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-theme="gauges"] {
+  color-scheme: dark;
+  --gz-steel:   #0d0c0b;   /* the bulkhead the fascia is fixed to */
+  --gz-paint:   #161513;   /* black wrinkle paint */
+  --gz-cream:   #ece2c9;   /* lettering printed on the paint: 13.9:1 */
+  --gz-cream-2: #b4aa92;   /* 8.1 */
+  --gz-cream-3: #8f866f;   /* 5.1 */
+  --gz-ivory:   #f0e7d0;   /* the dial's face */
+  --gz-print:   #1b1814;   /* the dial's print: 15:1 on the ivory */
+  --gz-print-2: #4b4336;   /* 8:1 */
+  --gz-amber:   #d98a1f;   /* the printed warning arc */
+  --gz-red:     #b0231b;   /* the red line */
+  --gz-lamp:    255 168 72;   /* the instrument lamps' light */
+  /* the recorder's card: its paper, rules and inks */
+  --gz-paper:   #f3ebd6;
+  --gz-pen:     #1d2740;   /* the recorder's ink: 13:1 on the paper */
+  --gz-rule:    #b9a983;
+  --gz-rule-2:  #8f8160;
+  --gz-mark:    #f0b541;   /* the highlighter over the fitted run */
+  /* the cost plate's brushed aluminium, and the screws that hold it, their slots at two angles */
+  --gz-brushed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Cfilter id='b' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.9' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='400' height='200' filter='url(%23b)'/%3E%3C/svg%3E");
+  --gz-screw:   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-7.5 -7.5 15 15'%3E%3Cdefs%3E%3CradialGradient id='h' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23f4f5f5'/%3E%3Cstop offset='.45' stop-color='%239a9fa2'/%3E%3Cstop offset='1' stop-color='%233f4346'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='.9' cy='1.2' r='6.3' fill='%23000' opacity='.55'/%3E%3Ccircle r='6' fill='url(%23h)' stroke='%230a0a0a' stroke-width='.8'/%3E%3Cg transform='rotate(32)'%3E%3Crect x='-5' y='-.9' width='10' height='1.8' fill='%232a2c2e'/%3E%3Crect x='-4.6' y='.9' width='9.2' height='.6' fill='%23fff' opacity='.45'/%3E%3C/g%3E%3C/svg%3E");
+  --gz-screw-2: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-7.5 -7.5 15 15'%3E%3Cdefs%3E%3CradialGradient id='h' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23f4f5f5'/%3E%3Cstop offset='.45' stop-color='%239a9fa2'/%3E%3Cstop offset='1' stop-color='%233f4346'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='.9' cy='1.2' r='6.3' fill='%23000' opacity='.55'/%3E%3Ccircle r='6' fill='url(%23h)' stroke='%230a0a0a' stroke-width='.8'/%3E%3Cg transform='rotate(-24)'%3E%3Crect x='-5' y='-.9' width='10' height='1.8' fill='%232a2c2e'/%3E%3Crect x='-4.6' y='.9' width='9.2' height='.6' fill='%23fff' opacity='.45'/%3E%3C/g%3E%3C/svg%3E");
+  /* the page's own neutrals, mixed from the paint's lettering, so what is not drawn as an
+     instrument reads in its ink */
+  --tint:    236 226 201;
+  --ink-rgb: 236 226 201;
+  --hi:      #f6efdc;
+  --ink:     var(--gz-cream);
+  --ink-2:   var(--gz-cream-2);
+  --ink-3:   #a39a83;
+  --ink-4:   var(--gz-cream-3);
+  --base:    var(--gz-steel);
+  --hair:    rgb(var(--tint) / .1);
+  --edge:    rgb(var(--tint) / .2);
+  /* polished chrome: bright sky, a hard dark horizon, the ground, and the sky again on the far side */
+  --gz-chrome: linear-gradient(170deg, #ffffff 0%, #d4d8da 11%, #5f656a 24%, #1d2023 34%, #0d0e10 44%,
+                               #8e9499 56%, #eef0f1 68%, #c3c7ca 80%, #4a4f53 92%, #8d9296 100%);
+  /* black wrinkle paint: a creased relief lit from the top left, drawn once as a tile */
+  --gz-wrinkle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='w' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.15' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.6 0 0 0 0'/%3E%3CfeDiffuseLighting surfaceScale='1.7' diffuseConstant='1.05' lighting-color='%23fff'%3E%3CfeDistantLight azimuth='225' elevation='40'/%3E%3C/feDiffuseLighting%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.066' intercept='.042'/%3E%3CfeFuncG type='linear' slope='0.0622' intercept='.04'/%3E%3CfeFuncB type='linear' slope='0.0585' intercept='.037'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23w)'/%3E%3C/svg%3E");
+  /* the ivory's grain */
+  --gz-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .28 0 0 0 0 .16 0 0 0 .55 -.1'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+:root[data-theme="gauges"] body {
+  background: radial-gradient(120% 70% at 50% -10%, rgb(255 240 220 / .05), transparent 60%),
+              linear-gradient(180deg, #121110, #0b0a09) var(--gz-steel);
+  background-attachment: fixed;
+}
+:root[data-theme="gauges"] .sky,
+:root[data-theme="gauges"] .grain,
+:root[data-theme="gauges"] .vig { display: none; }
+/* nothing moves of itself: the pilot lamp burns steady, and the ring's own shake gives way to the needle's */
+:root[data-theme="gauges"] .fresh .dot,
+:root[data-theme="gauges"] .art > * { animation: none !important; }
+/* One ink for whatever the script would colour by the reading, overruling what it writes on the
+   row, the ring and the detail: the band's colour, the pace channel's and the arc's bloom */
+:root[data-theme="gauges"] .lrow,
+:root[data-theme="gauges"] #detail {
+  --band: var(--gz-cream) !important; --band-rgb: var(--tint) !important; --bloom: 0 !important;
+}
+:root[data-theme="gauges"] .ring { --pace-ink: var(--gz-cream) !important; --pace-mark: var(--gz-cream) !important; }
+:root[data-theme="gauges"] .dband { color: var(--gz-print) !important; }
+
+:root[data-theme="gauges"] main {
+  max-width: 1180px; justify-content: flex-start; gap: 20px;
+  padding: clamp(14px, 2.4vh, 22px) clamp(14px, 2.4vw, 24px) clamp(24px, 4vh, 40px);
+}
+:root[data-theme="gauges"] :focus-visible,
+:root[data-theme="gauges"] .pick:has(input:focus-visible) { outline-color: var(--gz-cream); }
+
+/* ── the masthead: a chrome nameplate, the plan on an enamel badge, the freshness by its pilot
+   lamp, and the settings on a knurled knob ── */
+:root[data-theme="gauges"] .top { gap: 18px; padding: 0 6px; min-height: 56px; }
+:root[data-theme="gauges"] .mark { align-items: center; gap: 22px; }
+:root[data-theme="gauges"] .mark h1 {
+  font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: .2em; margin-right: -.2em;
+  color: #d4d8da;
+  background: linear-gradient(180deg, #ffffff 0%, #dfe2e4 36%, #4a4e52 50%, #6b7074 60%, #e9ebec 82%, #9ba0a3 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: .6px #1b1c1d;
+  filter: drop-shadow(1px 2px 1.2px rgb(0 0 0 / .9));
+}
+:root[data-theme="gauges"] .plan {
+  font-size: 11px; font-weight: 700; letter-spacing: .14em; color: var(--gz-print);
+  padding: 6px 11px 5px; border: 0; border-radius: 4px;
+  background: linear-gradient(180deg, #f6eedb, #e3d6b4);
+  box-shadow: 0 0 0 1.5px #8d9296, 0 0 0 2.5px #e7e9ea, 0 0 0 3.5px #4b4f53, 1px 2px 4px 3px rgb(0 0 0 / .6),
+              inset 0 1px 0 rgb(255 255 255 / .7), inset 0 -1px 1px rgb(90 70 30 / .35);
+}
+:root[data-theme="gauges"] .side { gap: 18px; }
+:root[data-theme="gauges"] .fresh {
+  gap: 10px; padding: 0; border: 0; border-radius: 0; background: none;
+  font-size: 13px; color: var(--gz-cream-2);
+}
+:root[data-theme="gauges"] .fresh[data-tone] { background: none; border: 0; }
+:root[data-theme="gauges"] .fresh[data-tone="live"] { color: var(--gz-cream); }
+:root[data-theme="gauges"] .fresh[data-tone="hold"] { color: #e8c98e; }
+:root[data-theme="gauges"] .fresh[data-tone="down"] { color: #e7b2a4; }
+/* The pilot lamp: a faceted jewel in a chrome bezel. Lit green while the feed is live, amber while
+   a reading is held, and red glass unlit while the service cannot be reached; waiting for the first
+   reading, the green glass is there but not yet lit. */
+:root[data-theme="gauges"] .fresh .dot {
+  width: 13px; height: 13px; --lamp-lo: #062a14; --lamp-hi: #2d6a45; --lamp-glow: transparent;
+  background:
+    radial-gradient(circle at 36% 30%, rgb(255 255 255 / .9) 0 9%, transparent 24%),
+    repeating-conic-gradient(from 22.5deg, rgb(255 255 255 / .14) 0 22.5deg, rgb(0 0 0 / .2) 22.5deg 45deg),
+    radial-gradient(circle at 42% 38%, var(--lamp-hi), var(--lamp-lo) 72%);
+  box-shadow: 0 0 0 1.5px #1b1d1f, 0 0 0 2.5px #c9cdd0, 0 0 0 3.5px #4a4f53, 0 0 9px 3px var(--lamp-glow);
+}
+:root[data-theme="gauges"] .fresh[data-tone="live"] .dot { --lamp-lo: #0a5a2c; --lamp-hi: #9ff0c2; --lamp-glow: rgb(40 200 110 / .4); }
+:root[data-theme="gauges"] .fresh[data-tone="hold"] .dot { --lamp-lo: #8a3a00; --lamp-hi: #ffd890; --lamp-glow: rgb(255 150 40 / .42); }
+:root[data-theme="gauges"] .fresh[data-tone="down"] .dot { --lamp-lo: #1e0605; --lamp-hi: #6e1610; }
+/* the knob: a knurled rim round a polished face, with the gear engraved in it */
+:root[data-theme="gauges"] .gear {
+  position: relative; width: 42px; height: 42px; border: 0; color: #3a3d40;
+  background: repeating-conic-gradient(from 3deg, #5b6064 0deg 3deg, #d8dbdc 3deg 6deg);
+  box-shadow: 2px 4px 6px rgb(0 0 0 / .8), 0 0 0 1px #050505;
+}
+:root[data-theme="gauges"] .gear::before {
+  content: ""; position: absolute; inset: 4px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgb(255 255 255 / .85), rgb(255 255 255 / 0) 38%),
+              conic-gradient(from 210deg, #f2f3f3, #a7abae 22%, #e9ebeb 38%, #7f8487 55%, #dfe1e2 72%, #9da1a4 88%, #f2f3f3);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / .35), inset 0 1px 1px rgb(255 255 255 / .8);
+}
+:root[data-theme="gauges"] .gear svg {
+  position: relative; width: 20px; height: 20px;
+  filter: drop-shadow(0 .6px 0 rgb(255 255 255 / .7));
+}
+:root[data-theme="gauges"] .gear:hover,
+:root[data-theme="gauges"] .gear[aria-expanded="true"] {
+  color: #1d1f21; border: 0;
+  background: repeating-conic-gradient(from 3deg, #5b6064 0deg 3deg, #d8dbdc 3deg 6deg);
+}
+:root[data-theme="gauges"] .gear:focus-visible { outline-offset: 4px; }
+
+/* ── the fascia: the limit's row and its detail on one panel of wrinkle paint, in a chrome
+   moulding lit from above, the paint shaded where the moulding stands over it ── */
+:root[data-theme="gauges"] .glass {
+  border-radius: 22px; border: 6px solid transparent;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / .5), rgb(0 0 0 / 0) 16%, rgb(0 0 0 / 0) 82%, rgb(0 0 0 / .32)) padding-box,
+    var(--gz-wrinkle) 0 0 / 160px 160px padding-box,
+    linear-gradient(var(--gz-paint), var(--gz-paint)) padding-box,
+    var(--gz-chrome) border-box;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 0 0 1px #050505, inset 0 0 0 1px rgb(0 0 0 / .85), inset 0 2px 1px rgb(255 255 255 / .06),
+              0 18px 34px -10px rgb(0 0 0 / .8);
+}
+:root[data-theme="gauges"] .glass::before { display: none; }
+:root[data-theme="gauges"] .rings { padding: 0; }
+:root[data-theme="gauges"] .lrow { gap: 28px; padding: 24px 28px; }
+
+/* The ring's button holds the instrument and its words beside it. It is still the button: it
+   opens the detail, so it is drawn sunk into the paint while the detail is open. */
+:root[data-theme="gauges"] .ring { padding: 10px 16px 10px 10px; gap: 26px; border-radius: 20px; }
+:root[data-theme="gauges"] .ring:hover { background: rgb(255 255 255 / .018); }
+:root[data-theme="gauges"] .ring[aria-expanded="true"] {
+  background: rgb(0 0 0 / .26);
+  box-shadow: inset 2px 3px 7px rgb(0 0 0 / .7), inset 0 0 0 1px rgb(var(--tint) / .12), 0 1px 0 rgb(255 255 255 / .05);
+}
+:root[data-theme="gauges"] .ring:focus-visible { outline: 2px solid var(--gz-cream); outline-offset: 4px; }
+/* a dormant, empty limit is quiet in its words; an instrument does not fade */
+:root[data-theme="gauges"] .ring[data-quiet="1"] { opacity: 1; }
+
+/* ── the instrument. The ring's own drawing gives way to the gauge's layers (gzMarkup): the
+   ivory face, the case and bezel round it, the print, the moving parts that change only with the
+   data (the bug, the drums and the flags), the needle's shadow, the needle, and the hub and glass
+   over it. The needle and its shadow are layers of their own, so turning them repaints nothing. ── */
+.art > .gz { display: none; }
+:root[data-theme="gauges"] .art { width: 330px; }
+:root[data-theme="gauges"] .art > :is(svg, .dial, .bevel, .readout) { display: none; }
+:root[data-theme="gauges"] .art > .gz {
+  display: block; position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: 4px 9px 14px -3px rgb(0 0 0 / .8);
+}
+.art .gz > * { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.gz text { font-family: var(--font-b612); }
+/* the face: ivory under the print, its grain, the lamps' light round its rim and the shadow the
+   bezel casts on it from the top left; held, the lighting goes out and the ivory cools */
+.gz .gz-plate {
+  inset: 7.06%; width: auto; height: auto; border-radius: 50%; isolation: isolate;
+  background: var(--gz-grain) 0 0 / 140px 140px, radial-gradient(circle at 42% 36%, #f8f2e1 0%, #efe5cc 62%, #ddd0ad 100%);
+  box-shadow: inset 4px 6px 11px rgb(42 29 8 / .5), inset 0 0 2px rgb(42 29 8 / .6);
+}
+.gz .gz-plate::before,
+.gz .gz-plate::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; transition: opacity .6s var(--ease); }
+.gz .gz-plate::before {
+  background: radial-gradient(closest-side, rgb(var(--gz-lamp) / 0) 64%, rgb(var(--gz-lamp) / .2) 90%, rgb(255 150 50 / .4) 100%);
+}
+.gz .gz-plate::after { background: #8c8a84; mix-blend-mode: color; opacity: 0; }
+.ring[data-lit="0"] .gz .gz-plate::before { opacity: 0; }
+.ring[data-lit="0"] .gz .gz-plate::after { opacity: .7; }
+/* the print */
+.gz .gz-ink { stroke: var(--gz-print); }
+.gz :is(.gz-num text, .gz-leg, .gz-pct) { fill: var(--gz-print); }
+.gz .gz-leg2 { fill: var(--gz-print-2); }
+.gz .gz-amber { fill: var(--gz-amber); }
+.gz .gz-redzone { fill: var(--gz-red); }
+.gz .gz-cut { stroke: var(--gz-ivory); }
+.gz .gz-red { stroke: var(--gz-red); }
+.gz .gz-needle, .gz .gz-nshadow { will-change: transform; transform-origin: 50% 50%; }
+.gz .gz-nshadow { opacity: .42; }
+/* the bug and its span: brass, a colour no zone or lamp uses, on the bezel's black step */
+.gz .gz-span { fill: none; stroke: #e2bf72; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: .01 4.6; }
+.ring[data-pace="over"] .gz .gz-span {
+  stroke: #dcb562; stroke-linecap: butt; stroke-dasharray: none;
+  stroke-width: calc(2.8px + 2.8px * var(--psev));
+}
+.ring:not([data-pace="over"]):not([data-pace="under"]) .gz .gz-span { display: none; }
+/* the flags, down in their slit until a reading is missing or held; the slit is cut only while one is up */
+.gz .gz-flag { transform: translateY(26px); transition: transform .6s cubic-bezier(.3, 0, .2, 1); }
+.ring[data-gzflag="off"] .gz .gz-flag.off,
+.ring[data-gzflag="held"] .gz .gz-flag.held { transform: none; }
+.gz .gz-slit { opacity: 0; transition: opacity .3s .55s; }
+.ring:is([data-gzflag="off"], [data-gzflag="held"]) .gz .gz-slit { opacity: 1; transition-delay: 0s; }
+/* with no motion the slit closes with its flag, not a moment after it */
+@media (prefers-reduced-motion: reduce) { .gz .gz-slit { transition-delay: 0s !important; } }
+.gz .gz-strip { transition: transform 1.1s cubic-bezier(.3, 0, .2, 1); }
+/* the jewels: lit, or dark glass with the window's glint in it */
+.gz-jewel .on { opacity: 0; }
+.gz-jewel[data-lit="1"] .on { opacity: 1; }
+.gz-jewel[data-lit="1"] .off { opacity: 0; }
+/* a plain lens, for forced colours only (below) */
+.gz-jewel .gz-lens { display: none; }
+
+/* ── the words beside the dial: the limit's name, the drum counter to the reset, the two jewels,
+   and the pace and the cap in words ── */
+.meta > .gz-reset, .meta > .gz-lamps { display: none; }
+:root[data-theme="gauges"] .ring .meta { width: 236px; gap: 0; align-self: stretch; justify-content: center; }
+:root[data-theme="gauges"] .meta > .gz-reset { display: block; margin-top: 22px; }
+:root[data-theme="gauges"] .meta > .gz-lamps { display: flex; gap: 24px; margin: 24px 0 22px 2px; }
+:root[data-theme="gauges"] .mlabel {
+  font-size: 11px; font-weight: 700; line-height: 1.45; letter-spacing: .16em; color: var(--gz-cream);
+  white-space: normal; overflow: visible;
+}
+.gz-sub, .gz-lamp > span {
+  display: block; font-size: 9.5px; font-weight: 700; line-height: 1; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--gz-cream-3);
+}
+.gz-reset .gz-sub { margin-bottom: 8px; }
+.gz-counter { display: block; width: 182px; height: auto; overflow: visible; }
+.gz-lamp { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.gz-lamp > svg { display: block; width: 40px; height: 40px; overflow: visible; }
+/* the countdown is on the drums; only a word (waiting, dormant) is still written */
+:root[data-theme="gauges"] .mclock:not(.word) { display: none; }
+:root[data-theme="gauges"] .mclock.word {
+  font-family: var(--font-b612); font-size: 13.5px; line-height: 19px; letter-spacing: .02em; color: var(--gz-cream);
+  margin-bottom: 2px;
+}
+:root[data-theme="gauges"] .mpace {
+  font-size: 13.5px; line-height: 19px; min-height: 19px; letter-spacing: .01em; color: var(--gz-cream);
+  white-space: normal; overflow: visible;
+}
+:root[data-theme="gauges"] .ring[data-pace="over"] .mpace { color: var(--gz-cream); }
+:root[data-theme="gauges"] .ring[data-pace="over"][data-hot="1"] .mpace { font-weight: 700; letter-spacing: .01em; }
+:root[data-theme="gauges"] .mpace .tri { font-size: 12px; margin-right: 5px; }
+:root[data-theme="gauges"] .meta-eta {
+  margin-top: 4px; font-size: 12.5px; line-height: 18px; min-height: 18px; letter-spacing: .01em;
+  color: var(--gz-cream-2); white-space: normal; overflow: visible;
+}
+:root[data-theme="gauges"] .meta-eta[data-on="1"] { color: var(--gz-cream-2); }
+:root[data-theme="gauges"] .meta-eta b { font-weight: 700; color: var(--gz-cream); }
+/* held, the paint's lettering stays as it is printed: the flag and the lamps say it */
+:root[data-theme="gauges"] body[data-hold="1"] :is(.mlabel, .mclock) { opacity: 1; }
+
+/* ── the chart: a strip-chart recorder's card behind glass in a chrome frame, its name and burn rate
+   printed on the paint above. The paper and all that is written on it are the script's (gzPaper,
+   gzPen), in fixed inks; the frame, the glass and the lamps' light at its rim are drawn here, and the
+   light goes out with the dial's ── */
+:root[data-theme="gauges"] .spark { display: flex; flex-direction: column; justify-content: center; }
+:root[data-theme="gauges"] .chartcap {
+  margin: 0 4px 9px; font-size: 11px; font-weight: 700; letter-spacing: .16em; color: var(--gz-cream);
+}
+:root[data-theme="gauges"] .chartcap .note { font-size: 12.5px; font-weight: 400; letter-spacing: .01em; color: var(--gz-cream-2); }
+/* the frame is GZ_FRAME wide, which the script leaves out of the card's width */
+.gz-rec {
+  position: relative; padding: 7px; border-radius: 16px;
+  background: linear-gradient(160deg, #ffffff 0%, #c7cbcd 14%, #6f7579 34%, #2c2f32 46%, #9ba1a4 60%, #eef0f0 80%, #8a8f93 100%);
+  box-shadow: 0 0 0 1px #050505, 2px 5px 10px rgb(0 0 0 / .75);
+}
+.gz-rec::before {
+  content: ""; position: absolute; inset: 3px; border-radius: 13px; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / .45), inset 0 1px 0 rgb(255 255 255 / .6);
+}
+.gz-card { position: relative; border-radius: 10px; overflow: hidden; background: var(--gz-paper); }
+.gz-card::before,
+.gz-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.gz-card::before {
+  background: radial-gradient(130% 160% at 50% 50%, rgb(var(--gz-lamp) / 0) 58%, rgb(var(--gz-lamp) / .26) 100%);
+  transition: opacity .6s var(--ease);
+}
+.lrow:has(> .ring[data-lit="0"]) .gz-card::before { opacity: 0; }
+.gz-card::after {
+  background:
+    linear-gradient(105deg, rgb(255 255 255 / 0) 0 18%, rgb(255 255 255 / .17) 24%, rgb(255 255 255 / 0) 34%),
+    linear-gradient(180deg, rgb(255 255 255 / .1), rgb(255 255 255 / 0) 30%);
+  box-shadow: inset 3px 4px 8px rgb(0 0 0 / .42), inset 0 0 0 1px rgb(0 0 0 / .5);
+}
+/* as tall as the script draws it (GZ_CHART_H) */
+:root[data-theme="gauges"] .chart,
+.gz-card .chartempty { height: 268px; }
+:root[data-theme="gauges"] .chart { overflow: hidden; }
+/* with nothing yet to write, the card is blank paper: its sprocket strips and its rules, the words
+   between two of them */
+.gz-card .chartempty {
+  border: 0; border-radius: 0; font-style: normal; font-size: 12.5px; color: var(--gz-print-2);
+  background:
+    radial-gradient(circle at 9px 7.5px, #2b2824 2.4px, transparent 2.9px) 0 0 / 17px 15px repeat-x,
+    radial-gradient(circle at 9px 7.5px, #2b2824 2.4px, transparent 2.9px) 0 100% / 17px 15px repeat-x,
+    linear-gradient(rgb(143 129 96 / .7) 0 0) 0 15px / 100% 1px no-repeat,
+    linear-gradient(rgb(143 129 96 / .7) 0 0) 0 calc(100% - 15px) / 100% 1px no-repeat,
+    repeating-linear-gradient(transparent 0 22px, rgb(185 169 131 / .55) 22px 23px) 0 31px / 100% 207px no-repeat,
+    var(--gz-paper);
+}
+.chart .gz-paper { fill: var(--gz-paper); }
+.chart .gz-edge { stroke: var(--gz-rule-2); stroke-opacity: .7; stroke-width: .8; }
+.chart .gz-hole { fill: #2b2824; }
+.chart .gz-hr { stroke: var(--gz-rule); stroke-opacity: .5; stroke-width: .8; }
+.chart .gz-rule { stroke: var(--gz-rule); stroke-opacity: .6; stroke-width: .8; }
+.chart .gz-rule.gz-major { stroke: var(--gz-rule-2); stroke-opacity: .95; stroke-width: 1.1; }
+.chart .gz-capline { stroke: var(--gz-red); stroke-width: 1.6; }
+.chart .gz-ahead { stroke: none; }
+.chart .gz-hl { fill: none; stroke: var(--gz-mark); stroke-opacity: .5; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.chart .gz-cappt { fill: var(--gz-paper); stroke: var(--gz-red); stroke-width: 1.7; }
+.chart .gz-rodsh { fill: #000; opacity: .16; }
+.chart .gz-rod { fill: #8e9397; }
+.chart .gz-rodhi { fill: #f4f5f5; }
+.chart .gz-pensh { fill: #000; opacity: .26; filter: blur(1.4px); }
+.chart .gz-nib { fill: #3a3f45; }
+.chart .gz-block { fill: #2b2d30; stroke: #000; stroke-width: .6; }
+.chart .gz-blockhi { stroke: #fff; stroke-opacity: .3; stroke-width: .8; }
+.chart .gz-well { fill: var(--gz-pen); stroke: #0b0f1a; stroke-width: .6; }
+.chart .gz-screw { fill: #c9cdd0; stroke: #3a3d40; stroke-width: .5; }
+.chart .gz-slot { stroke: #3a3d40; stroke-width: .8; }
+:root[data-theme="gauges"] .chart pattern .hx { stroke: var(--gz-rule); stroke-width: .9; opacity: .55; }
+:root[data-theme="gauges"] .chart .day { stroke: var(--gz-rule-2); stroke-opacity: .85; stroke-width: 1.1; }
+:root[data-theme="gauges"] .chart .warnln { stroke: #b86f0e; stroke-width: 1.3; stroke-dasharray: 5 4; }
+:root[data-theme="gauges"] .chart .full { stroke: var(--gz-pen); stroke-opacity: .38; stroke-width: 1.3; }
+:root[data-theme="gauges"] .chart .run { stroke: var(--gz-pen); stroke-width: 1.9; }
+:root[data-theme="gauges"] .chart .since { stroke: var(--gz-print-2); stroke-opacity: .8; stroke-dasharray: 3 3; }
+:root[data-theme="gauges"] .chart .proj { stroke: var(--gz-pen); stroke-width: 1.5; stroke-dasharray: 4 3.5; opacity: 1; }
+:root[data-theme="gauges"] .chart .head { fill: var(--gz-pen); }
+:root[data-theme="gauges"] .chart .ax { font-size: 11px; letter-spacing: .02em; fill: var(--gz-print-2); }
+:root[data-theme="gauges"] .chart .ax.gz-r { fill: #8f1c15; }
+:root[data-theme="gauges"] .chart .ax.gz-warn { fill: #7a4a08; }
+:root[data-theme="gauges"] .chart .lbl { fill: var(--gz-pen); stroke: var(--gz-paper); stroke-width: 3.6; }
+:root[data-theme="gauges"] .chart .lbl.gz-penup { font-size: 9.5px; font-weight: 700; letter-spacing: .12em; fill: #3a3833; }
+
+/* ── the detail, slid out of the same fascia under a chrome lip: its title printed in cream, the band
+   on an enamel badge that is the same at every reading, CLOSE a push button in a chrome ring; the
+   four figures in readout windows sunk into the paint, lit by the dial's lamps, so nothing reads as
+   a control but the controls; the words in two columns, and the download a bank of piano keys ── */
+:root[data-theme="gauges"] .detailInner {
+  border-top: 0; padding: 26px 30px 24px;
+  background: linear-gradient(180deg, #050505 0 1px, #eef0f0 1px 2px, #7d8286 2px 3px, #1b1c1d 3px 4px) 0 0 / 100% 4px no-repeat;
+}
+:root[data-theme="gauges"] .seam { display: none; }
+:root[data-theme="gauges"] .dhead { align-items: center; gap: 12px 18px; margin-bottom: 22px; }
+:root[data-theme="gauges"] .dtitle { font-size: 14px; font-weight: 700; letter-spacing: .02em; color: var(--gz-cream); }
+:root[data-theme="gauges"] .dband {
+  opacity: 1; border: 0; border-radius: 10px; padding: 5px 9px 4px 11px;
+  font-size: 10px; font-weight: 700; letter-spacing: .22em;
+  background: linear-gradient(180deg, #f6eedb, #e1d3ae);
+  box-shadow: 0 0 0 1.5px #8d9296, 0 0 0 2.5px #e7e9ea, 0 0 0 3.5px #3e4246, 1px 2px 4px 3px rgb(0 0 0 / .55), inset 0 1px 0 rgb(255 255 255 / .7);
+}
+:root[data-theme="gauges"] .dclose {
+  margin-right: 4px; padding: 9px 14px 8px; border: 0; border-radius: 6px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .18em; color: var(--gz-print);
+  background: linear-gradient(180deg, #f3ecda, #d8caa4);
+  box-shadow: 0 0 0 1px #2a2c2e, 0 0 0 3px #c9ccce, 0 0 0 4px #3d4144, 1px 3px 5px 3px rgb(0 0 0 / .6),
+              inset 0 1px 0 #fff, inset 0 -2px 2px rgb(80 60 20 / .3);
+}
+:root[data-theme="gauges"] .dclose:hover { color: var(--gz-print); background: linear-gradient(180deg, #faf5e8, #e2d6b5); }
+:root[data-theme="gauges"] .dclose:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 0 1px #2a2c2e, 0 0 0 3px #c9ccce, 0 0 0 4px #3d4144, 0 1px 2px 3px rgb(0 0 0 / .6), inset 0 2px 3px rgb(80 60 20 / .35);
+}
+:root[data-theme="gauges"] .dclose:focus-visible { outline: 2px solid var(--gz-cream); outline-offset: 7px; }
+:root[data-theme="gauges"] .readouts {
+  grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px;
+  background: none; border: 0; border-radius: 0; overflow: visible;
+}
+/* a window cut in the paint: the wall at its top left shades the card, the far edge catches the light */
+:root[data-theme="gauges"] .ro {
+  min-height: 64px; padding: 10px 13px 11px; border-radius: 7px;
+  border: 3px solid; border-color: #030303 #34322e #4a4742 #050505;
+  background: radial-gradient(140% 170% at 50% 35%, rgb(var(--gz-lamp) / 0) 55%, rgb(var(--gz-lamp) / .2) 100%) padding-box,
+              var(--gz-ivory) padding-box;
+  box-shadow: inset 3px 4px 7px rgb(0 0 0 / .55), inset 0 0 0 1px rgb(0 0 0 / .5), 0 0 0 1px rgb(0 0 0 / .7);
+}
+:root[data-theme="gauges"] .glass:has(.ring[data-lit="0"]) .ro { background: #e3dccb padding-box; }
+:root[data-theme="gauges"] .ro dt { font-size: 9.5px; font-weight: 700; letter-spacing: .18em; color: var(--gz-print-2); }
+/* the figures in the dial's print, whatever ink the script gives the pace */
+:root[data-theme="gauges"] .ro dd {
+  margin-top: 7px; font-size: 15px; font-weight: 700; letter-spacing: .01em; color: var(--gz-print) !important;
+  white-space: normal; overflow: visible;
+}
+:root[data-theme="gauges"] .ro dd small { margin-left: 4px; font-size: 11.5px; font-weight: 400; letter-spacing: .01em; color: var(--gz-print-2) !important; }
+:root[data-theme="gauges"] .ro dd.est { font-size: 13px; font-style: normal; font-weight: 700; color: var(--gz-print-2) !important; }
+:root[data-theme="gauges"] .ro dd.est small { display: block; margin: 3px 0 0; }
+/* held, the paint's lettering stays as it is printed: the flag, the dark lamps and the lifted pen say it */
+:root[data-theme="gauges"] body[data-hold="1"] :is(.dtitle, .chartcap, .ro dt) { opacity: 1; }
+:root[data-theme="gauges"] .dfoot {
+  max-width: none; margin: 22px 0 0; columns: 2 32ch; column-gap: 44px;
+  font-size: 12.5px; line-height: 1.62; color: var(--gz-cream-2);
+}
+:root[data-theme="gauges"] .dexport {
+  margin-top: 22px; padding-top: 20px; gap: 10px 20px; border-top: 0;
+  background: linear-gradient(180deg, #050505 0 1px, rgb(255 255 255 / .09) 1px 2px) 0 0 / 100% 2px no-repeat;
+}
+:root[data-theme="gauges"] .dxh { font-size: 9.5px; font-weight: 700; letter-spacing: .2em; color: var(--gz-cream-3); }
+/* the keys stand in a chrome strip, as an old radio's presets do; the one saving is held down */
+:root[data-theme="gauges"] .dxspans {
+  gap: 3px; padding: 4px; border-radius: 6px;
+  background: linear-gradient(180deg, #f2f3f3, #9ba0a3 45%, #3d4144 55%, #c9ccce);
+  box-shadow: 0 0 0 1px #050505, 1px 3px 6px rgb(0 0 0 / .7);
+}
+:root[data-theme="gauges"] .dxspan {
+  min-width: 42px; padding: 10px 8px 9px; border: 0; border-radius: 2px 2px 3px 3px;
+  font-size: 11px; font-weight: 700; color: var(--gz-print);
+  background: linear-gradient(180deg, #faf4e4 0%, #eee3c6 70%, #c9b98f 100%);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -3px 0 #b6a57b, 0 1px 0 #111;
+}
+:root[data-theme="gauges"] .dxspan:hover { color: var(--gz-print); background: linear-gradient(180deg, #fffaee 0%, #f4ead0 70%, #d2c39a 100%); }
+:root[data-theme="gauges"] .dxspan:active,
+:root[data-theme="gauges"] .dxspan[aria-busy="true"] {
+  color: var(--gz-print); transform: translateY(1px);
+  background: linear-gradient(180deg, #e3d8bb, #d3c49c);
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / .38), inset 0 -1px 0 #b6a57b;
+}
+:root[data-theme="gauges"] .dxspan[aria-disabled="true"]:not([aria-busy]) {
+  color: rgb(27 24 20 / .42); background: linear-gradient(180deg, #e2dccb, #cfc4a6); box-shadow: inset 0 -3px 0 #b3a682, 0 1px 0 #111;
+}
+/* the keys stand close in a bright strip, so a focused one is ringed inside its own face, in the print's ink */
+:root[data-theme="gauges"] .dxspan:focus-visible { outline: 2px solid var(--gz-print); outline-offset: -4px; }
+:root[data-theme="gauges"] .dxnote { font-size: 12px; color: var(--gz-cream-2); }
+
+/* ── the divider: two chrome strips, the words stamped between them ── */
+:root[data-theme="gauges"] .rule { gap: 16px; padding: 0; margin: 4px 0 0; }
+:root[data-theme="gauges"] .rule .ln,
+:root[data-theme="gauges"] .rule .ln.r {
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(180deg, #f4f5f5 0, #b4b8bb 35%, #4a4e52 60%, #9ca1a4 100%);
+  box-shadow: 0 2px 3px rgb(0 0 0 / .8);
+}
+:root[data-theme="gauges"] .rule .tag { font-size: 10px; font-weight: 700; letter-spacing: .24em; color: var(--gz-cream-3); }
+
+/* ── the cost strip: a data plate of black anodised aluminium, brushed and screwed on, a different
+   source in a different material: no paint, no glass, no lamps. Its lettering is the bare metal
+   etched through, and its models are told apart by etched patterns (gzEtch), not by colour ── */
+:root[data-theme="gauges"] .cost {
+  --gz-etch: #cfd2d4; --gz-etch-2: #9ca1a5; --cerr: #e7b2a4;
+  position: relative; padding: 28px 36px 26px; border: 0; border-radius: 6px; color: var(--gz-etch);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  background: linear-gradient(180deg, rgb(255 255 255 / .06), rgb(255 255 255 / 0) 40%, rgb(0 0 0 / .18)),
+              var(--gz-brushed) 0 0 / 400px 200px, #222426;
+  box-shadow: 0 0 0 1px #050505, inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -1px 0 rgb(0 0 0 / .6), 2px 6px 12px rgb(0 0 0 / .7);
+}
+@media (min-width: 760px) {
+  :root[data-theme="gauges"] .cost { grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 4px 44px; }
+}
+:root[data-theme="gauges"] .cost::before {
+  content: ""; position: absolute; inset: 8px; pointer-events: none;
+  background: var(--gz-screw) 0 0 / 15px 15px no-repeat, var(--gz-screw-2) 100% 0 / 15px 15px no-repeat,
+              var(--gz-screw-2) 0 100% / 15px 15px no-repeat, var(--gz-screw) 100% 100% / 15px 15px no-repeat;
+}
+:root[data-theme="gauges"] .chead h2 { font-size: 11px; font-weight: 700; letter-spacing: .16em; color: var(--gz-etch); }
+:root[data-theme="gauges"] .chead h2 .sl { opacity: 1; color: var(--gz-etch-2); }
+:root[data-theme="gauges"] .cwarn { margin-top: 12px; max-width: none; font-size: 13.5px; line-height: 1.6; color: var(--gz-etch-2); }
+:root[data-theme="gauges"] .cwarn b { color: #eceeef; font-weight: 700; }
+:root[data-theme="gauges"] .ctot { margin-top: 18px; }
+:root[data-theme="gauges"] .ctot .v { font-size: 27px; font-weight: 700; letter-spacing: .02em; line-height: 1.1; color: var(--gz-etch); }
+:root[data-theme="gauges"] .ctot .k { margin-top: 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .2em; color: var(--gz-etch-2); }
+/* what the script writes in the page's own faint ink reads in the plate's */
+:root[data-theme="gauges"] :is(.ctab td[style], .ctot .v[style*="ink-4"]) { color: var(--gz-etch-2) !important; }
+:root[data-theme="gauges"] .cbar {
+  height: 12px; margin: 4px 0 8px; border-radius: 2px; background: none;
+  box-shadow: inset 0 0 0 1px rgb(207 210 212 / .55);
+}
+:root[data-theme="gauges"] .cbar span + span { border-left: 1px solid #141516; }
+.gz-etch { display: block; width: 100%; height: 100%; }
+.gz-etch .gz-solid, .gz-etch pattern :is(circle) { fill: var(--gz-etch); }
+.gz-etch pattern path { fill: none; stroke: var(--gz-etch); stroke-width: 1.15; }
+:root[data-theme="gauges"] .ctab { font-size: 13px; font-variant-numeric: tabular-nums; }
+:root[data-theme="gauges"] .ctab th {
+  padding: 8px 8px 8px 0; font-size: 9.5px; font-weight: 700; letter-spacing: .18em; color: var(--gz-etch-2);
+  border-bottom: 1px solid rgb(207 210 212 / .45);
+}
+:root[data-theme="gauges"] .ctab td { padding: 9px 8px 9px 0; color: var(--gz-etch); border-bottom-color: rgb(207 210 212 / .16); }
+:root[data-theme="gauges"] .ctab col.c2 { width: 112px; }
+:root[data-theme="gauges"] .ctab col.c3 { width: 66px; }
+:root[data-theme="gauges"] .sw {
+  width: 10px; height: 10px; margin-right: 9px; vertical-align: -1px; border-radius: 0; overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--gz-etch);
+}
+:root[data-theme="gauges"] .cnote { margin-top: 12px; font-size: 11.5px; letter-spacing: .01em; color: var(--gz-etch-2); }
+
+/* ── Settings: a slip of the same paint hung from the knob, in a chrome moulding. The themes are a
+   bank of ivory preset keys in a chrome strip, the one chosen latched down; a switch is a chrome
+   bat-handle toggle on a plate printed ON and OFF, up for on; the reset is a push button ── */
+:root[data-theme="gauges"] .panel {
+  padding: 15px 17px 13px; border-radius: 14px; border: 4px solid transparent;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / .45), rgb(0 0 0 / 0) 34px) padding-box,
+    var(--gz-wrinkle) 0 0 / 160px 160px padding-box,
+    linear-gradient(var(--gz-paint), var(--gz-paint)) padding-box,
+    var(--gz-chrome) border-box;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 0 0 1px #050505, inset 0 0 0 1px rgb(0 0 0 / .85), 0 24px 44px -14px rgb(0 0 0 / .9), 2px 6px 12px rgb(0 0 0 / .6);
+}
+:root[data-theme="gauges"] .ptitle { font-size: 11px; font-weight: 700; letter-spacing: .2em; color: var(--gz-cream); }
+:root[data-theme="gauges"] .phead { margin: 13px 0 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .2em; color: var(--gz-cream-3); }
+/* the sections are parted by a line engraved in the paint: its cut, and the light on its far edge */
+:root[data-theme="gauges"] .psec + .psec,
+:root[data-theme="gauges"] .pfoot {
+  margin-top: 13px; border-top: 0;
+  background: linear-gradient(180deg, #050505 0 1px, rgb(255 255 255 / .08) 1px 2px) 0 0 / 100% 2px no-repeat;
+}
+:root[data-theme="gauges"] .pname { font-size: 13px; color: var(--gz-cream); }
+:root[data-theme="gauges"] .phint { margin-top: 1px; font-size: 11px; color: var(--gz-cream-2); }
+:root[data-theme="gauges"] .pnote { font-size: 11px; color: #e8c98e; }
+:root[data-theme="gauges"] .picks {
+  gap: 3px; padding: 2px; border: 4px solid transparent; border-radius: 7px;
+  background: linear-gradient(#0b0a09, #0b0a09) padding-box,
+              linear-gradient(180deg, #f2f3f3, #9ba0a3 45%, #3d4144 55%, #c9ccce) border-box;
+  box-shadow: 0 0 0 1px #050505, 1px 3px 6px rgb(0 0 0 / .7);
+}
+/* a key: ivory, its front edge showing below its face; latched, it is held down in the strip with
+   no front to show, its face shaded by the strip's rim */
+:root[data-theme="gauges"] .pick {
+  gap: 4px; padding: 7px 7px 10px; border: 0; border-radius: 2px 2px 4px 4px;
+  background: linear-gradient(180deg, #faf4e4 0%, #eee3c6 70%, #c9b98f 100%);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -4px 0 #b6a57b, 0 1px 0 #000;
+  transition: padding .12s var(--ease), box-shadow .12s var(--ease), background .12s var(--ease);
+}
+:root[data-theme="gauges"] .pick:hover { background: linear-gradient(180deg, #fffaee 0%, #f4ead0 70%, #d2c39a 100%); }
+:root[data-theme="gauges"] .pick:has(input:checked) {
+  padding: 10px 7px 7px;
+  background: linear-gradient(180deg, #d9cdab, #e1d6b8 30%, #d6c8a2);
+  box-shadow: inset 0 4px 5px -1px rgb(0 0 0 / .55), inset 0 0 0 1px rgb(0 0 0 / .25), inset 0 -1px 0 #b6a57b;
+}
+:root[data-theme="gauges"] .pick .swatch {
+  height: 24px; margin-bottom: 2px; border-radius: 3px; border: 1px solid #1b1814;
+  box-shadow: 0 1px 0 rgb(255 255 255 / .7);
+}
+:root[data-theme="gauges"] .pick .fn { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gz-print-2); }
+:root[data-theme="gauges"] .pick:has(input:checked) .fn { color: var(--gz-print); }
+/* the keys stand close in a bright strip, so a focused one is ringed inside its own face */
+:root[data-theme="gauges"] .pick:has(input:focus-visible) { outline: 2px solid var(--gz-print); outline-offset: -5px; }
+/* The toggle: its plate and the bushing it stands in, one background, and the ON and OFF printed
+   down its left, which are print and not a value, so they are given no words to be read out; the
+   bat handle is the switch's ::before, drawn pointing up and turned over the bushing to point down,
+   so it swings through the plate the way a toggle's lever does. */
+:root[data-theme="gauges"] .switch {
+  width: 48px; height: 34px; border: 0; border-radius: 4px;
+  background:
+    radial-gradient(circle at 34px 17px, #f6f7f7 0 1.4px, #a7acaf 2.6px, #3c4145 5px, #0b0c0d 5.6px 6.4px, transparent 7px),
+    radial-gradient(circle at 35px 18.5px, rgb(0 0 0 / .7) 0 6px, transparent 8.5px),
+    linear-gradient(180deg, #2a2826, #141312);
+  box-shadow: 0 0 0 1px #050505, inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -1px 0 rgb(0 0 0 / .6), 1px 2px 3px rgb(0 0 0 / .6);
+}
+:root[data-theme="gauges"] .switch::after {
+  content: "ON\A OFF" / ""; position: absolute; left: 6px; top: 3px; white-space: pre;
+  font: 700 8px/14px var(--font-b612); letter-spacing: .1em; color: var(--gz-cream-2);
+}
+:root[data-theme="gauges"] .switch::before {
+  top: 1px; left: 30px; width: 8px; height: 16px; border-radius: 0;
+  background:
+    radial-gradient(circle at 3.2px 3.4px, #fff 0 .9px, #dfe2e4 1.6px, #8e9397 3.2px, #2c2f31 4px, transparent 4.4px),
+    linear-gradient(90deg, transparent 2.3px, #f4f5f5 2.3px, #a9aeb1 4px, #4a4f53 5.7px, transparent 5.7px) 0 4px / 100% 12px no-repeat;
+  box-shadow: none; transform-origin: 50% 100%; transform: none;
+  transition: transform .12s cubic-bezier(.5, 0, .7, 1);
+}
+:root[data-theme="gauges"] .switch:not(:checked)::before { transform: rotateX(180deg); }
+:root[data-theme="gauges"] .switch:focus-visible { outline: 2px solid var(--gz-cream); outline-offset: 3px; }
+:root[data-theme="gauges"] .pfoot { padding-top: 12px; font-size: 11px; color: var(--gz-cream-3); white-space: nowrap; }
+:root[data-theme="gauges"] .preset {
+  margin-right: 4px; padding: 7px 10px 6px; border: 0; border-radius: 5px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--gz-print);
+  background: linear-gradient(180deg, #f3ecda, #d8caa4);
+  box-shadow: 0 0 0 1px #2a2c2e, 0 0 0 3px #c9ccce, 0 0 0 4px #3d4144, 1px 3px 5px 3px rgb(0 0 0 / .5),
+              inset 0 1px 0 #fff, inset 0 -2px 2px rgb(80 60 20 / .3);
+}
+:root[data-theme="gauges"] .preset:hover:not(:disabled) { color: var(--gz-print); background: linear-gradient(180deg, #faf5e8, #e2d6b5); }
+:root[data-theme="gauges"] .preset:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 0 1px #2a2c2e, 0 0 0 3px #c9ccce, 0 0 0 4px #3d4144, 0 1px 2px 3px rgb(0 0 0 / .5), inset 0 2px 3px rgb(80 60 20 / .35);
+}
+:root[data-theme="gauges"] .preset:focus-visible { outline: 2px solid var(--gz-cream); outline-offset: 7px; }
+
+/* ── narrowing: first the chart drops under the instrument, then the words drop under the dial,
+   the counter and the jewels side by side, and a phone's dial is a little smaller ── */
+@media (max-width: 1080px) {
+  :root[data-theme="gauges"] .lrow { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme="gauges"] .ring { justify-self: center; }
+}
+/* the detail's four windows, two to a row once four would crowd their figures */
+@media (max-width: 900px) {
+  :root[data-theme="gauges"] .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* the knob stays up beside the nameplate, and the pilot lamp and its words take a line of their
+   own under them, wrapping rather than cut short */
+@media (max-width: 760px) {
+  :root[data-theme="gauges"] .top {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "mark gear" "fresh fresh"; gap: 10px 14px;
+  }
+  :root[data-theme="gauges"] .grow { display: none; }
+  :root[data-theme="gauges"] .side { display: contents; }
+  :root[data-theme="gauges"] .mark { grid-area: mark; }
+  :root[data-theme="gauges"] .prefs { grid-area: gear; }
+  :root[data-theme="gauges"] .fresh { grid-area: fresh; justify-self: start; padding-left: 2px; }
+  :root[data-theme="gauges"] .fresh span { white-space: normal; }
+}
+@media (max-width: 680px) {
+  :root[data-theme="gauges"] .ring { flex-direction: column; align-items: stretch; padding: 8px; }
+  :root[data-theme="gauges"] .art { align-self: center; width: min(300px, 100%); }
+  :root[data-theme="gauges"] .ring .meta {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: end;
+    width: auto; align-self: auto;
+  }
+  :root[data-theme="gauges"] .meta > :not(.gz-reset, .gz-lamps) { grid-column: 1 / -1; }
+  :root[data-theme="gauges"] .mlabel { text-align: center; }
+  :root[data-theme="gauges"] .meta > .gz-reset { margin-top: 16px; }
+  :root[data-theme="gauges"] .meta > .gz-lamps { margin: 16px 4px 0 0; gap: 18px; }
+  :root[data-theme="gauges"] .meta > :is(.mclock.word, .mclock:not(.word) + .mpace) { margin-top: 18px; }
+  /* with no reading the word under the counter takes the place of the pace and cap lines, which
+     are empty then, so the chart under the dial does not drop when a reading is lost */
+  :root[data-theme="gauges"] .meta:has(> .mclock.word) > :is(.mpace, .meta-eta):empty { display: none; }
+  :root[data-theme="gauges"] .lrow { padding: 18px 14px; gap: 18px; }
+  :root[data-theme="gauges"] .detailInner { padding: 22px 16px 20px; }
+  :root[data-theme="gauges"] .readouts { gap: 14px; }
+  :root[data-theme="gauges"] .cost { padding: 26px 22px 24px; }
+}
+/* a phone's card is shorter (GZ_CHART_H), and its name and rate are set closer to share a line */
+@media (max-width: 560px) {
+  :root[data-theme="gauges"] .chart,
+  .gz-card .chartempty { height: 212px; }
+  :root[data-theme="gauges"] .chartcap { gap: 4px 10px; letter-spacing: .1em; }
+  :root[data-theme="gauges"] .chartcap .note { font-size: 12px; letter-spacing: 0; }
+  .gz-card .chartempty { background-position: 0 0, 0 100%, 0 15px, 0 calc(100% - 15px), 0 26px; background-size: 17px 15px, 17px 15px, 100% 1px, 100% 1px, 100% 161px; }
+  /* the divider's words wrap, centred, rather than push the page wider than a phone */
+  :root[data-theme="gauges"] .rule .tag { min-width: 0; white-space: normal; text-align: center; letter-spacing: .16em; text-wrap: balance; }
+  :root[data-theme="gauges"] .rule .ln { min-width: 24px; }
+}
+/* the narrowest phones: a smaller nameplate, and the counter and the jewels drawn smaller to keep
+   their row; the plate's figures closer, so the models keep their names. The ring fills its row,
+   so the dial's width comes from the row and not from the narrower words under it. */
+@media (max-width: 380px) {
+  :root[data-theme="gauges"] .mark { gap: 12px; }
+  :root[data-theme="gauges"] .mark h1 { font-size: 24px; }
+  :root[data-theme="gauges"] .lrow { padding: 16px 10px; }
+  :root[data-theme="gauges"] .ring { padding: 6px; justify-self: stretch; }
+  :root[data-theme="gauges"] .ring .meta { column-gap: 10px; }
+  :root[data-theme="gauges"] .meta > .gz-lamps { gap: 10px; margin-right: 0; }
+  .gz-counter { width: 150px; }
+  .gz-lamp > svg { width: 34px; height: 34px; }
+  .gz-lamp > span { letter-spacing: .12em; }
+  :root[data-theme="gauges"] .cost { padding: 24px 16px 22px; }
+  :root[data-theme="gauges"] .ctab col.c2 { width: 92px; }
+  :root[data-theme="gauges"] .ctab col.c3 { width: 54px; }
+}
+/* Forced colours keep the words and the instrument and drop the paint, the chrome, the glass and
+   every glow for the system's ground and plain edges. The instrument is drawn, not printed, so it
+   takes the system's colours by hand: the face the ground, the print and the case the text, the
+   amber zone grey, and what reads the data, the needle, the bug and its span and the red line,
+   highlighted. A lamp lit is a filled lens and a dark one an empty ring, under its word; a flag is
+   striped in the text colour round its word. Nothing trembles (gzShake). */
+@media (forced-colors: active) {
+  :root[data-theme="gauges"] .glass { background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  :root[data-theme="gauges"] :is(.plan, .gear, .gear:hover, .gear[aria-expanded="true"]) { border: 1px solid CanvasText; box-shadow: none; }
+  :root[data-theme="gauges"] .gear::before { display: none; }
+  :root[data-theme="gauges"] .mark h1 { filter: none; -webkit-text-fill-color: CanvasText; -webkit-text-stroke: 0; }
+  :root[data-theme="gauges"] .ring[aria-expanded="true"] { outline: 1px solid CanvasText; }
+  /* focus outranks the open mark, so the ring still shows where focus is while its detail is open */
+  :root[data-theme="gauges"] .ring[aria-expanded="true"]:focus-visible { outline: 3px solid Highlight; outline-offset: 4px; }
+  :root[data-theme="gauges"] .fresh .dot {
+    forced-color-adjust: none; background: Canvas; box-shadow: none; border: 1.5px solid CanvasText;
+  }
+  :root[data-theme="gauges"] .fresh:is([data-tone="live"], [data-tone="hold"]) .dot { background: CanvasText; }
+  .art .gz > svg, .gz-counter, .gz-jewel { forced-color-adjust: none; }
+  .gz .gz-plate { background: Canvas; box-shadow: none; }
+  .gz .gz-plate::before, .gz .gz-plate::after, .gz .gz-nshadow, :is(.gz, .gz-counter, .gz-jewel) .gz-fx,
+  .gz-jewel :is(.on, .off) { display: none; }
+  .gz .gz-rim { stroke: CanvasText; }
+  .gz .gz-line { stroke: CanvasText; stroke-opacity: 1; stroke-width: 1.2; }
+  .gz .gz-ink { stroke: CanvasText; }
+  .gz :is(.gz-num text, .gz-leg, .gz-leg2, .gz-pct) { fill: CanvasText; }
+  .gz .gz-amber { fill: GrayText; }
+  .gz .gz-cut { stroke: Canvas; }
+  .gz .gz-redzone { fill: Highlight; }
+  .gz .gz-red { stroke: Highlight; }
+  .gz :is(.gz-pin, .gz-sep, .gz-hub) { fill: CanvasText; stroke: none; opacity: 1; }
+  :is(.gz, .gz-counter, .gz-jewel) .gz-win { fill: CanvasText; }
+  :is(.gz, .gz-counter, .gz-jewel) :is(.gz-well, .gz-drum) { fill: Canvas; }
+  :is(.gz, .gz-counter) .gz-dig { fill: CanvasText; }
+  .ring[data-pace] .gz .gz-span { stroke: Highlight; }
+  .gz .gz-bug { fill: Highlight; stroke: CanvasText; }
+  .gz .gz-needle :is(path, circle) { fill: Highlight; stroke: none; }
+  .gz .gz-fl0 { fill: Canvas; }
+  .gz .gz-fl1 { fill: CanvasText; }
+  .gz .gz-flagbd { stroke: CanvasText; }
+  .gz .gz-flagpl { fill: Canvas; stroke: CanvasText; }
+  .gz .gz-flagtx { fill: CanvasText; }
+  .gz-jewel .gz-lens { display: inline; fill: Canvas; stroke: CanvasText; stroke-width: 1.5; }
+  .gz-jewel[data-lit="1"] .gz-lens { fill: Highlight; }
+  /* Settings: the slip a plain box, the keys plain buttons, the one chosen ringed in the highlight,
+     and a toggle's handle a bar, up for on and highlighted */
+  :root[data-theme="gauges"] .panel { background: Canvas; border: 1px solid CanvasText; }
+  :root[data-theme="gauges"] :is(.psec + .psec, .pfoot) { background: none; border-top: 1px solid CanvasText; }
+  :root[data-theme="gauges"] .picks { gap: 6px; padding: 0; border: 0; background: none; box-shadow: none; }
+  :root[data-theme="gauges"] .pick { border: 1px solid ButtonText; box-shadow: none; }
+  :root[data-theme="gauges"] .pick:has(input:checked) { border: 3px solid Highlight; }
+  :root[data-theme="gauges"] .pick .swatch { box-shadow: none; }
+  :root[data-theme="gauges"] .switch { background: ButtonFace; border: 1px solid ButtonText; box-shadow: none; }
+  :root[data-theme="gauges"] .switch::before { forced-color-adjust: none; left: 32px; width: 4px; border-radius: 2px; background: ButtonText; }
+  :root[data-theme="gauges"] .switch:checked::before { background: Highlight; }
+  :root[data-theme="gauges"] .switch::after { color: ButtonText; }
+  :root[data-theme="gauges"] .preset { border: 1px solid ButtonText; box-shadow: none; }
+}
+/* The recorder's card, the detail and the plate in the system's colours: the card's paper is the ground,
+   what is written on it the text, its rules the text faintly and the fitted run, the cap and the
+   ramp's end highlighted; the plate's patterns are etched in the text colour, so the models are
+   still told apart */
+@media (forced-colors: active) {
+  .gz-rec { padding: 0; background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  .gz-rec::before, .gz-card::before, .gz-card::after, :root[data-theme="gauges"] .cost::before { display: none; }
+  .gz-card { border-radius: 15px; }
+  :root[data-theme="gauges"] .chart { forced-color-adjust: none; }
+  .chart :is(.gz-paper, .gz-cappt, .gz-rod, .gz-rodhi) { fill: Canvas; }
+  .chart :is(.gz-hole, .gz-nib, .gz-block, .gz-well, .gz-screw, .gz-pensh, .gz-rodsh) { fill: CanvasText; }
+  .chart :is(.gz-rod, .gz-block) { stroke: CanvasText; stroke-width: 1; }
+  .chart :is(.gz-edge, .gz-hr, .gz-rule) { stroke: CanvasText; stroke-opacity: .28; }
+  .chart .gz-rule.gz-major { stroke: CanvasText; stroke-opacity: .6; }
+  .chart :is(.gz-capline, .gz-cappt) { stroke: Highlight; }
+  .chart .gz-hl { stroke: Highlight; stroke-opacity: .55; }
+  .chart :is(.gz-blockhi, .gz-slot) { stroke: Canvas; }
+  :root[data-theme="gauges"] .chart pattern .hx { stroke: CanvasText; opacity: .3; }
+  :root[data-theme="gauges"] .chart :is(.day, .warnln, .since) { stroke: CanvasText; stroke-opacity: .75; }
+  :root[data-theme="gauges"] .chart :is(.full, .run, .proj) { stroke: CanvasText; }
+  :root[data-theme="gauges"] .chart .full { stroke-opacity: .5; }
+  :root[data-theme="gauges"] .chart .head { fill: CanvasText; }
+  :root[data-theme="gauges"] .chart :is(.ax, .ax.gz-r, .ax.gz-warn, .lbl, .lbl.gz-penup) { fill: CanvasText; }
+  :root[data-theme="gauges"] .chart .lbl { stroke: Canvas; }
+  :root[data-theme="gauges"] :is(.detailInner, .dexport) { border-top: 1px solid CanvasText; }
+  :root[data-theme="gauges"] :is(.dband, .ro) { border: 1px solid CanvasText; box-shadow: none; }
+  :root[data-theme="gauges"] .dxspans { background: none; box-shadow: none; }
+  :root[data-theme="gauges"] :is(.dclose, .dxspan) { border: 1px solid ButtonText; box-shadow: none; transform: none; }
+  :root[data-theme="gauges"] .dxspan[aria-busy="true"] { background: Highlight; color: HighlightText; }
+  :root[data-theme="gauges"] .dxspan[aria-disabled="true"]:not([aria-busy]) { color: GrayText; border-color: GrayText; }
+  :root[data-theme="gauges"] .rule :is(.ln, .ln.r) { height: 1px; background: CanvasText; box-shadow: none; }
+  :root[data-theme="gauges"] .cost { background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  :root[data-theme="gauges"] :is(.cbar, .sw) { box-shadow: none; border: 1px solid CanvasText; }
+  .gz-etch { forced-color-adjust: none; }
+  .gz-etch .gz-solid, .gz-etch pattern circle { fill: CanvasText; }
+  .gz-etch pattern path { stroke: CanvasText; }
+}
+
+/* the theme's patch of itself, in Settings: a small dial on the black paint, the amber printed from 70,
+   its needle at 60 */
+.pick[data-pick="gauges"] .swatch { position: relative; background: #161513; }
+.pick[data-pick="gauges"] .swatch::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  background:
+    radial-gradient(circle, #c9cdd0 0 1.3px, #1b1814 1.5px 2.1px, transparent 2.3px),
+    radial-gradient(closest-side, #efe5cc 0 74%, transparent 76%),
+    conic-gradient(from 48deg, #d98a1f 0 72deg, transparent 0),
+    radial-gradient(circle at 42% 36%, #f8f2e1, #ddd0ad);
+  box-shadow: 0 0 0 1px #0b0c0d, 0 0 0 2px #e2e5e6, 0 0 0 2.6px #4a4f53;
+}
+.pick[data-pick="gauges"] .swatch::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 1.4px; height: 7.5px; margin: -7.5px 0 0 -.7px;
+  background: #1b1814; transform-origin: 50% 100%; transform: rotate(24deg);
+}
 </style>
 </head>
 <body data-hold="0">
@@ -2334,6 +3134,7 @@ const neuOn = () => document.documentElement.dataset.theme === "neumorphism";
 /* the light clay reads the light ladder; the dark clay reads Glass's, which was set for a dark ground */
 const neuLight = () => neuOn() && document.documentElement.dataset.clay !== "dark";
 const paperOn = () => document.documentElement.dataset.theme === "broadsheet";
+const gaugesOn = () => document.documentElement.dataset.theme === "gauges";
 /* Broadsheet's paper is a light ground too, so it prints the light clay's inks, unless forced colours
    have put a dark ground under it, where it reads Glass's ladder as the dark clay does */
 const FORCED_DARK = matchMedia("(forced-colors: active) and (prefers-color-scheme: dark)");
@@ -2623,6 +3424,467 @@ function arcPath(r, f0, f1) {
          "A" + r + " " + r + " 0 " + (span > .5 ? 1 : 0) + " 1 " + b.x.toFixed(2) + " " + b.y.toFixed(2);
 }
 
+/* ═════════════════════════ gauges ═════════════════════════
+   The Gauges theme's instrument, drawn in layers over one another inside the ring's .art: the
+   ivory face, the bezel, the print, the parts that move only when the data does (the pace bug and
+   its span, the drums, the flags), the needle's shadow, the needle, and the hub and glass. They
+   share one 340-unit box with the pivot at its centre, and the scale sweeps GZ.sweep degrees from
+   GZ.a0, 0 at the bottom left and 100 at the bottom right, so the bottom of the face is a gap the
+   needle never crosses: the drums, the legend and the flags are kept there. */
+const GZ = { a0: -120, sweep: 240, park: -3, pinR: 124, pinRad: 3, step: 151, odoY: 37 };
+const gzAng = (v) => GZ.a0 + (GZ.sweep * v) / 100;
+const gzPt = (v, r) => { const a = (gzAng(v) * Math.PI) / 180; return [r * Math.sin(a), -r * Math.cos(a)]; };
+const gzF = (n) => +n.toFixed(2);
+/* the needle tapers from 3.2 units either side of the pivot to 1.2 near its tip */
+const gzHalf = (r) => 3.2 - (2 * r) / 127;
+/* how far past a value its stop pin stands, so the needle resting on the pin reads that value */
+const GZ_PIN = ((gzHalf(GZ.pinR) + GZ.pinRad) / GZ.pinR) * (180 / Math.PI) * (100 / GZ.sweep);
+const gzArc = (v0, v1, r) => {
+  const [x0, y0] = gzPt(v0, r), [x1, y1] = gzPt(v1, r);
+  return `M${gzF(x0)} ${gzF(y0)}A${r} ${r} 0 ${((v1 - v0) * GZ.sweep) / 100 > 180 ? 1 : 0} 1 ${gzF(x1)} ${gzF(y1)}`;
+};
+const gzBand = (v0, v1, r0, r1) => {
+  const [a, b] = gzPt(v0, r1), [c, d] = gzPt(v1, r1), [e, f] = gzPt(v1, r0), [g, h] = gzPt(v0, r0);
+  const L = ((v1 - v0) * GZ.sweep) / 100 > 180 ? 1 : 0;
+  return `M${gzF(a)} ${gzF(b)}A${r1} ${r1} 0 ${L} 1 ${gzF(c)} ${gzF(d)}L${gzF(e)} ${gzF(f)}A${r0} ${r0} 0 ${L} 0 ${gzF(g)} ${gzF(h)}Z`;
+};
+const gzTick = (v, r0, r1, w, cls) => {
+  const [x0, y0] = gzPt(v, r0), [x1, y1] = gzPt(v, r1);
+  return `<line class="${cls}" x1="${gzF(x0)}" y1="${gzF(y0)}" x2="${gzF(x1)}" y2="${gzF(y1)}" stroke-width="${w}"></line>`;
+};
+const gzStops = (id, x1, y1, x2, y2, stops) =>
+  `<linearGradient id="${id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"></stop>`).join("")}</linearGradient>`;
+/* Polished chrome reflects what is round it, so it is drawn as bands rather than a sheen: the bright
+   sky, a hard dark horizon, the ground, and light again. The inner slope faces the other way. */
+const GZ_CHROME = [[0, "#ffffff"], [.1, "#eef0f1"], [.2, "#9aa0a4"], [.2, "#2a2d30"], [.33, "#0c0d0e"], [.45, "#17191b"],
+  [.5, "#6c7276"], [.56, "#d8dcde"], [.64, "#ffffff"], [.72, "#b4b9bc"], [.8, "#3c4145"], [.8, "#1a1c1e"], [.9, "#4d5357"], [1, "#a9aeb1"]];
+const GZ_CHROME_R = GZ_CHROME.map(([o, c]) => [1 - o, c]).reverse();
+/* the drums' glyphs, in their order round the drum: blank, 0 to 9, 0 again (for a forward roll
+   from 9), and a dash for no reading */
+const GZ_GLYPHS = ["", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "–"];
+const gzGlyph = (ch) => (ch === "–" ? 12 : ch === " " || ch === "" ? 0 : Number(ch) + 1);
+
+/* a cut-glass jewel lamp, lit or dark: its facets shaded from a light at the top left, and lit
+   from behind, the table glowing most */
+const GZ_JEWEL = {
+  amber: { lo: [150, 38, 0], mid: [255, 128, 14], hi: [255, 240, 190], offLo: [36, 14, 4], offHi: [120, 52, 14], glow: "255 150 40" },
+  red:   { lo: [110, 6, 4], mid: [240, 40, 22], hi: [255, 200, 170], offLo: [30, 6, 5], offHi: [110, 22, 16], glow: "255 60 40" },
+};
+function gzJewel(id, R, hue) {
+  const pal = GZ_JEWEL[hue], L = [-.45, -.55, .7], lm = Math.hypot(...L), Lv = L.map((c) => c / lm);
+  const tone = (a, b, t) => "rgb(" + mix(a, b, clamp(t, 0, 1)).join(" ") + ")";
+  const facets = (lit) => {
+    const P = (r, a) => [r * Math.cos(a), r * Math.sin(a)];
+    const N = 8, step = (Math.PI * 2) / N, r0 = R * .42, r1 = R * .76;
+    const facet = (pts, tilt, theta) => {
+      const n = [Math.sin(tilt) * Math.cos(theta), Math.sin(tilt) * Math.sin(theta), Math.cos(tilt)];
+      const d = Math.max(0, n[0] * Lv[0] + n[1] * Lv[1] + n[2] * Lv[2]);
+      const hv = [Lv[0], Lv[1], Lv[2] + 1], hm = Math.hypot(...hv);
+      const spec = Math.pow(Math.max(0, (n[0] * hv[0] + n[1] * hv[1] + n[2] * hv[2]) / hm), 40);
+      const t = lit ? Math.pow(Math.max(0, 1 - tilt / 1.15), 1.4) * .9 + .22 * d + (Math.round(theta * 4) % 2 ? .06 : -.04) : .15 + .55 * d;
+      const col = lit ? (t < .55 ? tone(pal.lo, pal.mid, t / .55) : tone(pal.mid, pal.hi, (t - .55) / .45)) : tone(pal.offLo, pal.offHi, t);
+      const p = pts.map((q) => q.map(gzF).join(",")).join(" ");
+      return `<polygon points="${p}" fill="${col}"></polygon>` +
+        (spec > .05 ? `<polygon points="${p}" fill="#fff" opacity="${gzF(Math.min(.85, spec * (lit ? .8 : 1)))}"></polygon>` : "");
+    };
+    const tbl = [];
+    for (let i = 0; i < N; i++) tbl.push(P(r0, i * step + step / 2));
+    let s = facet(tbl, 0, 0);
+    for (let i = 0; i < N; i++) {
+      const a = i * step + step / 2, b = a + step, m = a + step / 2;
+      s += facet([P(r0, a), P(r1, m), P(r0, b)], .55, m);
+      s += facet([P(r0, a), P(r1, a - step / 2), P(R, a), P(r1, a + step / 2)], .72, a);
+      s += facet([P(r1, m), P(R, m - step / 2), P(R, m)], 1.05, m - step / 4);
+      s += facet([P(r1, m), P(R, m), P(R, m + step / 2)], 1.05, m + step / 4);
+    }
+    return s;
+  };
+  return `<defs><radialGradient id="${id}b" cx=".38" cy=".32" r=".7"><stop offset="0" stop-color="#fff"></stop><stop offset=".4" stop-color="#b8bcbf"></stop><stop offset=".75" stop-color="#43474a"></stop><stop offset="1" stop-color="#1c1e20"></stop></radialGradient>
+      <radialGradient id="${id}g"><stop offset="0" stop-color="rgb(${pal.glow} / .55)"></stop><stop offset=".45" stop-color="rgb(${pal.glow} / .2)"></stop><stop offset="1" stop-color="rgb(${pal.glow} / 0)"></stop></radialGradient></defs>
+    <circle class="on gz-fx" r="${R * 2.2}" fill="url(#${id}g)"></circle>
+    <circle class="gz-fx" cx="${R * .14}" cy="${R * .22}" r="${R * 1.36}" fill="#000" opacity=".55"></circle>
+    <circle class="gz-win" r="${R * 1.3}" fill="url(#${id}b)"></circle><circle class="gz-fx" r="${R * 1.3}" fill="none" stroke="#0a0a0a" stroke-width=".6"></circle>
+    <circle class="gz-well" r="${R * 1.06}" fill="#0b0a09"></circle>
+    <g class="off">${facets(false)}</g><g class="on">${facets(true)}</g>
+    <circle class="gz-lens" r="${R}"></circle>
+    <circle class="gz-fx" r="${R}" fill="none" stroke="#000" stroke-opacity=".6" stroke-width=".7"></circle>`;
+}
+
+/* a row of drums: cells [{x, w}] of height h, each a strip of GZ_GLYPHS rolled into its window */
+function gzDrums(id, cells, h, size, cls, start) {
+  return cells.map((c, i) => `<clipPath id="${id}c${i}"><rect x="${c.x}" y="0" width="${c.w}" height="${h}"></rect></clipPath>
+    <g clip-path="url(#${id}c${i})"><rect class="gz-drum" x="${c.x}" y="0" width="${c.w}" height="${h}" fill="#171513"></rect>
+      <g class="gz-strip" data-r="${cls}${i}" data-i="${start[i]}" style="transform:translateY(${-start[i] * h}px)">${GZ_GLYPHS.map((g, k) =>
+        `<text class="gz-dig" x="${gzF(c.x + c.w / 2)}" y="${gzF(k * h + h / 2 + size * .36)}" text-anchor="middle" font-size="${size}" font-weight="700" fill="#efe6cf">${g}</text>`).join("")}</g>
+      <rect class="gz-fx" x="${c.x}" y="0" width="${c.w}" height="${h}" fill="url(#${id}sh)"></rect></g>`).join("");
+}
+const gzDrumShade = (id) => `<linearGradient id="${id}sh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".92"></stop><stop offset=".2" stop-color="#000" stop-opacity=".35"></stop><stop offset=".42" stop-color="#fff" stop-opacity=".07"></stop><stop offset=".58" stop-color="#fff" stop-opacity=".03"></stop><stop offset=".8" stop-color="#000" stop-opacity=".35"></stop><stop offset="1" stop-color="#000" stop-opacity=".92"></stop></linearGradient>`;
+
+/* the instrument's layers, for buildRings; the print's zones are left for gzZones */
+function gzMarkup(key) {
+  const id = "gz-" + key + "-", vb = `viewBox="-170 -170 340 340" aria-hidden="true" focusable="false"`;
+  const legend = key === "weekly" ? "of weekly limit" : "of the " + SHORT[key].toLowerCase() + " limit";
+  let ticks = "";
+  for (let v = 0; v <= 100; v++) {
+    ticks += v % 10 === 0 ? gzTick(v, 119, 137, 3.4, "gz-ink") : v % 5 === 0 ? gzTick(v, 126, 137, 2, "gz-ink") : gzTick(v, 131, 137, 1, "gz-ink");
+  }
+  let nums = "";
+  for (let v = 0; v <= 100; v += 10) {
+    const [x, y] = gzPt(v, 101);
+    nums += `<text transform="translate(${gzF(x)} ${gzF(y + 6.4)}) scale(.84 1)" text-anchor="middle" font-size="18.5" font-weight="700" letter-spacing="-.2">${v}</text>`;
+  }
+  /* the stop pins, out at the scale's ends under the needle's path, standing proud of the face */
+  const pins = [GZ.park - GZ_PIN, 100 + GZ_PIN].map((v) => {
+    const [x, y] = gzPt(v, GZ.pinR);
+    return `<circle class="gz-fx" cx="${gzF(x + 1.2)}" cy="${gzF(y + 1.9)}" r="${GZ.pinRad + .5}" fill="#2a1d08" opacity=".35"></circle>` +
+      `<circle class="gz-pin" cx="${gzF(x)}" cy="${gzF(y)}" r="${GZ.pinRad}" fill="url(#${id}pin)" stroke="#1d1f21" stroke-width=".5"></circle>`;
+  }).join("");
+  /* the odometer: a narrow wheel for the hundreds, which shows only at the cap, and two for the
+     figures, in a chrome-lipped window cut in the face below the hub */
+  const odo = [{ x: 0, w: 12 }, { x: 13.5, w: 21 }, { x: 36, w: 21 }], ow = 57, oh = 30, ox = -31;
+  const flag = (cls, label) => `<g class="gz-flag ${cls}">
+        <rect class="gz-flagbd" x="-27" y="104" width="54" height="23" rx="2" fill="url(#${id}${cls})" stroke="#1b1814" stroke-width="1"></rect>
+        <rect class="gz-flagpl" x="-17.5" y="107.6" width="35" height="15.4" rx="1.2" fill="#f6f0de" stroke="#1b1814" stroke-width=".8"></rect>
+        <text class="gz-flagtx" y="119.4" text-anchor="middle" font-size="11.5" font-weight="700" letter-spacing="1.4" fill="#1b1814">${label}</text></g>`;
+  const needle = (shade) => shade
+    ? `<path d="M-3.2 0L-1.2 -127L0 -132L1.2 -127L3.2 0L2.2 17L-2.2 17Z" fill="#000"></path><circle cy="23" r="8.5" fill="#000"></circle>`
+    : `<path data-r="gzl" d="M0 -132L-1.2 -127L-3.2 0L0 0Z" fill="#2c2925"></path><path data-r="gzr" d="M0 -132L1.2 -127L3.2 0L0 0Z" fill="#141210"></path>
+       <path d="M-3.2 0L-2.2 17L2.2 17L3.2 0Z" fill="#141210"></path>
+       <circle cy="23" r="8" fill="#141210"></circle><circle cy="23" r="8" fill="none" stroke="#3b3631" stroke-width=".8"></circle>
+       <circle cy="23" r="5.4" fill="none" stroke="#2a2622" stroke-width="1.2"></circle>`;
+  return `<span class="gz" aria-hidden="true">
+        <span class="gz-plate"></span>
+        <svg class="gz-case" ${vb}><defs>
+          ${gzStops(id + "a", .14, 0, .86, 1, GZ_CHROME)}
+          ${gzStops(id + "b", .14, 0, .86, 1, GZ_CHROME_R)}
+          ${gzStops(id + "c", .1, 0, .9, 1, [[0, "#ffffff"], [.45, "#f4f6f6"], [.6, "#5d6266"], [.8, "#eef0f0"], [1, "#b9bdc0"]])}
+          ${gzStops(id + "l", .15, 0, .85, 1, [[0, "#f6f7f7"], [.4, "#a7acaf"], [.55, "#3c4145"], [.75, "#d9dcdd"], [1, "#6d7276"]])}
+          <filter id="${id}s" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation=".7"></feGaussianBlur></filter></defs>
+          <circle class="gz-rim" r="167.4" fill="none" stroke="#060606" stroke-width="1.6"></circle>
+          <circle class="gz-rim" r="163.2" fill="none" stroke="url(#${id}a)" stroke-width="7"></circle>
+          <circle class="gz-fx" r="159.1" fill="none" stroke="url(#${id}c)" stroke-width="1.4"></circle>
+          <circle class="gz-fx" r="156" fill="none" stroke="url(#${id}b)" stroke-width="4.8"></circle>
+          <circle class="gz-fx" r="${GZ.step}" fill="none" stroke="#0b0c0d" stroke-width="6.4"></circle>
+          <circle class="gz-line" r="154.1" fill="none" stroke="#000" stroke-opacity=".85" stroke-width=".7"></circle>
+          <circle class="gz-line" r="147" fill="none" stroke="url(#${id}l)" stroke-width="2.4"></circle>
+          <g class="gz-fx" fill="none" stroke="#fff" stroke-linecap="round" filter="url(#${id}s)">
+            <path d="${gzArc(8, 30, 163.6)}" stroke-width="2.2" stroke-opacity=".95"></path>
+            <path d="${gzArc(34, 40, 163.6)}" stroke-width="1.3" stroke-opacity=".7"></path>
+            <path d="${gzArc(-34, -18, 156.4)}" transform="rotate(180)" stroke-width="1.5" stroke-opacity=".6"></path></g>
+        </svg>
+        <svg class="gz-print" ${vb}><defs>
+          <radialGradient id="${id}pin" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff"></stop><stop offset=".45" stop-color="#a5a9ac"></stop><stop offset="1" stop-color="#2b2e30"></stop></radialGradient>
+          ${gzStops(id + "w", 0, 0, 0, 1, [[0, "#f4f5f5"], [.35, "#9ea3a6"], [.55, "#3b3f42"], [.8, "#d6d9da"], [1, "#7d8286"]])}</defs>
+          <g data-r="gzzones"></g>
+          <path class="gz-ink" d="${gzArc(0, 100, 137)}" fill="none" stroke-width="1.1"></path>
+          ${ticks}
+          <g data-r="gzred"></g>
+          <g class="gz-num">${nums}</g>
+          <text class="gz-leg" y="${GZ.odoY + oh + 21}" text-anchor="middle" font-size="10" font-weight="700" letter-spacing="2.8">PER CENT</text>
+          <text class="gz-leg2" y="${GZ.odoY + oh + 33}" text-anchor="middle" font-size="8.4" letter-spacing="1.5">${legend.toUpperCase()}</text>
+          ${pins}
+          <rect class="gz-win" x="${ox - 3}" y="${GZ.odoY - 3}" width="${ow + 6}" height="${oh + 6}" rx="2.5" fill="url(#${id}w)"></rect>
+          <rect class="gz-well" x="${ox - 1}" y="${GZ.odoY - 1}" width="${ow + 2}" height="${oh + 2}" fill="#050505"></rect>
+          <text x="${ox + ow + 7}" y="${GZ.odoY + 22}" font-size="13" font-weight="700" class="gz-pct">%</text>
+        </svg>
+        <svg class="gz-dyn" ${vb}><defs>${gzDrumShade(id + "o")}
+          <pattern id="${id}off" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect class="gz-fl0" width="8" height="8" fill="#f6f0de"></rect><rect class="gz-fl1" width="4" height="8" fill="#b0231b"></rect></pattern>
+          <pattern id="${id}held" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect class="gz-fl0" width="8" height="8" fill="#f6f0de"></rect><rect class="gz-fl1" width="4" height="8" fill="#1b1814"></rect></pattern>
+          <linearGradient id="${id}brass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dd9a"></stop><stop offset=".5" stop-color="#c99f4c"></stop><stop offset="1" stop-color="#7b5a22"></stop></linearGradient>
+          <clipPath id="${id}fc"><rect x="-40" y="96" width="80" height="32.2"></rect></clipPath></defs>
+          <path class="gz-span" data-r="gzspan" d=""></path>
+          <g class="gz-fx" data-r="gzbugs" style="display:none"><path d="M0 -145L-8.8 -159.4L8.8 -159.4Z" fill="#000" opacity=".55"></path></g>
+          <g data-r="gzbug" style="display:none">
+            <path class="gz-bug" d="M0 -145L-8.8 -159.4L8.8 -159.4Z" fill="url(#${id}brass)" stroke="#1f1404" stroke-width="1.2" stroke-linejoin="round"></path>
+            <path class="gz-fx" d="M0 -148.8L-5.4 -157.8L0 -157.8Z" fill="#fff" opacity=".5"></path></g>
+          <g transform="translate(${ox} ${GZ.odoY})">${gzDrums(id + "o", odo, oh, 23, "gzo", [0, 12, 12])}
+            <rect class="gz-fx" x="0" y="0" width="${ow}" height="${oh * .45}" fill="#fff" opacity=".06"></rect>
+            <rect class="gz-sep" x="12" y="0" width="1.5" height="${oh}" fill="#000"></rect><rect class="gz-sep" x="34.5" y="0" width="1.5" height="${oh}" fill="#000"></rect>
+            <rect class="gz-line" x="-1" y="-1" width="${ow + 2}" height="${oh + 2}" fill="none" stroke="#000" stroke-width="1.2"></rect></g>
+          <g class="gz-slit"><rect class="gz-sep" x="-30" y="127.2" width="60" height="2.6" rx="1.3" fill="#1b1814" opacity=".85"></rect>
+            <path class="gz-fx" d="M-29 131.2H29" stroke="#fff" stroke-opacity=".6" stroke-width=".8" stroke-linecap="round"></path></g>
+          <g clip-path="url(#${id}fc)">${flag("off", "OFF")}${flag("held", "HELD")}</g>
+        </svg>
+        <svg class="gz-nshadow" ${vb} style="transform:translate(1.3%, 2%) rotate(${gzAng(GZ.park)}deg)"><defs><filter id="${id}ns" x="-50%" y="-10%" width="200%" height="120%"><feGaussianBlur stdDeviation="2.2"></feGaussianBlur></filter></defs>
+          <g filter="url(#${id}ns)">${needle(true)}</g></svg>
+        <svg class="gz-needle" ${vb} style="transform:rotate(${gzAng(GZ.park)}deg)">${needle(false)}</svg>
+        <svg class="gz-top" ${vb}><defs>
+          <radialGradient id="${id}dome" cx=".36" cy=".3" r=".75"><stop offset="0" stop-color="#ffffff"></stop><stop offset=".22" stop-color="#e9ebec"></stop><stop offset=".5" stop-color="#8f9497"></stop><stop offset=".78" stop-color="#34383b"></stop><stop offset="1" stop-color="#1a1c1e"></stop></radialGradient>
+          <linearGradient id="${id}glass" x1=".1" y1="0" x2=".7" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".34"></stop><stop offset=".5" stop-color="#fff" stop-opacity=".06"></stop><stop offset="1" stop-color="#fff" stop-opacity="0"></stop></linearGradient>
+          <filter id="${id}hs" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2"></feGaussianBlur></filter>
+          <filter id="${id}gl" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="2.4"></feGaussianBlur></filter></defs>
+          <circle class="gz-fx" cx="2.6" cy="4.2" r="13.4" fill="#000" opacity=".45" filter="url(#${id}hs)"></circle>
+          <circle class="gz-hub" r="13" fill="#1a1c1e"></circle><circle class="gz-hub" r="12" fill="url(#${id}dome)"></circle>
+          <circle class="gz-fx" r="12" fill="none" stroke="#000" stroke-opacity=".5" stroke-width=".6"></circle>
+          <g class="gz-fx">
+          <path d="M-144 -12A145 145 0 0 1 26 -143A170 170 0 0 0 -144 -12Z" fill="url(#${id}glass)"></path>
+          <path d="M-104 -72Q-74 -108 -26 -122" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="9" stroke-linecap="round" filter="url(#${id}gl)"></path>
+          <path d="${gzArc(3, 33, 141.8)}" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.7" stroke-linecap="round"></path>
+          <path d="${gzArc(-46, 4, 143)}" transform="rotate(-56)" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"></path></g>
+        </svg>
+      </span>`;
+}
+/* the words' column: the counter and the jewels */
+function gzMetaMarkup(key) {
+  const id = "gz-" + key + "-";
+  const cells = [], units = [];
+  let x = 8;
+  for (const [n, u] of [[1, "d"], [2, "h"], [2, "m"]]) {
+    for (let i = 0; i < n; i++) { cells.push({ x, w: 17 }); x += 18.5; }
+    units.push([x + 5, u]); x += 13;
+  }
+  const W = units[2][0] + 11, H = 38, h = 28;
+  return `<span class="gz-reset"><span class="gz-sub">Resets in</span>
+        <svg class="gz-counter" viewBox="0 0 ${W} ${H}" aria-hidden="true" focusable="false"><defs>${gzDrumShade(id + "k")}
+          ${gzStops(id + "kf", 0, 0, 0, 1, [[0, "#fff"], [.3, "#b9bdc0"], [.5, "#3a3e41"], [.7, "#a3a8ab"], [1, "#eef0f0"]])}</defs>
+          <rect class="gz-win" x="0" y="0" width="${W}" height="${H}" rx="4" fill="url(#${id}kf)"></rect>
+          <rect class="gz-well" x="3" y="3" width="${W - 6}" height="${H - 6}" rx="2" fill="#0b0a09"></rect>
+          <g transform="translate(0 5)">${gzDrums(id + "k", cells, h, 19, "gzk", [12, 12, 12, 12, 12])}
+          ${units.map(([ux, u]) => `<text class="gz-dig" x="${ux}" y="${h / 2 + 4.6}" text-anchor="middle" font-size="12" font-weight="700" fill="#b4aa92">${u}</text>`).join("")}</g>
+        </svg></span>
+      <span class="gz-lamps">
+        <span class="gz-lamp"><svg class="gz-jewel" data-r="gzpace" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">${gzJewel(id + "jp", 12.5, "amber")}</svg><span>Pace</span></span>
+        <span class="gz-lamp"><svg class="gz-jewel" data-r="gzcap" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">${gzJewel(id + "jc", 12.5, "red")}</svg><span>Limit</span></span>
+      </span>`;
+}
+
+/* The printed zones, from the thresholds the API serves: amber from the warning floor, red from
+   the critical cut where it stands clear of the cap, with a line of print across the band where
+   they meet, so the join does not rest on hue alone, lighter station marks cut into the amber at
+   the quarter points colourMarks gives, and the red line at the cap. Drawn again only when the
+   thresholds move. */
+function gzZones(key, th) {
+  const host = q(key, "gzzones");
+  const warn = num(th && th.warningFloorPercent, NaN), cap = num(th && th.exhaustedPercent, 100);
+  const marks = th ? colourMarks(th) : [];
+  const stamp = marks.map((m) => m.v.toFixed(2) + (m.served ? "s" : "")).join(",") + "|" + warn + "|" + cap;
+  if (host.dataset.k === stamp) return;
+  host.dataset.k = stamp;
+  const crit = marks.find((m) => m.served && m.v > warn && m.v < cap);
+  let s = "";
+  if (isFinite(warn) && warn < cap) {
+    s += `<path d="${gzBand(warn, crit ? crit.v : cap, 138.5, 144.5)}" class="gz-amber"></path>`;
+    if (crit) s += `<path d="${gzBand(crit.v, cap, 138.5, 144.5)}" class="gz-redzone"></path>` + gzTick(crit.v, 137, 145.5, 1.6, "gz-ink");
+    for (const m of marks) if (!m.served && m.v > warn && m.v < cap) s += gzTick(m.v, 138, 145, 1.3, "gz-cut");
+  }
+  host.innerHTML = s;
+  q(key, "gzred").innerHTML = gzTick(clamp(cap, 0, 100), 116, 145, 4, "gz-red");
+}
+
+/* ── the needle: a spring, swinging to each new reading with a little overshoot, struck against
+   its stop pins at either end of the scale, and trembling while the reading runs over pace ──
+   The spring is stepped on requestAnimationFrame, and the loop ends once the needle is at rest and
+   still, or the tab is hidden, to start again when it is shown. Under reduced motion the needle is
+   set where it belongs and nothing moves. Only the needle's two layers turn, by transform, so a frame repaints
+   nothing; the light on its faces is moved once it has turned far enough to show. */
+const GZN = {};
+const GZ_K = 16, GZ_DAMP = 2 * .8 * Math.sqrt(GZ_K), GZ_BOUNCE = .32, GZ_PRESS = 3;
+function gzNeedle(key) {
+  return GZN[key] || (GZN[key] = { v: GZ.park, vel: 0, target: GZ.park, amp: 0, raf: 0, last: 0, drawn: 0, lit: NaN });
+}
+function gzAim(key, target, amp) {
+  const n = gzNeedle(key);
+  n.target = clamp(target, GZ.park, 100);
+  n.amp = amp;
+  gzGo(key);
+}
+/* the tremble the data asks for, held still where the system asks for no motion or forced colours */
+const gzShake = (n) => (REDUCE.matches || FORCED.matches ? 0 : n.amp);
+function gzGo(key) {
+  const n = gzNeedle(key);
+  if (!gaugesOn()) { cancelAnimationFrame(n.raf); n.raf = 0; return; }
+  if (REDUCE.matches) {
+    cancelAnimationFrame(n.raf); n.raf = 0;
+    n.v = n.target; n.vel = 0;
+    gzDraw(key, n.v);
+    return;
+  }
+  const resting = n.vel === 0 && n.v === n.target;
+  if (resting && !(gzShake(n) > 0)) { cancelAnimationFrame(n.raf); n.raf = 0; gzDraw(key, n.v); return; }
+  if (!n.raf && document.visibilityState !== "hidden") { n.last = 0; n.raf = requestAnimationFrame((t) => gzStep(key, t)); }
+}
+function gzStep(key, ts) {
+  const n = GZN[key];
+  n.raf = 0;
+  if (!gaugesOn() || REDUCE.matches || document.visibilityState === "hidden") { gzGo(key); return; }
+  const dt = n.last ? Math.min(.034, (ts - n.last) / 1000) : 1 / 60;
+  n.last = ts;
+  if (n.vel !== 0 || n.v !== n.target) {
+    /* at either end the spring is aimed a little past the pin, so the needle is pressed against it,
+       strikes it, gives back a little and comes to rest on it */
+    const goal = n.target >= 100 ? 100 + GZ_PRESS : n.target <= GZ.park ? GZ.park - GZ_PRESS : n.target;
+    n.vel += (-(n.v - goal) * GZ_K - n.vel * GZ_DAMP) * dt;
+    n.v += n.vel * dt;
+    if (n.v > 100) { n.v = 100; if (n.vel > 0) n.vel = -n.vel * GZ_BOUNCE; }
+    if (n.v < GZ.park) { n.v = GZ.park; if (n.vel < 0) n.vel = -n.vel * GZ_BOUNCE; }
+    /* pressed against a pin, the spring and the pin trade a fraction of a point a second for
+       ever, so a needle on its pin is at rest once its bounces are under a point a second */
+    const pinned = (n.target >= 100 && n.v === 100) || (n.target <= GZ.park && n.v === GZ.park);
+    if (pinned ? Math.abs(n.vel) < 1 : Math.abs(n.vel) < .03 && Math.abs(n.v - n.target) < .02) { n.v = n.target; n.vel = 0; }
+  }
+  const settled = n.vel === 0 && n.v === n.target;
+  /* the tremble: three slow waves of unrelated periods, so it never visibly repeats and never
+     leans either way; once settled it is drawn at about thirty frames a second, which is enough */
+  if (!settled || ts - n.drawn > 30) {
+    const t = ts / 1000;
+    const amp = gzShake(n);
+    const wob = amp > 0 ? amp * (.5 * Math.sin(t * 14.45) + .32 * Math.sin(t * 23.25 + 1.3) + .18 * Math.sin(t * 38.33 + .4)) : 0;
+    gzDraw(key, n.v, wob);
+    n.drawn = ts;
+  }
+  if (!settled || gzShake(n) > 0) n.raf = requestAnimationFrame((t2) => gzStep(key, t2));
+}
+function gzDraw(key, v, wob = 0) {
+  /* the tremble presses the needle against a pin, never into it */
+  const n = gzNeedle(key), a = clamp(gzAng(v) + wob, gzAng(GZ.park), gzAng(100));
+  const btn = $("ring-" + key), needle = btn.querySelector(".gz-needle"), shadow = btn.querySelector(".gz-nshadow");
+  needle.style.transform = "rotate(" + a.toFixed(3) + "deg)";
+  /* the shadow falls the same way whatever the needle's angle: offset on the page, not on the needle */
+  shadow.style.transform = "translate(1.3%, 2%) rotate(" + a.toFixed(3) + "deg)";
+  if (Math.abs(a - n.lit) > 4 || !isFinite(n.lit)) {
+    n.lit = a;
+    const r = (a * Math.PI) / 180, lt = .707 * (Math.cos(r) + Math.sin(r));
+    const face = (t) => rgbCss(mix([12, 10, 9], [92, 86, 78], clamp(t, 0, 1)));
+    q(key, "gzl").setAttribute("fill", face(Math.max(0, lt) * .9 + .06));
+    q(key, "gzr").setAttribute("fill", face(Math.max(0, -lt) * .9 + .06));
+  }
+}
+/* the loop stops while the tab is hidden, and this starts it again when the tab is shown; it also
+   sets the needle still, or trembling again, as the system's reduced-motion setting changes */
+const gzMotion = () => { for (const key of ORDER) if (GZN[key]) gzGo(key); };
+document.addEventListener("visibilitychange", gzMotion);
+/* when the theme goes off the needle goes back to its pin, so it swings up again when it returns,
+   and the ring drops the dial's flag and lights, which gzPaint sets again under Gauges */
+function gzRest() {
+  for (const key of Object.keys(GZN)) {
+    const n = GZN[key], btn = $("ring-" + key);
+    cancelAnimationFrame(n.raf);
+    Object.assign(n, { raf: 0, v: GZ.park, vel: 0, lit: NaN });
+    gzDraw(key, GZ.park);
+    delete btn.dataset.gzflag;
+    delete btn.dataset.lit;
+  }
+}
+
+/* a drum rolled to a glyph. Going up from 9 it rolls on to the 0 after it and is then set back to
+   the first, unseen, and going down from 0 it is set on that second 0 first, so a drum always rolls
+   one step, the way the figures run, rather than back round through all ten. The dash and the
+   blank have no place in the figures' order, so a drum is set to or from either, not rolled. */
+const gzRolls = new WeakMap();
+function gzRoll(strip, ch, h) {
+  const k = gzGlyph(ch);
+  let was = Number(strip.dataset.i || 0);
+  if (k === was || (was === 11 && k === 1)) return;
+  clearTimeout(gzRolls.get(strip));
+  const put = (i, still) => {
+    if (still) strip.style.transition = "none";
+    strip.style.transform = "translateY(" + -i * h + "px)";
+    strip.dataset.i = String(i);
+    if (still) { void strip.getBoundingClientRect(); strip.style.transition = ""; }
+  };
+  /* the second 0 is the first one, seen from the other side */
+  if (was === 11) { put(1, true); was = 1; }
+  const quiet = REDUCE.matches || !gaugesOn();
+  if (!quiet && was === 10 && k === 1) {
+    put(11, false);
+    gzRolls.set(strip, setTimeout(() => put(1, true), 1200));
+  } else if (!quiet && was === 1 && k === 10) {
+    put(11, true);
+    put(10, false);
+  } else put(k, quiet || was === 0 || was === 12 || k === 0 || k === 12);
+}
+
+/* What the dial and its card show, for the detail's words, naming only what is drawn in this state:
+   the span while there is one; with a pace, the zones as gzZones prints them, the jewels and the
+   upright at "fit"; the HELD flag and the dark lights while they show; and on the card the fitted
+   run, a ramp while one is drawn and the pen while it is lifted. With no reading, or no window
+   running, there is no pace, and the words keep to what stands in for it and the card, so the
+   paragraph is no longer than the other themes' in the same state. */
+function gzLegend(o, th) {
+  let s = o.paced
+    ? " The brass line on the bezel's step joins bug and needle: dotted while it is headroom, solid and heavier as the overrun grows."
+    : "";
+  if (o.full) {
+    const warn = num(th && th.warningFloorPercent, NaN), cap = num(th && th.exhaustedPercent, 100), c = num(th && th.criticalPercent, NaN);
+    const crit = th ? colourMarks(th).find((m) => m.served && m.v > warn && m.v < cap) : null;
+    if (isFinite(warn) && warn < cap) {
+      s += " The amber arc, with lighter station marks at its quarter points, runs from the warning floor at " + showPct(warn) + "%" +
+        (crit ? ", red from critical at " + showPct(crit.v) + "%," : "") + " to the cap's red line, where a stop pin holds the needle." +
+        (!crit && isFinite(c) && c > warn && c < cap ? " The served critical cut at " + showPct(c) + "% sits too close to the cap to print." : "");
+    } else if (th) s += " The red line is the cap, where a stop pin holds the needle.";
+    s += " PACE lights over pace, LIMIT at the cap.";
+  }
+  if (o.held) s += " The HELD flag is up and the dial's lights are out.";
+  if (o.card && o.full) {
+    s += " On the recorder's card the fitted run is in full ink over a highlighter, fainter before the dashed upright at \u201cfit\u201d" +
+      (o.ramp ? "; a projection runs as a dashed ramp over hatched paper to a red ring on the cap's line" : "") +
+      (o.penUp ? "; the pen is up" : "") + ".";
+  } else if (o.card) s += " The recorder's " + (o.penUp ? "pen is up; its " : "") + "fitted run is in full ink over a highlighter.";
+  return s;
+}
+
+/* The face is printed from the thresholds served with a reading. With none, the plan is not known
+   and its critical cut is a placeholder, so the face keeps what the last reading printed, or,
+   before any, prints the amber arc and the red line alone. The detail's words read the same. */
+const gzFace = {};
+const gzFaceTh = (key, th) => gzFace[key] || (th && { ...th, criticalPercent: NaN });
+
+/* The theme's part of paintRing: the needle, the bug and its span, the drums, the jewels and the
+   flags. The words beside the dial are paintRing's own. */
+function gzPaint(key, th, f, known, dormant, pct, el, sev, band, rem) {
+  const btn = $("ring-" + key);
+  if (known) gzFace[key] = th;
+  gzZones(key, gzFaceTh(key, th));
+  /* the tremble: over pace, short of the cap, while Vibration is on (and, in gzShake, the system
+     allows motion). A held reading keeps trembling, as Glass's ring keeps shaking: the verdict was
+     true when it was read, and the flag says it is old. */
+  const over = btn.dataset.pace === "over" && band !== "exhausted";
+  const amp = over && PREFS.shake ? .3 + .7 * sev : 0;
+  gzAim(key, known ? pct : GZ.park, amp);
+
+  /* the bug, on the bezel's black step at the clock's share of the window, and the span from it to
+     the needle: dotted while it is headroom, solid and heavier as the overrun grows */
+  const bug = q(key, "gzbug"), bugs = q(key, "gzbugs"), span = q(key, "gzspan");
+  if (el === null || !known) {
+    bug.style.display = bugs.style.display = "none";
+    span.setAttribute("d", "");
+  } else {
+    const ev = el * 100, a = gzAng(ev).toFixed(2), p = clamp(pct, 0, 100);
+    bug.style.display = bugs.style.display = "";
+    bug.setAttribute("transform", "rotate(" + a + ")");
+    bugs.setAttribute("transform", "translate(.9 1.5) rotate(" + a + ")");
+    const lo = Math.min(p, ev), hi = Math.max(p, ev);
+    span.setAttribute("d", hi - lo > .4 ? gzArc(lo, hi, GZ.step) : "");
+  }
+
+  /* the drums: the percent as showPct writes it, the tens always shown, and the hundreds' wheel
+     turned up only at the cap; no reading is two dashes. The counter reads days, hours and minutes. */
+  let cells = ["", "–", "–"];
+  if (known) {
+    const t = showPct(pct);
+    cells = t.length === 3 ? [...t] : ["", t.length === 2 ? t[0] : "0", t[t.length - 1]];
+  }
+  cells.forEach((ch, i) => gzRoll(q(key, "gzo" + i), ch, 30));
+  let clock = ["–", "–", "–", "–", "–"];
+  if (rem !== null && isFinite(rem)) {
+    const s = Math.max(0, Math.floor(rem)), d = Math.min(9, Math.floor(s / 86400)), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    clock = [String(d), ...String(h).padStart(2, "0"), ...String(m).padStart(2, "0")];
+  }
+  clock.forEach((ch, i) => gzRoll(q(key, "gzk" + i), ch, 28));
+  /* past the reset instant, until the next reading brings the new window, the counter reads zeros
+     and "resetting…" is written beside it as a word, as waiting and dormant are */
+  if (rem !== null && isFinite(rem) && rem <= 0) q(key, "clock").classList.add("word");
+
+  /* the jewels: PACE while over pace, LIMIT at the cap; a held reading keeps its lamps */
+  q(key, "gzpace").dataset.lit = btn.dataset.pace === "over" ? "1" : "0";
+  q(key, "gzcap").dataset.lit = band === "exhausted" ? "1" : "0";
+  /* OFF with no reading, HELD over a held one; the lighting goes out while held or cut off. The
+     moment the page spends connecting is not yet "no reading", so OFF waits for the service to
+     answer, or to be found out of reach, and a page opened on a live reading raises no flag. */
+  btn.dataset.gzflag = !known ? (S.snap || f.tone === "down" ? "off" : "") : f.hold ? "held" : "";
+  btn.dataset.lit = f.hold || f.tone === "down" ? "0" : "1";
+}
+
 function buildRings() {
   ringsEl.innerHTML = ORDER.map((key) => `
    <div class="lrow" id="row-${key}" style="--tk:url(#tk-${key});--hb:url(#hb-${key})">
@@ -2661,9 +3923,12 @@ function buildRings() {
         <span class="readout" aria-hidden="true">
           <span class="numrow"><span class="num" data-r="num">—</span><span class="pctsign" data-r="sign">%</span></span>
         </span>
+        <!-- the Gauges theme's instrument; the others do not draw it -->
+        ${gzMarkup(key)}
       </span>
       <span class="meta" aria-hidden="true">
         <span class="mlabel" data-r="label">${SHORT[key]}</span>
+        ${gzMetaMarkup(key)}
         <span class="mclock" data-r="clock">—</span>
         <span class="mpace" data-r="pace"></span>
         <span class="meta-eta" data-r="eta"></span>
@@ -2731,6 +3996,8 @@ function render() {
       (/max_20x/.test(plan.rateLimitTier || "") ? " · 20×" : /max_5x/.test(plan.rateLimitTier || "") ? " · 5×" : "")
     : "";
 
+  /* the recorder's pen lifts the moment a reading is held, not at the chart's next redraw */
+  if (gaugesOn() && document.body.dataset.hold !== (f.hold ? "1" : "0")) S.chartsDirty = true;
   document.body.dataset.hold = f.hold ? "1" : "0";
 
   let heat = 0;
@@ -2853,6 +4120,7 @@ function paintRing(key, th, f) {
   /* the fluid takes the arc's colour and is stirred by the same heat that warms the room;
      a ring with nothing to show (no reading, or dormant at zero) gets a grey, barely-moving one */
   if (FLUIDS[key]) FLUIDS[key].look(ramp.rgb, known && !quiet ? heat : -1, !!f.hold);
+  if (gaugesOn()) gzPaint(key, th, f, known, dormant, pct, el, sev, band, rem);
   return heat;
 }
 
@@ -3057,22 +4325,30 @@ function renderDetail(key) {
     : `<dd class="est">no fitted run yet</dd>`;
 
   /* The words name what is drawn: the ring's arc and white tick under Glass, the bar and the ▲
-     under it in the Matrix terminal, which shows this same text, and the tick in ink on Broadsheet's paper. */
-  const bar = tuiOn();
+     under it in the Matrix terminal, which shows this same text, the tick in ink on Broadsheet's paper,
+     and the needle and the brass bug on Gauges' dial. */
+  const bar = tuiOn(), dial = gaugesOn();
   const N = bar
     ? { gauge: "bar", tick: "The ▲ under the bar sits at ", round: "of the way along", head: "The bar" }
+    : dial ? { gauge: "dial", tick: "The brass bug on the bezel stands at ", round: "on the scale", head: "The needle" }
     : { gauge: "ring", tick: paperOn() ? "The inked tick sits at " : "The white tick sits at ", round: "of the way round", head: "The arc" };
   /* the notch, said in words — the tick teaches itself on first click */
   let marker;
   if (dormant) marker = "No reset window is running, so there is no clock to pace this " + showPct(lim.percent) +
-    "% against. The " + N.gauge + " picks up a pace marker on its own once a window starts.";
-  else if (el === null || !known) marker = "No reset instant, so the pace marker cannot be placed.";
+    "% against. The " + N.gauge + " picks up a " + (dial ? "brass bug" : "pace marker") + " on its own once a window starts.";
+  else if (dial && !known) {
+    /* as the dial draws it: the lights, and the flag, which waits for the service to answer */
+    const drawn = $("ring-" + key).dataset;
+    marker = "No reading" + (drawn.lit === "0" ? " and the service out of reach: the dial's lights are out, " : ": ") +
+      "the needle rests on its pin below 0" + (drawn.gzflag === "off" ? ", the drums show dashes and the OFF flag is up." : " and the drums show dashes.");
+  }
+  else if (el === null || !known) marker = "No reset instant, so the " + (dial ? "brass bug" : "pace marker") + " cannot be placed.";
   else {
     const d = lim.percent - el * 100, g = Math.abs(Math.round(d));
     /* The prose narrates whichever state the panel is actually in. It was
        switched to past-perfect unconditionally when the hold prefix was
        added, so a live panel described itself in the past tense. */
-    const had = f.hold ? "had" : "has", reaches = f.hold ? "reached" : "reaches";
+    const had = f.hold ? "had" : "has", reaches = dial ? (f.hold ? "read" : "reads") : f.hold ? "reached" : "reaches";
     /* A published projection outranks the pace comparison. The server only
        publishes one when the fitted rate reaches the cap before this window
        resets, so "coasting" cannot be said next to it — the panel would be
@@ -3084,8 +4360,10 @@ function renderDetail(key) {
       (d > PACE_DEAD ? g + " points past it" +
            (paceSeverity(lim.percent, el) >= PACE_LOUD ? ", " + paceMultiple(lim.percent, el) + " the clock's own rate" : "") +
            /* attributed, because the very next sentence may be the OTHER
-              model saying the opposite */
-           ": on the even-burn clock alone, the cap arrives before the window resets."
+              model saying the opposite; at the cap it is no forecast but a fact */
+           (lim.percent >= num(th && th.exhaustedPercent, 100)
+             ? ": the cap " + had + " been reached, with the window still to reset."
+             : ": on the even-burn clock alone, the cap arrives before the window resets.")
        : d < -PACE_DEAD ? (proj !== null
            ? g + " points behind it — but the clock is not what binds here: the fitted burn rate reaches the cap at " +
              stamp(proj) + ", before this window resets."
@@ -3104,7 +4382,16 @@ function renderDetail(key) {
      the panel whose job is to teach the ring, so the resting page
      stays the ring and its chart and nothing else. */
   let legend = "";
-  if (known && !dormant && el !== null) {
+  if (dial) {
+    const cs = chartSeries(key, proj);
+    legend = gzLegend({
+      full: known && !dormant,
+      /* the span is drawn only off pace, as paintRing sets data-pace */
+      paced: known && !dormant && el !== null && Math.abs(lim.percent - el * 100) > PACE_DEAD,
+      held: $("ring-" + key).dataset.gzflag === "held",
+      card: cs.usable.length > 1, ramp: cs.projX != null, penUp: !known || !!f.hold,
+    }, gzFaceTh(key, th));
+  } else if (known && !dormant && el !== null) {
     legend = bar
       ? " The line under the bar runs from the bar's end to the ▲ — that difference as a length: " +
         "dotted and faint while it is headroom, solid in the pace colour once the bar has overrun the clock."
@@ -3115,7 +4402,7 @@ function renderDetail(key) {
   /* Mirrors the marks as drawn — the ring's as paintThresholds draws them (its `on` flag and its
      choice of marks, not just the values), the terminal's every one — so the prose never names
      a mark that was not drawn. */
-  if (known && !quiet && typeof lim.percent === "number") {
+  if (known && !quiet && typeof lim.percent === "number" && !dial) {
     const w = num(th && th.warningFloorPercent, NaN), e = num(th && th.exhaustedPercent, 100);
     const c = num(th && th.criticalPercent, NaN);
     const shown = (v) => bar || v > lim.percent;   // the ring leaves out what the arc has passed
@@ -3137,10 +4424,12 @@ function renderDetail(key) {
   }
 
   const winSec = num(lim && lim.windowSeconds, FALLBACK_WINDOW[key]);
-  /* the chart now lives beside the ring, always drawn; its marks are explained here */
+  /* the chart now lives beside the ring, always drawn; its marks are explained here (the
+     recorder's card in gzLegend, with the dial's) */
   legend += bar
     ? " In the chart under the bar the trace is bright where the burn rate was fitted, a dotted upright" +
       " over \u201cfit\u201d marks where that run starts, and a dotted ramp runs to the cap when a projection is published."
+    : dial ? ""
     : " In the chart beside the ring the trace is bright where the burn rate was fitted," +
       " a dashed upright marks where that run starts, and a dashed ramp runs to the cap when a projection is published.";
 
@@ -3156,7 +4445,7 @@ function renderDetail(key) {
        <div class="ro"><dt>pace</dt>${paceHtml}</div>
        <div class="ro"><dt>fitted run</dt>${runHtml}</div>
      </dl>
-     <p class="dfoot">${esc(marker)}${esc(legend)}${
+     <p class="dfoot" role="paragraph">${esc(marker)}${esc(legend)}${
        burn === null ? " The fitted burn rate is a second, separate model, and it needs three readings in an unbroken run before it can say anything at all." :
        proj === null ? " The fitted burn rate is a second, separate model: it publishes no projection while that fitted rate is flat or falling, when the window resets before the cap, or when the newest reading is too old to extrapolate from." : ""}${
        proj !== null && fit && fit.provisional ? " The ? on that time means its own spread is wide relative to how far ahead it is — the run supports the direction but not yet the hour." : ""}</p>`;
@@ -3274,10 +4563,14 @@ function chartSeries(key, proj, src = null) {
    ui-monospace face (~0.6em) plus .04em of tracking; mid centres text on a line, capY is the cap
    label's baseline, floor the bottom row's, and two labels closer than clash are moved step apart.
    Train's bitmap face is set at 20px, so there the chart is taller and its margins wider, and the
-   cap label has a row of its own above the plot, where the ramp cannot reach it. */
+   cap label has a row of its own above the plot, where the ramp cannot reach it. Gauges' recorder
+   paper has a sprocket strip strip px deep along each edge, the cap label's row and the times' row
+   inside them, and to the right of the pen the paper it has not reached yet, where its carriage
+   stands; its B612 is 11px. */
 const CHART_TYPE = {
   plain: { PL: 34, PR: 46, PT: 10, PB: 19, CHAR_W: 6.4, mid: 3.4, capY: 19, floor: 5, clash: 12, step: 15 },
   pixel: { PL: 34, PR: 56, PT: 26, PB: 24, CHAR_W: 7.6, mid: 6, capY: 16, floor: 6, clash: 18, step: 22, tall: 160 },
+  gauges: { PL: 38, PR: 56, PT: 38, PB: 42, CHAR_W: 7.4, mid: 3.8, capY: 30, floor: 23, clash: 13, step: 16, strip: 15 },
 };
 /* A line laid on the page's 3px grid, cell by cell, each move across or up and never both at once:
    every cell shares a side with the last, so a one-point step keeps its riser and the trace stays
@@ -3305,21 +4598,87 @@ function gridDash(a, b) {
   for (let k = 0; k < n; k += 5) d += gridPath([at(k), at(Math.min(n, k + 3))]);
   return d;
 }
+/* Gauges' recorder paper, as it is printed before the pen writes on it: ivory, a sprocket strip
+   along each edge, a rule every 10 points (heavier at 0 and 50, red at 100) and one every hour, or
+   every few hours where hours would crowd, running on past the pen over the paper still to come;
+   the scale in the margin. While a projection is drawn, the stretch from now to the cap's time is
+   hatched, so a forecast is never taken for a reading. The axis is the chart's own throughout. */
+function gzPaper(T, W, H, X, Y, m, hatchId) {
+  const { PL, PR, PT, PB, strip } = T, right = W - 6, f = (v) => v.toFixed(1);
+  let s = `<rect class="gz-paper" x="0" y="0" width="${W}" height="${H}"></rect>`;
+  for (const y of [strip, H - strip]) s += `<line class="gz-edge" x1="0" y1="${y}" x2="${W}" y2="${y}"></line>`;
+  /* the holes 17 apart, the run centred so both ends are inset alike */
+  const holes = Math.floor((W - 18) / 17), hx0 = (W - holes * 17) / 2;
+  for (let i = 0; i <= holes; i++) {
+    const x = f(hx0 + i * 17);
+    s += `<circle class="gz-hole" cx="${x}" cy="${strip / 2}" r="2.6"></circle>` +
+         `<circle class="gz-hole" cx="${x}" cy="${H - strip / 2}" r="2.6"></circle>`;
+  }
+  const hour = 3600000, perHour = (W - PL - PR) * hour / (m.t1 - m.t0);
+  const every = [1, 2, 3, 6, 12, 24].find((n) => n * perHour >= 16) || 24;
+  /* on the local clock's hours, as the days' rules are on its midnights */
+  for (const d = new Date(m.t0); ; ) {
+    d.setMinutes(60, 0, 0);
+    const x = X(d.getTime());
+    if (x >= right) break;
+    if (d.getHours() % every === 0) s += `<line class="gz-hr" x1="${f(x)}" y1="${PT}" x2="${f(x)}" y2="${H - PB}"></line>`;
+  }
+  for (let v = 0; v < 100; v += 10) {
+    s += `<line class="gz-rule${v % 50 ? "" : " gz-major"}" x1="${PL}" y1="${f(Y(v))}" x2="${right}" y2="${f(Y(v))}"></line>`;
+  }
+  s += `<line class="gz-capline" x1="${PL}" y1="${f(Y(100))}" x2="${right}" y2="${f(Y(100))}"></line>`;
+  for (const v of [0, 50, 100]) {
+    s += `<text class="ax${v === 100 ? " gz-r" : ""}" x="${PL - 7}" y="${f(Y(v) + T.mid)}" text-anchor="end">${v}</text>`;
+  }
+  if (m.projX !== null) {
+    s += `<defs><pattern id="${hatchId}" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">` +
+         `<path class="hx" d="M-1 3H7"></path></pattern></defs>` +
+         `<path class="gz-ahead" d="M${f(X(m.now))} ${PT}H${W - PR}V${H - PB}H${f(X(m.now))}Z" style="fill:url(#${hatchId})" data-hatch="${hatchId}"></path>`;
+  }
+  return s;
+}
+/* The recorder's pen at the head, on a carriage that runs up and down a guide rod just to its right,
+   the rod held in a bracket at each end, clear of the rows of words above and below the plot. At 0
+   and at 100 the carriage stops against a bracket, a little in from the pen's point, rather than
+   run off the end of its rod.
+   Held, or with no reading to write, the pen is lifted off the paper: nib and carriage stand a
+   little up and away, and their shadow falls further off. Shapes of one flat colour each, so the
+   saved graph can paint them as they are. */
+function gzPen(hx, hy, up, T, H) {
+  const f = (v) => v.toFixed(1), top = T.PT - 4, len = H - T.PB - T.PT + 8, rod = hx + 10;
+  const x = up ? hx - 1 : hx, y = up ? hy - 3 : hy, off = up ? 6 : 2.5;
+  const cy = clamp(y, top + 12, top + len - 12), ny = clamp(y, cy - 9, cy + 9);
+  const bracket = (by) => `<rect class="gz-block" x="${f(rod - 5)}" y="${f(by)}" width="10" height="4" rx="1"></rect>`;
+  return `<rect class="gz-rodsh" x="${f(rod + 2)}" y="${top}" width="2.2" height="${len}"></rect>` +
+    `<rect class="gz-rod" x="${f(rod - 2)}" y="${top}" width="4" height="${len}"></rect>` +
+    `<rect class="gz-rodhi" x="${f(rod - 1.2)}" y="${top}" width="1.1" height="${len}"></rect>` +
+    bracket(top - 2) + bracket(top + len - 2) +
+    `<rect class="gz-pensh" x="${f(x + 5 + off)}" y="${f(cy - 12 + off)}" width="10" height="24"></rect>` +
+    `<path class="gz-nib" d="M${f(x - .8)} ${f(ny)}L${f(x + 5.5)} ${f(ny - 2.6)}V${f(ny + 2.6)}Z"></path>` +
+    `<rect class="gz-block" x="${f(x + 5)}" y="${f(cy - 12)}" width="10" height="24" rx="2"></rect>` +
+    `<line class="gz-blockhi" x1="${f(x + 6.5)}" y1="${f(cy - 10.6)}" x2="${f(x + 13.5)}" y2="${f(cy - 10.6)}"></line>` +
+    `<circle class="gz-well" cx="${f(x + 10)}" cy="${f(cy - 4.6)}" r="2.7"></circle>` +
+    `<circle class="gz-screw" cx="${f(x + 10)}" cy="${f(cy + 6)}" r="2.3"></circle>` +
+    `<line class="gz-slot" x1="${f(x + 8.5)}" y1="${f(cy + 6.8)}" x2="${f(x + 11.5)}" y2="${f(cy + 5.2)}"></line>`;
+}
 function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   const h = src ? src.hist : S.hist, m = chartSeries(key, proj, src), { pts, usable, now } = m;
+  /* Gauges draws the chart as a strip-chart recorder's card behind glass in a chrome frame (gzRec) */
+  const gz = gaugesOn(), gzRec = (inner) => gz ? `<div class="gz-rec"><div class="gz-card">${inner}</div></div>` : inner;
   if (usable.length < 2) {
     return `<div class="chartcap"><span>history${presentUnknown ? " · current reading unknown" : ""}</span>
               <span class="note">${esc(burnNote(fit))}</span></div>
-            <div class="chartempty">${h ? "not enough readings retained yet to draw a line" : "loading history…"}</div>`;
+            ${gzRec(`<div class="chartempty">${h ? "not enough readings retained yet to draw a line" : "loading history…"}</div>`)}`;
   }
 
-  const pixel = trainOn(), T = pixel ? CHART_TYPE.pixel : CHART_TYPE.plain;
+  const pixel = trainOn(), T = pixel ? CHART_TYPE.pixel : gz ? CHART_TYPE.gauges : CHART_TYPE.plain;
   const { PL, PR, PT, PB, CHAR_W } = T;
   /* a label's width: measured in its own face where the caller can, as a saved graph's can, and
      otherwise counted in glyphs, which holds since the weekdays are always English (LOCALE) */
   const tw = src && src.measure ? src.measure : (t) => t.length * CHAR_W;
   const edge = pixel ? onGrid : (v) => v;
-  const { t0, t1, ymax, projX } = m;
+  /* the recorder's paper is printed 0 to 100, as the dial is, whatever the trace reaches */
+  const { t0, t1, projX } = m, ymax = gz ? 100 : m.ymax;
 
   const X = (t) => PL + ((t - t0) / (t1 - t0)) * (W - PL - PR);
   const Y = (v) => PT + (1 - clamp(v, 0, ymax) / ymax) * (H - PT - PB);
@@ -3349,7 +4708,8 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   const paper = paperOn(), hatchId = "hx-" + key + (src ? "-g" : "");
   const plotBox = `<rect x="${PL}" y="${PT}" width="${W - PL - PR}" height="${H - PT - PB}" fill="none" stroke="none"></rect>`;
   let pencil = "";
-  for (const fr of [0, .5, 1]) {
+  if (gz) s += gzPaper(T, W, H, X, Y, m, "gzh-" + key + (src ? "-g" : ""));
+  else for (const fr of [0, .5, 1]) {
     const y = Y(ymax * fr);
     const line = `<line class="grid" x1="${PL}" y1="${y.toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
     if (paper) pencil += line; else s += line;
@@ -3385,10 +4745,12 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
       const run = usable.filter((p) => p.t >= since);
       /* a two-sample run is a sliver; shading it would read as an
          artefact, so only a run wide enough to be a shape is filled */
-      if (run.length > 1 && X(run[run.length - 1].t) - X(run[0].t) > (W - PL - PR) * 0.08) {
+      if (run.length > 1 && X(run[run.length - 1].t) - X(run[0].t) > (W - PL - PR) * 0.08 && !gz) {
         s += `<path class="area" d="${runD} L${edge(X(run[run.length-1].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} L${edge(X(run[0].t)).toFixed(1)} ${edge(H-PB).toFixed(1)} Z"${
           paper ? ` style="fill:url(#${hatchId})" data-hatch="${hatchId}"` : ""}></path>`;
       }
+      /* the recorder marks its fitted run with a highlighter under the ink instead */
+      if (gz) s += `<path class="gz-hl" d="${runD}"></path>`;
       s += `<path class="run" d="${runD}"></path>`;
     }
     if (since > t0 && since < t1) {
@@ -3397,6 +4759,9 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
          than meet the axis, and is drawn last, as the labels that matter may want the place */
       const room = !pixel || X(since) - 4 - tw("fit") > PL + 2;
       fitLabel = { x: X(since) + (room ? -4 : 4), y: H - PB - 4, anchor: room ? "end" : "start" };
+      /* the recorder's paper is printed from 0, so a low trace runs through that corner: then the
+         label goes to the top of its upright instead */
+      if (gz && usable.some((p) => Math.abs(X(p.t) - X(since)) < tw("fit") + 8 && Y(p.v) > H - PB - 22)) fitLabel.y = PT + 13;
     }
   }
   if (paper) s += `</g>`;
@@ -3411,14 +4776,25 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
      that row when, and only when, it would actually reach into it. Both
      are knocked out of whatever passes under them by .lbl, so the ramp
      cannot strike a glyph either way. */
-  let capLeft = Infinity;
+  let capLeft = Infinity, capRing = "";
   if (projX !== null) {
     const capText = "cap " + stamp(projX);
-    capLeft = X(projX) - 5 - tw(capText);
+    let capX = X(projX) - 5, capAnchor = "end";
+    capLeft = capX - tw(capText);
+    /* a cap close to now puts the label over the recorder's rod and carriage: then it stands just
+       right of them, or where there is no room for it there, to the left of the pen */
+    const pen = X(last.t);
+    if (gz && capLeft < pen + 19 && capX > pen - 4) {
+      if (pen + 19 + tw(capText) <= W - 4) { capLeft = pen + 19; capX = capLeft; capAnchor = "start"; }
+      else { capX = pen - 4; capLeft = capX - tw(capText); }
+    }
     const projLine = `<path class="proj" d="${pixel ? gridDash([X(last.t), Y(last.v)], [X(projX), Y(100)])
       : `M${X(last.t).toFixed(1)} ${Y(last.v).toFixed(1)}L${X(projX).toFixed(1)} ${Y(100).toFixed(1)}`}"></path>`;
     s += paper ? `<g class="pen">${plotBox}${projLine}</g>` : projLine;
-    s += `<text class="ax lbl" x="${(X(projX) - 5).toFixed(1)}" y="${T.capY}" text-anchor="end" fill="var(--band)">${esc(capText)}</text>`;
+    /* on the recorder the ramp ends on the cap's red rule, in a ring of the same red, drawn over
+       the pen (below) so a cap close to now is not hidden under the carriage */
+    if (gz) capRing = `<circle class="gz-cappt" cx="${X(projX).toFixed(1)}" cy="${Y(100).toFixed(1)}" r="3.4"></circle>`;
+    s += `<text class="ax lbl" x="${capX.toFixed(1)}" y="${T.capY}" text-anchor="${capAnchor}" fill="var(--band)">${esc(capText)}</text>`;
   }
   const headX = X(last.t), headY = Y(last.v);
   const label = last.v + "%";
@@ -3433,6 +4809,9 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   /* The ramp leaves the head going up and to the right, so that is the one place a label as big
      as the bitmap face's must not be. Up and to the left is clear: the trace comes from below. */
   if (T === CHART_TYPE.pixel && projX !== null) { lx = headX - 8; la = "end"; ly = Math.max(headY - 10, capRow); }
+  /* The recorder's pen carriage stands just right of the head, so the value is read beside it: level
+     with the head, or under it while a ramp leaves the head going up and to the right */
+  if (gz) { lx = headX + 20; la = "start"; ly = clamp(projX !== null ? headY + 17 : headY + 4, PT + 13, H - PB - 3); }
   if (projX !== null) {
     const l = la === "end" ? lx - lw : lx, r = la === "end" ? lx : lx + lw;
     /* they only fight when the label reaches into the cap label's span
@@ -3446,15 +4825,27 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   }
   /* "warn" sits in the right margin at the warning line, which is exactly where the head
      label lands when the reading is near the floor; the head's value wins, the line stays */
+  /* on the recorder's paper it is printed over its line at the paper's edge, clear of the carriage */
   if (warnOn) {
-    const wy = Y(warn) + T.mid, wl = W - PR + 5, hl = la === "end" ? lx - lw : lx, hr = la === "end" ? lx : lx + lw;
+    const wy = gz ? Y(warn) - 4 : Y(warn) + T.mid, wl = gz ? W - 6 - tw("warn") : W - PR + 5;
+    const hl = la === "end" ? lx - lw : lx, hr = la === "end" ? lx : lx + lw;
     if (!(hr > wl - 3 && hl < wl + tw("warn") + 3 && Math.abs(ly - wy) < T.clash - 1)) {
-      s += `<text class="ax" x="${wl.toFixed(1)}" y="${wy.toFixed(1)}" fill="rgb(var(--warning-rgb)/.65)">warn</text>`;
+      s += gz ? `<text class="ax gz-warn" x="${wl.toFixed(1)}" y="${wy.toFixed(1)}">warn</text>`
+              : `<text class="ax" x="${wl.toFixed(1)}" y="${wy.toFixed(1)}" fill="rgb(var(--warning-rgb)/.65)">warn</text>`;
     }
   }
   s += pixel ? `<rect class="head" x="${onGrid(headX) - 4.5}" y="${onGrid(headY) - 4.5}" width="9" height="9"></rect>`
              : `<circle class="head" cx="${headX.toFixed(1)}" cy="${headY.toFixed(1)}" r="2.6"></circle>`;
+  /* the pen lifts off the paper while the reading is held, or while there is none to write */
+  const lifted = gz && (presentUnknown || !!freshness().hold);
+  if (gz) s += gzPen(headX, headY, lifted, T, H) + capRing;
   s += `<text class="ax lbl" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${la}" fill="var(--band)">${label}</text>`;
+  /* PEN UP is written up and to the left of the pen, where a rising trace has not been; a head at
+     the top of the paper has the trace beside it there, so it goes under the head instead */
+  if (lifted) {
+    s += `<text class="ax lbl gz-penup" x="${Math.max(headX - 9, PL + 4 + tw("PEN UP")).toFixed(1)}" y="${
+      Math.min(headY - 10 >= PT + 8 ? headY - 10 : headY + 19, H - PB - 3).toFixed(1)}" text-anchor="end">PEN UP</text>`;
+  }
   if (fitLabel) {
     const fw = tw("fit"), fl = fitLabel.anchor === "end" ? fitLabel.x - fw : fitLabel.x, fr = fl + fw;
     const hl = la === "end" ? lx - lw : lx, hr = hl + lw;
@@ -3465,11 +4856,21 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
     }
   }
   s += `<text class="ax" x="${PL}" y="${H - T.floor}">${esc(stamp(t0))}</text>`;
-  s += `<text class="ax" x="${(W - PR).toFixed(1)}" y="${H - T.floor}" text-anchor="end">${projX !== null ? esc(stamp(t1)) : "now"}</text>`;
+  let footRight = W - PR - tw(projX !== null ? stamp(t1) : "now");
+  if (!gz) s += `<text class="ax" x="${(W - PR).toFixed(1)}" y="${H - T.floor}" text-anchor="end">${projX !== null ? esc(stamp(t1)) : "now"}</text>`;
+  else {
+    /* the recorder's "now" stands under its pen, left of the rod, where it clears the times at the ends */
+    const nowX = headX + 6, nowL = nowX - tw("now");
+    if (projX !== null) s += `<text class="ax" x="${(W - PR).toFixed(1)}" y="${H - T.floor}" text-anchor="end">${esc(stamp(t1))}</text>`;
+    if (projX === null || (nowL > PL + tw(stamp(t0)) + 8 && nowX + 8 < footRight)) {
+      s += `<text class="ax" x="${nowX.toFixed(1)}" y="${H - T.floor}" text-anchor="end">now</text>`;
+      footRight = Math.min(footRight, nowL);
+    }
+  }
   /* the days' names along the foot, wherever they clear the two ends and each other */
   if (days.length) {
     const left = PL + tw(stamp(t0)) + 8;
-    const right = W - PR - tw(projX !== null ? stamp(t1) : "now") - 8;
+    const right = footRight - 8;
     let last = -Infinity;
     for (const [x, name] of days) {
       const half = tw(name) / 2;
@@ -3484,7 +4885,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
       <span>last ${esc(fmtSpan((Math.max(...usable.map(p=>p.t)) - t0) / 1000))} of history${
         presentUnknown ? " · current reading unknown" : ""}</span>
       <span class="note">${esc(burnNote(fit))}</span>
-    </div>${s}`;
+    </div>${gzRec(s)}`;
 }
 
 /* Every row's chart, from the one /api/history payload. Called when the history or the
@@ -3496,6 +4897,9 @@ const CHART_REFRESH_MS = 20000;
 const NEU_CHART_H = [120, 150, 240];
 /* Broadsheet's, at a phone's width and wider: the lead's chart is taller than the glass's */
 const BS_CHART_H = [120, 150];
+/* Gauges' recorder card, at a phone's width and wider, as tall as the instrument beside it allows; and
+   the chrome frame round the card, each side, which the card's width leaves out (.gz-rec in CSS) */
+const GZ_CHART_H = [212, 268], GZ_FRAME = 7;
 const chartMarkup = {};
 function renderCharts() {
   S.chartsDirty = false;
@@ -3506,6 +4910,7 @@ function renderCharts() {
   const H = trainOn() ? CHART_TYPE.pixel.tall
     : neuOn() ? (narrow ? NEU_CHART_H[0] : matchMedia("(max-width: 760px)").matches ? NEU_CHART_H[1] : NEU_CHART_H[2])
     : paperOn() ? BS_CHART_H[narrow ? 0 : 1]
+    : gaugesOn() ? GZ_CHART_H[narrow ? 0 : 1]
     : narrow ? 100 : 118;
   for (const key of ORDER) {
     const host = $("spark-" + key);
@@ -3516,7 +4921,7 @@ function renderCharts() {
     const band = !known || quiet ? "unknown" : bandOf(lim.percent, th);
     const proj = fit && typeof fit.projectedAt === "number" && isFinite(fit.projectedAt) ? fit.projectedAt : null;
     const cs = getComputedStyle(host), inset = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) || 0;
-    const W = Math.max(220, Math.round((host.clientWidth || 480) - inset));
+    const W = Math.max(220, Math.round((host.clientWidth || 480) - inset - (gaugesOn() ? 2 * GZ_FRAME : 0)));
     const html = chartHTML(key, fit, band, proj, th, W, !known, H);
     if (html !== chartMarkup[key]) { chartMarkup[key] = html; host.innerHTML = html; }
   }
@@ -3592,6 +4997,7 @@ function graphName(key, span) {
 
 function drawGraph(key, h, [sec, , spanWords]) {
   const { w: GW, h: GH, pad, scale, chartTop, chartH } = GRAPH, pixel = trainOn(), terminal = tuiOn(), soft = neuOn(), paper = paperOn();
+  const gz = gaugesOn();
   const canvas = document.createElement("canvas");
   canvas.width = GW * scale; canvas.height = GH * scale;
   const ctx = canvas.getContext("2d");
@@ -3603,12 +5009,15 @@ function drawGraph(key, h, [sec, , spanWords]) {
   const probe = document.createElement("span");
   row.appendChild(probe);
   const colour = (v) => { probe.style.color = v; return getComputedStyle(probe).color; };
-  let ink, dim, faint, hi, bg, frame, lift, shade;
+  let ink, dim, faint, hi, bg, frame, lift, shade, gzInk = {};
   try {
     ink = colour("var(--ink)"); dim = colour("var(--ink-3)"); faint = colour("var(--ink-4)"); hi = colour("var(--hi)");
-    bg = pixel ? colour("var(--plate)") : terminal ? "#000" : soft ? colour("var(--clay)") : paper ? colour("var(--paper)") : "#10131a";
+    bg = pixel ? colour("var(--plate)") : terminal ? "#000" : soft ? colour("var(--clay)") : paper ? colour("var(--paper)")
+       : gz ? colour("var(--gz-paint)") : "#10131a";
     frame = pixel ? colour("var(--band)") : terminal ? MX_INK.line : colour("var(--edge)");
     if (soft) { lift = colour("var(--lift)"); shade = colour("var(--shade)"); }
+    if (gz) gzInk = { print: colour("var(--gz-print)"), print2: colour("var(--gz-print-2)"), paper: colour("var(--gz-paper)"),
+                      steel: colour("var(--gz-steel)") };
   } finally {
     probe.remove();
   }
@@ -3623,7 +5032,15 @@ function drawGraph(key, h, [sec, , spanWords]) {
      picture (a shadow's blur and offset are in the canvas's own pixels, so twice the page's);
      Broadsheet's a sheet of its paper in a frame inked by hand, with a double rule under the
      heading, drawn from the limit's own seed so the same graph saved again is framed the same way;
+     Gauges' its black fascia in a chrome moulding, with the recorder's card in its own chrome frame;
      the others square */
+  const rrect = (x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+  const chrome = (x, y, w, h, stops) => {
+    const g = ctx.createLinearGradient(x, y, x + w * .35, y + h);
+    for (const [o, c] of stops) g.addColorStop(o, c);
+    return g;
+  };
+  const card = { x: pad - GZ_FRAME, y: chartTop - GZ_FRAME, w: GW - 2 * pad + 2 * GZ_FRAME, h: chartH + 2 * GZ_FRAME };
   ctx.fillStyle = bg;
   if (soft) {
     ctx.fillRect(0, 0, GW, GH);
@@ -3651,6 +5068,26 @@ function drawGraph(key, h, [sec, , spanWords]) {
     inkLine(ctx, m, GH - m, m, m, rnd, 1.5);
     inkLine(ctx, pad, chartTop - 10, GW - pad, chartTop - 10, rnd, 2.2);
     inkLine(ctx, pad, chartTop - 5, GW - pad, chartTop - 5, rnd, .9);
+  } else if (gz) {
+    ctx.fillStyle = gzInk.steel; ctx.fillRect(0, 0, GW, GH);
+    ctx.fillStyle = bg; rrect(3, 3, GW - 6, GH - 6, 22); ctx.fill();
+    const shade = ctx.createLinearGradient(0, 0, 0, GH);
+    shade.addColorStop(0, "rgb(0 0 0 / .45)"); shade.addColorStop(.16, "rgb(0 0 0 / 0)");
+    shade.addColorStop(.82, "rgb(0 0 0 / 0)"); shade.addColorStop(1, "rgb(0 0 0 / .3)");
+    ctx.fillStyle = shade; ctx.fill();
+    /* the moulding, lit as the page's is (--gz-chrome): sky, a hard horizon, the ground, sky again */
+    const mould = ctx.createLinearGradient(GW * .41, 0, GW * .59, GH);
+    for (const [o, c] of [[0, "#ffffff"], [.11, "#d4d8da"], [.24, "#5f656a"], [.34, "#1d2023"], [.44, "#0d0e10"],
+                          [.56, "#8e9499"], [.68, "#eef0f1"], [.8, "#c3c7ca"], [.92, "#4a4f53"], [1, "#8d9296"]]) mould.addColorStop(o, c);
+    ctx.lineWidth = 6; ctx.strokeStyle = mould; rrect(3, 3, GW - 6, GH - 6, 22); ctx.stroke();
+    ctx.lineWidth = 1; ctx.strokeStyle = "#050505"; rrect(.5, .5, GW - 1, GH - 1, 24.5); ctx.stroke();
+    ctx.save();
+    ctx.shadowColor = "rgb(0 0 0 / .75)"; ctx.shadowBlur = 10 * scale; ctx.shadowOffsetX = 2 * scale; ctx.shadowOffsetY = 5 * scale;
+    ctx.fillStyle = chrome(card.x, card.y, card.w, card.h, [[0, "#ffffff"], [.14, "#c7cbcd"], [.34, "#6f7579"], [.46, "#2c2f32"],
+                                                           [.6, "#9ba1a4"], [.8, "#eef0f0"], [1, "#8a8f93"]]);
+    rrect(card.x, card.y, card.w, card.h, 16); ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = 1; ctx.strokeStyle = "#050505"; rrect(card.x - .5, card.y - .5, card.w + 1, card.h + 1, 16.5); ctx.stroke();
   } else {
     ctx.fillRect(0, 0, GW, GH);
     ctx.strokeStyle = frame; ctx.lineWidth = 1;
@@ -3674,7 +5111,19 @@ function drawGraph(key, h, [sec, , spanWords]) {
   const top = pad + size.small;
   const qw = write("QUOTA", L, top, mark, size.small, sans, { weight: pixel ? 400 : 620, spacing: pixel ? 1.6 : 2.8 });
   const plan = $("plan").textContent.trim();
-  if (plan) write(plan, L + qw + 14, top, faint, size.small, sans, { spacing: pixel ? 0 : 1.4 });
+  if (plan && gz) {
+    /* on its enamel badge in a thin chrome rim, as the masthead has it */
+    ctx.font = "700 12px " + sans;
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "1.7px";
+    const bw = ctx.measureText(plan).width + 20, bx = L + qw + 18, by = top - 16;
+    for (const [grow, c] of [[3.5, "#4b4f53"], [2.5, "#e7e9ea"], [1.5, "#8d9296"]]) {
+      ctx.fillStyle = c; rrect(bx - grow, by - grow, bw + 2 * grow, 22 + 2 * grow, 4 + grow); ctx.fill();
+    }
+    const enamel = ctx.createLinearGradient(0, by, 0, by + 22);
+    enamel.addColorStop(0, "#f6eedb"); enamel.addColorStop(1, "#e3d6b4");
+    ctx.fillStyle = enamel; rrect(bx, by, bw, 22, 4); ctx.fill();
+    write(plan, bx + 10, by + 15.5, gzInk.print, 12, sans, { weight: 700, spacing: 1.7 });
+  } else if (plan) write(plan, L + qw + 14, top, faint, size.small, sans, { spacing: pixel ? 0 : 1.4 });
   const ty = top + 14 + size.title;
   const tw = write((lim && lim.label) || SHORT[key], L, ty, ink, size.title, sans, { weight: pixel ? 400 : 500 });
   write(" · " + spanWords, L + tw, ty, dim, size.title, sans, { weight: pixel ? 400 : 300 });
@@ -3718,9 +5167,27 @@ function drawGraph(key, h, [sec, , spanWords]) {
     host.innerHTML = chartHTML(key, fit, band, proj, th, CW, !known, chartH,
                                { hist: h, from, days: sec >= 86400, reach: 0.3, measure });
     const svg = host.querySelector("svg.chart");
+    /* Gauges' card: its paper, kept inside the frame's rounded window */
+    if (gz) { ctx.save(); rrect(L, chartTop, CW, chartH, 10); ctx.clip(); ctx.fillStyle = gzInk.paper; ctx.fillRect(L, chartTop, CW, chartH); }
     if (svg) paintSvg(ctx, svg, L, chartTop);
-    else write("not enough readings over " + spanWords + " to draw a line", GW / 2, chartTop + chartH / 2, faint, size.small, sans,
-               { align: "center" });
+    else write("not enough readings over " + spanWords + " to draw a line", GW / 2, chartTop + chartH / 2,
+               gz ? gzInk.print2 : faint, size.small, sans, { align: "center" });
+    if (gz) {
+      /* the lamps' light at its rim, out while the dial's is; the glass over it, and the shadow of the
+         frame's edge inside it */
+      if ($("ring-" + key).dataset.lit !== "0") {
+        const glow = ctx.createRadialGradient(GW / 2, chartTop + chartH / 2, chartH * .4, GW / 2, chartTop + chartH / 2, CW * .62);
+        glow.addColorStop(0, "rgb(255 168 72 / 0)"); glow.addColorStop(1, "rgb(255 168 72 / .26)");
+        ctx.fillStyle = glow; ctx.fillRect(L, chartTop, CW, chartH);
+      }
+      const glint = ctx.createLinearGradient(L, chartTop, L + CW * .55, chartTop + chartH * .9);
+      glint.addColorStop(0, "rgb(255 255 255 / 0)"); glint.addColorStop(.3, "rgb(255 255 255 / 0)");
+      glint.addColorStop(.4, "rgb(255 255 255 / .16)"); glint.addColorStop(.55, "rgb(255 255 255 / 0)");
+      ctx.fillStyle = glint; ctx.fillRect(L, chartTop, CW, chartH);
+      ctx.shadowColor = "rgb(0 0 0 / .45)"; ctx.shadowBlur = 8 * scale; ctx.shadowOffsetX = 3 * scale; ctx.shadowOffsetY = 4 * scale;
+      ctx.lineWidth = 8; ctx.strokeStyle = "#000"; rrect(L - 4, chartTop - 4, CW + 8, chartH + 8, 14); ctx.stroke();
+      ctx.restore();
+    }
   } finally {
     host.remove();
   }
@@ -3776,16 +5243,18 @@ function paintSvg(ctx, svg, ox, oy) {
     if (el.closest("defs")) continue;
     const s = getComputedStyle(el);
     if (s.display === "none" || s.visibility === "hidden") continue;
-    /* Broadsheet's hatching: its pattern's strokes, laid across the chart and kept to the shape */
+    /* Broadsheet's hatching, and Gauges' over the paper the pen has not reached: the pattern's
+       strokes, at its spacing and angle, laid across the chart and kept to the shape */
     if (el.dataset.hatch && vb) {
-      const hx = svg.querySelector("#" + el.dataset.hatch + " path"), hs = hx && getComputedStyle(hx);
+      const pat = svg.querySelector("#" + el.dataset.hatch), hx = pat && pat.querySelector("path"), hs = hx && getComputedStyle(hx);
       if (hs && hs.stroke && hs.stroke !== "none") {
+        const turn = /rotate\(([-\d.]+)/.exec(pat.getAttribute("patternTransform") || "");
         ctx.save();
         ctx.translate(ox, oy);
         ctx.clip(new Path2D(el.getAttribute("d")));
         ctx.globalAlpha = n(s.opacity, 1) * n(hs.opacity, 1) * n(hs.strokeOpacity, 1);
         ctx.strokeStyle = hs.stroke; ctx.lineWidth = n(hs.strokeWidth, 1);
-        hatch(ctx, vb.width, vb.height, 4.6, -50);
+        hatch(ctx, vb.width, vb.height, n(pat.getAttribute("width"), 4.6), turn ? n(turn[1], -50) : -50);
         ctx.restore();
       }
       continue;
@@ -3796,6 +5265,8 @@ function paintSvg(ctx, svg, ox, oy) {
     const sw = n(s.strokeWidth, 1);
     ctx.save();
     ctx.translate(ox, oy);
+    /* a soft shadow, as Gauges' pen carriage casts on its paper */
+    if (s.filter.startsWith("blur(")) ctx.filter = s.filter;
     const toStroke = () => {
       ctx.globalAlpha = op * n(s.strokeOpacity, 1);
       ctx.strokeStyle = stroke; ctx.lineWidth = sw;
@@ -4322,8 +5793,8 @@ document.addEventListener("visibilitychange", boilMotion);
    Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
    through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
-  /* the terminal, the scene, the clay and the paper have no fluid, so under them the loop stops too */
-  const on = PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn();
+  /* the terminal, the scene, the clay, the paper and the instrument have no fluid, so under them the loop stops too */
+  const on = PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn() && !gaugesOn();
   for (const key of ORDER) {
     if (!FLUIDS[key]) continue;
     const canvas = q(key, "fluid");
@@ -6699,7 +8170,9 @@ function trainMotion() {
    of it falls, how fast, and its two colours; whether Train's scene
    moves, and its own shake, which shares Glass's switch; and
    Neumorphism's clay, light, dark or as the system is, and its shake
-   and typeface, which share Glass's. One belongs to no theme:
+   and typeface, which share Glass's; Broadsheet's boiling ink; and
+   the tremble of Gauges' needle, which shares the shake's switch. One
+   belongs to no theme:
    whether the cost strip is shown. The
    panel lists only the settings of the theme on screen, and that one;
    under Neumorphism it lists only the theme, and the rest are keys and
@@ -6716,7 +8189,7 @@ const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: 
                         clay: "system", boil: true };
 /* key, label, and the glyphs on its swatch */
 const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""], ["neumorphism", "Neumorphism", ""],
-                ["broadsheet", "Broadsheet", ""]];
+                ["broadsheet", "Broadsheet", ""], ["gauges", "Gauges", ""]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
 /* Neumorphism's clay: light, dark, or whichever the system asks for, followed as it changes. Under
    forced colours the ground is the system's, so the clay follows the system's palette whatever
@@ -6730,7 +8203,7 @@ const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source
                ["noto-sans", "Noto Sans", "--font-noto"], ["fira-code", "Fira Code", "--font-code"]];
 /* key, label, hint, and the themes it belongs to, or "all" */
 const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "glass"],
-                  ["shake", "Vibration", "The ring shakes while over pace", "glass train neumorphism"],
+                  ["shake", "Vibration", "The ring shakes while over pace", "glass train neumorphism gauges"],
                   ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
                   ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"],
                   ["scene", "Moving scene", "The train, its smoke and the fire", "train"],
@@ -6746,8 +8219,8 @@ const COLOURS = [["rain1", "Colour #1", "The rain"],
 const isHex = (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
 /* a slider's value put on its steps, without the dust of binary fractions */
 const onStep = (v, lo, hi, step) => Number((lo + Math.round((clamp(v, lo, hi) - lo) / step) * step).toFixed(2));
-/* the face in force: Matrix and Broadsheet set their own, and the reader's choice waits for the theme to change back */
-const faceOf = (p) => (p.theme === "matrix" ? "fira-code" : p.theme === "broadsheet" ? "caveat" : p.font);
+/* the face in force: Matrix, Broadsheet and Gauges set their own, and the reader's choice waits for the theme to change back */
+const faceOf = (p) => (p.theme === "matrix" ? "fira-code" : p.theme === "broadsheet" ? "caveat" : p.theme === "gauges" ? "b612" : p.font);
 
 /* Never trusts the stored copy further than it can be checked: a stale or hand-edited entry
    falls back to the default one key at a time instead of breaking the page. */
@@ -6801,7 +8274,7 @@ function buildPrefs() {
       <div class="picks" role="radiogroup" aria-labelledby="ph-theme">${THEMES.map(([k, label, sample]) =>
         `<label class="pick" data-pick="${k}"><input type="radio" name="theme" value="${k}"><span class="swatch" aria-hidden="true">${sample}</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-motion" data-for="glass matrix train broadsheet">
+    <div class="psec" role="group" aria-labelledby="ph-motion" data-for="glass matrix train broadsheet gauges">
       <div class="phead" id="ph-motion">Motion</div>
       ${sw(SWITCHES[0])}
       <div class="prow sub" id="prefsSpeed" data-for="glass">
@@ -6817,7 +8290,7 @@ function buildPrefs() {
       ${SLIDERS.map(slider).join("")}
       <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train broadsheet">
+    <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train broadsheet gauges">
       <div class="phead" id="ph-page">Page</div>
       ${sw(SWITCHES[5])}
     </div>
@@ -6830,7 +8303,7 @@ function buildPrefs() {
       <div class="picks" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
         `<label class="pick"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
-    <div class="pfoot" data-for="glass matrix train broadsheet"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
+    <div class="pfoot" data-for="glass matrix train broadsheet gauges"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
 
   /* a slider or a colour, read into the settings: put on its steps, or refused if it is no colour;
      false for any other control */
@@ -6931,10 +8404,13 @@ function syncPrefs() {
   /* Only the settings of the theme on screen are listed — the glass page's when a theme cannot
      run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
      and the rain's amount and speed only while the rain is on. */
-  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : neuOn() ? "neumorphism" : paperOn() ? "broadsheet" : "glass";
+  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : neuOn() ? "neumorphism" : paperOn() ? "broadsheet" : gaugesOn() ? "gauges" : "glass";
   panel.querySelectorAll("[data-for]").forEach((el) => {
     el.hidden = el.dataset.for !== "all" && !el.dataset.for.split(" ").includes(shown);
   });
+  /* one switch, but under Gauges it is the needle that trembles */
+  panel.querySelector('input[name="shake"]').closest(".prow").querySelector(".phint").textContent =
+    gaugesOn() ? "The needle trembles while over pace" : SWITCHES[1][2];
   if (!PREFS.fluid) $("prefsSpeed").hidden = true;
   if (!PREFS.rain) panel.querySelectorAll("[data-rain]").forEach((el) => { el.hidden = true; });
   $("prefsStill").hidden = !REDUCE.matches;
@@ -6964,11 +8440,12 @@ function applyPrefs() {
   trainMotion();
   /* the scene's face goes with the scene, so a browser that cannot run it keeps the reader's own */
   if (trainOn()) root.dataset.font = "jersey-10";
-  if (PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn()) startFluids();
+  if (PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn() && !gaugesOn()) startFluids();
   fluidMotion();
   boilMotion();
-  /* the cost strip points at the gauge above it, which is a bar in the terminal */
-  $("cwGauge").textContent = tuiOn() ? "bar" : "ring";
+  if (!gaugesOn()) gzRest();
+  /* the cost strip points at the gauge above it, which is a bar in the terminal and a dial on the panel */
+  $("cwGauge").textContent = tuiOn() ? "bar" : gaugesOn() ? "dial" : "ring";
   syncPrefs();
 }
 
@@ -7005,7 +8482,7 @@ addEventListener("storage", (e) => {
   PREFS = loadPrefs();
   showPrefs();
 });
-if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); boilMotion(); syncPrefs(); });
+if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); boilMotion(); gzMotion(); syncPrefs(); });
 /* the system turning dark or light turns a clay that follows it, at once */
 if (DARK.addEventListener) DARK.addEventListener("change", () => { if (PREFS.clay === "system" || FORCED.matches) showPrefs(); });
 if (FORCED.addEventListener) FORCED.addEventListener("change", () => showPrefs());
@@ -7017,6 +8494,16 @@ const CRAMP = ["#9aa4dc", "#828cc4", "#6c75a8", "#585f8b", "#464b6d"];
 /* on Neumorphism's light clay and Broadsheet's paper the same family runs the other way, so the largest share
    still stands out most; the dark clay keeps the glass's order */
 const CRAMP_LIGHT = ["#464b6d", "#585f8b", "#6c75a8", "#828cc4", "#9aa4dc"];
+/* Gauges' data plate is etched, not coloured: its models are told apart by pattern, solid, hatched,
+   dotted, cross-hatched and ruled, each drawn as an SVG of its own (where names an id for it) so a
+   forced palette keeps the patterns as well as the inks */
+const GZ_ETCH = ["", `<path d="M-1 1L1 -1M0 4L4 0M3 5L5 3"></path>`, `<circle cx="2" cy="2" r=".95"></circle>`,
+                 `<path d="M0 0L4 4M4 0L0 4"></path>`, `<path d="M0 .6H4"></path>`];
+function gzEtch(i, where) {
+  const k = Math.min(i, 4), id = "gzet-" + where + i;
+  return `<svg class="gz-etch" aria-hidden="true" focusable="false">${k ? `<defs><pattern id="${id}" patternUnits="userSpaceOnUse" width="4" height="${k === 4 ? 2.5 : 4}">${
+    GZ_ETCH[k]}</pattern></defs><rect width="100%" height="100%" fill="url(#${id})"></rect>` : `<rect class="gz-solid" width="100%" height="100%"></rect>`}</svg>`;
+}
 function renderCost() {
   const c = S.cost;
   if (!c) { $("costNote").textContent = "waiting for ccusage…"; return; }
@@ -7031,9 +8518,11 @@ function renderCost() {
   $("costTotal").style.color = dead ? "var(--ink-4)" : "";
   $("costKey").textContent = "7-day total · usd · estimate" + (c.stale && !c.error ? " · cached copy" : "");
 
+  const gz = gaugesOn();
   $("costBar").innerHTML = models.map((m, i) => {
     const p = total > 0 ? (num(m.cost, 0) / total) * 100 : 0;
-    return `<span style="width:${p.toFixed(3)}%;background:${ramp[Math.min(i, 4)]}"></span>`;
+    return gz ? `<span style="width:${p.toFixed(3)}%">${gzEtch(i, "b")}</span>`
+              : `<span style="width:${p.toFixed(3)}%;background:${ramp[Math.min(i, 4)]}"></span>`;
   }).join("");
 
   $("costRows").innerHTML = dead
@@ -7041,13 +8530,13 @@ function renderCost() {
     : models.length
       ? models.map((m, i) => {
           const p = total > 0 ? (num(m.cost, 0) / total) * 100 : 0;
-          return `<tr><td class="mn"><span class="sw" style="background:${ramp[Math.min(i, 4)]}"></span>${esc(shortModel(m.name))}</td>` +
+          return `<tr><td class="mn"><span class="sw"${gz ? "" : ` style="background:${ramp[Math.min(i, 4)]}"`}>${gz ? gzEtch(i, "s") : ""}</span>${esc(shortModel(m.name))}</td>` +
                  `<td class="r">${money(m.cost)}</td><td class="r" style="color:var(--ink-4)">${p.toFixed(1)}%</td></tr>`;
         }).join("")
       : `<tr><td class="mn" colspan="3" style="color:var(--ink-4)">ccusage reports no local usage in the last seven days</td></tr>`;
 
   if (c.error) {
-    $("costNote").innerHTML = `<span style="color:var(--cerr, #f0b9c4)">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota ${tuiOn() ? "bar" : "ring"} above is unaffected.`;
+    $("costNote").innerHTML = `<span style="color:var(--cerr, #f0b9c4)">${esc(c.error.code)} — ${esc(c.error.message)}</span> · the quota ${tuiOn() ? "bar" : gaugesOn() ? "dial" : "ring"} above is unaffected.`;
   } else if (c.stale) {
     $("costNote").textContent = "Cached copy while a refresh runs. Recomputed at most every 5 minutes.";
   } else {

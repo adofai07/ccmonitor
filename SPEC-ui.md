@@ -9,9 +9,9 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 ## Theme
 
-Five themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, **Train**, a
-pixel scene, **Neumorphism**, soft clay, light or dark, and **Broadsheet**, a newspaper written and
-drawn by hand.
+Six themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, **Train**, a
+pixel scene, **Neumorphism**, soft clay, light or dark, **Broadsheet**, a newspaper written and
+drawn by hand, and **Gauges**, a motorcar's instrument panel.
 
 **Glass: dark glass over an animated gradient.**
 
@@ -20,8 +20,8 @@ drawn by hand.
 - Motion is confined to the backdrop, the ring's interior (see *Ring interior* below) and
   one alarm, the shake of the ring while it is over pace (see *Over pace*). The arc, tick and
   chart otherwise only move when the data moves. Each of the three can be switched off in
-  *Settings*. (Matrix, Train and Broadsheet have motion of their own, and Neumorphism only the
-  shake; see below.)
+  *Settings*. (Matrix, Train and Broadsheet have motion of their own, Neumorphism only the
+  shake and Gauges only its needle's; see below.)
 - `prefers-reduced-motion` freezes the gradient, holds the ring's fluid as a still frame and
   stops the shake.
 
@@ -305,6 +305,130 @@ hatched track, and the chart's grid and hatching. The ink boils.
 - The saved graph is drawn on the paper, in a frame inked by hand with a double rule under its
   heading, its run hatched as on the page.
 
+### Gauges
+
+The page as a motorcar's instrument panel: a fascia of black wrinkle paint in a chrome moulding,
+the limit as a round gauge on it, and its chart as a strip-chart recorder. The words are printed on
+the paint in B612. Its palette is fixed, and only an instrument's own conventions signal.
+
+```
+ QUOTA [MAX · 20×]                                 ◉ live · updated 13s ago   (⚙)
+ ╭──────────────────────────────────────────────────────────────────────────────╮
+ │    ╭────▽─────╮    CURRENT WEEK (ALL MODELS)     LAST 12H OF HISTORY    burn │
+ │   ╱ 40  50  60 ╲   RESETS IN                     ┌·······················┐   │
+ │  │ 30    ╱   70 │  [4]d[0][3]h[5][9]m            │100 ───────────────────│   │
+ │  │ 20   ╱    80 │  (●) PACE   (○) LIMIT          │ 50 ___▁▂▃▅▆▇━━━┃      │   │
+ │  │ 10  ●     90 │  ▲ 20 pts over pace            │  0 ────────────┃      │   │
+ │   ╲ 0 [60]% 100╱   cap ~Thu 18:40 · in 1d 6h     └·······················┘   │
+ │    ╰──────────╯                                                              │
+ ╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+- **The page says what Glass's says, as instruments.** The header is a chrome nameplate, the plan on
+  an enamel badge, the freshness beside a pilot lamp and the gear on a knurled knob. The limit's row
+  is the fascia: the gauge, its words in a column beside it, and the recorder. The detail slides out
+  of the same fascia under a chrome lip: the title printed on the paint, the band on an enamel badge
+  that is the same at every reading, *close* a push button, the four figures in windows sunk into
+  the paint so that nothing reads as a control but the controls, the words in two columns, and the
+  download a bank of piano keys. The words name only what the dial and the card show in that state,
+  and are never longer than another theme's in the same state: with no reading, or no window
+  running, there is no pace, and they keep to what stands in for it, the flag, the lights and the
+  card, leaving the zones and the jewels to the words with a pace. The cost strip is a data plate of black anodised aluminium, brushed
+  and screwed on: a different source in a different material, its lettering etched and its models
+  told apart by etched patterns, solid, hatched, dotted, cross-hatched and ruled, not by colour. The
+  order, and so the keyboard's and screen readers' path through it, is the glass page's; the gauge
+  is still the ring's button, drawn sunk into the paint while its detail is open.
+- **The gauge.** An ivory face printed in black, ticks every 1, 5 and 10 points and upright numerals
+  every 10, sweeps 240° from 0 at the bottom left to 100 at the bottom right; the gap at the bottom,
+  which the needle never crosses, holds the odometer, the legend and the flags. A polished bezel in
+  facets, drawn as hard bands of reflection, holds a domed glass whose glint is drawn at the top
+  left. The needle is slim and black, with a counterweight and a domed chrome cap, and its shadow
+  falls at a fixed offset whatever its angle. Two stop pins stand at the scale's ends: with no
+  reading the needle rests on the lower one, below 0, and at the cap it rests on the upper one, just
+  past the red line, placed so the needle on it reads exactly 100.
+- **The zones are printed, from the thresholds the API serves.** An amber arc runs from the warning
+  floor to the cap, with lighter station marks cut into it at its quarter points, and a red line
+  marks the cap. A red zone is printed from critical only where critical stands clear of the cap,
+  with a line of print across the band where it meets the amber, so the join does not rest on hue;
+  the served 99% does not, and the detail says so. They are redrawn only when the thresholds move,
+  and only from a reading's: with none the plan is unknown and its critical cut a placeholder, so
+  the face keeps what the last reading printed, or, before any, the amber arc and the red line.
+- **Pace is a bug on the bezel.** A polished brass triangle, a colour no zone or lamp uses, stands
+  on the bezel's black step at the clock's share of the window, and a brass span on the step joins
+  it to the needle: dotted while it is headroom, solid and heavier the further the needle has
+  overrun the clock. On the step it stays clear of the face and the amber arc, so both read at 1x in
+  every state. Within 1.5 points of the clock there is no span, and with no reading, no reset
+  instant or a dormant limit neither is drawn.
+- **Drums and lamps.** The percent rolls on odometer drums cut into the face below the hub: two
+  figures, and a narrow hundreds wheel that turns up its 1 only at the cap; a drum always rolls one
+  step the way the figures run, and is set, not rolled, to or from a dash or the blank, which have
+  no place among the figures. *Resets in* is a drum counter beside the dial, in days, hours and
+  minutes, and the written countdown is left out; only a word (waiting, dormant, resetting) is
+  still written.
+  With no reading the odometer shows dashes, and with no reset time the counter. Two cut-glass
+  jewels sit under the counter: PACE, amber, lit while the reading is more than 1.5 points past the
+  bug, and LIMIT, red, lit at the cap; a held reading keeps its lamps. The pilot lamp is lit green
+  while the feed is live, unlit green while it waits for its first reading, lit amber while a
+  reading is held and unlit red while the service is out of reach.
+- **Flags and lights.** With no reading an OFF flag, striped red and ivory, rises out of a slit in
+  the face; over a held reading a HELD flag, striped black and ivory. The slit is cut only while a
+  flag is up. While a reading is held or the service is out of reach, the instrument's lighting goes
+  out: the face cools to grey and the lamps' light at its rim, and at the recorder card's, is gone.
+- **The chart is a strip-chart recorder.** Ivory ruled paper behind glass in a chrome frame, with a
+  sprocket strip along each edge, a rule every hour (or every few, where hours would crowd), one
+  every 10 points, heavier at 0 and 50, and a red rule at 100. The paper is printed 0 to 100, as the
+  dial is, whatever the trace reaches. The run the burn rate was fitted to is in full ink over a
+  highlighter, the earlier trace fainter, with a dashed upright at `fit`. A published projection
+  runs as a dashed ramp on the chart's own clock to a red ring on the cap's rule, over paper hatched
+  from now to the cap's time, so a forecast is never taken for a reading; its ring is drawn over the
+  pen, so a cap close to now is not hidden. The pen stands at the head on a carriage running up a
+  guide rod, which at 0 and at 100 stops against the rod's bracket rather than run off its end;
+  while the reading is held or missing it lifts off the paper and `PEN UP` is printed beside it. The card is 268px tall, and 212px at a phone's width.
+- **Its palette is fixed.** It reads none of the colours the other themes take from the reading: the
+  band's and the pace channel's inks are overruled with the paint's lettering, and the band's badge
+  is the same enamel at every reading. Only the printed zones, the jewels, the pilot lamp and the
+  flags signal, by the conventions of an instrument, and nothing else changes colour at any reading.
+  The lettering holds 5:1 on the paint at its faintest and the print 8:1 on the ivory.
+- **Nothing moves by itself.** The needle is a spring: it swings to each new reading with a little
+  overshoot and settles, strikes the upper pin at the cap, gives back a little and comes to rest
+  against it. The drums roll and the flags rise when the data changes them. While the reading runs
+  over pace, short of the cap, the needle trembles, three slow waves of unrelated periods summing to
+  at most 0.3° plus 0.7° times the pace severity, so it never visibly repeats and never leans either
+  way, and never past a stop pin; a held reading keeps trembling, as Glass's ring keeps shaking.
+  *Vibration* in Settings switches the tremble off. The loop runs only while the needle swings or
+  trembles, and a needle pressed on its pin is at rest once its bounces are under a point a second;
+  it stops in a hidden tab; the needle and its shadow are layers of their own, turned only by a transform, so
+  nothing is repainted while it moves, and the paint, the grain and the brushed metal are fixed
+  images. There is no fluid and no animated background, and the pilot lamp does not breathe. Under
+  the system's reduced-motion setting every change is made at once, with no swing, roll or tremble,
+  and forced colours still the tremble too.
+- **Settings is a slip of the same paint** hung from the knob in a chrome moulding. The themes are a
+  bank of ivory preset keys in a chrome strip, the one chosen latched down; a switch is a chrome
+  bat-handle toggle on a plate printed ON and OFF, up for on; the reset is a push button. It lists
+  the theme, the vibration and the cost strip.
+- **Its type is its own.** It is set in B612 whatever the typeface says: a face drawn for aircraft
+  cockpits, bundled in two weights, its figures all of one width. B612 has no ▲ or ◆, so they are
+  drawn from its ▼, and its straight-sided parentheses, which in capitals read as brackets, are
+  drawn again as curves (see `public/fonts/README.md`).
+- As the window narrows, the chart drops under the instrument, the detail's figures go two to a row,
+  then the freshness takes a line of its own under the nameplate with the knob still beside it, then
+  the words drop under a 300px dial with the counter and the jewels side by side, and at a phone's
+  width the card is shorter and the divider's words wrap. The narrowest phones get a smaller
+  nameplate, counter and jewels, and a dial as wide as its row allows up to 300px, so nothing is
+  wider than the screen at 320px.
+- Forced colours keep the words and the instrument and drop the paint, the chrome, the glass and
+  every glow. The face is the system's ground; the print, the case, the pins and the drums' figures
+  are its text, and so is the line where a red zone meets the amber; the amber zone is grey; and
+  what reads the data, the needle, the bug and its span and the red line, is highlighted. A lit lamp is a filled lens and a dark one an empty ring, under
+  its word, and a flag is striped in the text colour round its word. On the recorder the paper is
+  the ground and the fitted run, the cap and the ramp's end are highlighted; the plate's patterns
+  are etched in the text colour, so the models are still told apart. In Settings the chosen theme is
+  ringed in the highlight and a switch's handle is a bar, highlighted while it is on. The gauge keeps
+  a thicker highlighted focus ring over its open mark while its detail is open.
+- The saved graph is drawn on the fascia's paint in a chrome moulding, the plan on its enamel badge,
+  and the recorder's card in its chrome frame, its lamps' light at the rim only while the dial's is
+  lit.
+
 ## Primary view — the weekly limit, a ring and its chart
 
 ```
@@ -458,15 +582,15 @@ The panel lists the theme, then only the settings of the theme on screen, and th
 belongs to no theme; nothing is shown greyed out. Under Neumorphism it lists only the theme: that
 theme's settings, and the cost strip's, are keys and switches on the page itself (see
 *Neumorphism*), so there it has no reset either. Under Broadsheet it lists the theme, the boil and
-the cost strip.
+the cost strip, and under Gauges the theme, the vibration and the cost strip.
 
 | theme | setting | choices | default |
 | --- | --- | --- | --- |
-| all | Theme | Glass, Matrix, Train, Neumorphism, Broadsheet | Glass |
+| all | Theme | Glass, Matrix, Train, Neumorphism, Broadsheet, Gauges | Glass |
 | Neumorphism, on the page | Clay | Light, Dark, System — System follows the system's dark mode, as it changes | System |
 | Glass | Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
 | Glass | Speed | slow / normal / fast (0.25×, 0.5×, 1×) — listed only while the fluid is on | normal |
-| Glass, Train; Neumorphism on the page | Vibration | on / off — the shake of a ring over pace | on |
+| Glass, Train, Gauges; Neumorphism on the page | Vibration | on / off — the shake of a ring over pace; in Gauges the needle's tremble | on |
 | Glass | Animated background | on / off — off pauses the drifting sky where it stands | on |
 | Glass; Neumorphism on the page | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
 | Matrix | Rain | on / off — off stops the rain where it stands | on |
@@ -480,7 +604,7 @@ the cost strip.
 
 Settings change how the page looks, never what it measures or how it judges a reading:
 switching the shake off leaves the over-pace verdict in the tick, the caption and the halo (in
-Neumorphism, the numeral's ink).
+Neumorphism, the numeral's ink; in Gauges, the PACE lamp and the solid span).
 They are kept in this browser (only the ones that differ from the default), applied before the
 ring is first drawn, and followed in other open tabs. A slider or a colour is followed on screen
 as it moves, and kept once it is let go. The system's reduced-motion setting still stills
@@ -488,10 +612,11 @@ everything, and the panel (in Neumorphism, the vibration's plate) says so while 
 
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
 font service. Fira Code also takes over the figures, which are otherwise set in the system's
-monospaced face. Matrix is set in Fira Code, Train in Jersey 10 and Broadsheet in Caveat, a
-handwriting face, whatever the typeface says; the reader's own choice is kept, and returns with
-Glass or Neumorphism. Jersey 10 is not offered as a choice: it is
-a bitmap face, set at a few fixed sizes that the rest of the page does not keep to.
+monospaced face. Matrix is set in Fira Code, Train in Jersey 10, Broadsheet in Caveat, a
+handwriting face, and Gauges in B612, a face drawn for aircraft cockpits, whatever the typeface
+says; the reader's own choice is kept, and returns with Glass or Neumorphism. Jersey 10 is not
+offered as a choice: it is a bitmap face, set at a few fixed sizes that the rest of the page does
+not keep to.
 
 The page writes its times, weekdays, dates and amounts in English, on a 24-hour clock with the day
 before the month (British English), whatever the browser's language. So it reads the same
