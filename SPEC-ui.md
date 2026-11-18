@@ -360,11 +360,17 @@ the paint in B612. Its palette is fixed, and only an instrument's own convention
   every state. Within 1.5 points of the clock there is no span, and with no reading, no reset
   instant or a dormant limit neither is drawn.
 - **Drums and lamps.** The percent rolls on odometer drums cut into the face below the hub: two
-  figures, and a narrow hundreds wheel that turns up its 1 only at the cap; a drum always rolls one
-  step the way the figures run, and is set, not rolled, to or from a dash or the blank, which have
-  no place among the figures. *Resets in* is a drum counter beside the dial, in days, hours and
-  minutes, and the written countdown is left out; only a word (waiting, dormant, resetting) is
-  still written.
+  figures, and a narrow hundreds wheel that turns up its 1 only at the cap. Every change slides one
+  step: the new figure comes up from below when the value has risen and down from above when it
+  has fallen, the old one leaving by the other side, so a drum never runs through figures the value
+  did not pass; a dash counts as lower than any reading, and the dash and the blank slide like any
+  figure. The step is quick (350 ms) and lands without creeping, as a drum's detent does; the
+  damped swing is the needle's. A change that comes while a row is sliding waits for it to land,
+  keeping only the newest, so no drum jumps part way and a row never shows a mix of two readings.
+  *Resets in* is a drum counter beside the dial, in days, hours and minutes, holding at 9d 23h 59m
+  for a reset further off, and the written countdown is left out; only a word (waiting, dormant,
+  resetting) is still written, in the place of the empty pace and cap lines, so the counter does
+  not move when a reading comes or goes.
   With no reading the odometer shows dashes, and with no reset time the counter. Two cut-glass
   jewels sit under the counter: PACE, amber, lit while the reading is more than 1.5 points past the
   bug, and LIMIT, red, lit at the cap; a held reading keeps its lamps. The pilot lamp is lit green
@@ -401,7 +407,7 @@ the paint in B612. Its palette is fixed, and only an instrument's own convention
   nothing is repainted while it moves, and the paint, the grain and the brushed metal are fixed
   images. There is no fluid and no animated background, and the pilot lamp does not breathe. Under
   the system's reduced-motion setting every change is made at once, with no swing, roll or tremble,
-  and forced colours still the tremble too.
+  and a slide already running lands at once; forced colours still the tremble too.
 - **Settings is a slip of the same paint** hung from the knob in a chrome moulding. The themes are a
   bank of ivory preset keys in a chrome strip, the one chosen latched down; a switch is a chrome
   bat-handle toggle on a plate printed ON and OFF, up for on; the reset is a push button. It lists
