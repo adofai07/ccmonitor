@@ -2144,7 +2144,13 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   --gz-ivory:   #f0e7d0;   /* the dial's face */
   --gz-print:   #1b1814;   /* the dial's print: 15:1 on the ivory */
   --gz-print-2: #4b4336;   /* 8:1 */
-  --gz-amber:   #d98a1f;   /* the printed warning arc */
+  --gz-amber:   #d98a1f;   /* the printed warning arc, and its second quarter */
+  /* the warning arc's quarters, each painted a shade deeper toward the cap: yellow, amber, orange,
+     red-orange, so the face reads hotter the further round it goes; the red is the cap's alone */
+  --gz-warn-0:  #dbab24;
+  --gz-warn-1:  var(--gz-amber);
+  --gz-warn-2:  #d2651c;
+  --gz-warn-3:  #c2401b;
   --gz-red:     #b0231b;   /* the red line */
   --gz-lamp:    255 168 72;   /* the instrument lamps' light */
   /* the recorder's card: its paper, rules and inks */
@@ -2331,6 +2337,10 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 .gz :is(.gz-num text, .gz-leg, .gz-pct) { fill: var(--gz-print); }
 .gz .gz-leg2 { fill: var(--gz-print-2); }
 .gz .gz-amber { fill: var(--gz-amber); }
+.gz .gz-amber.q0 { fill: var(--gz-warn-0); }
+.gz .gz-amber.q1 { fill: var(--gz-warn-1); }
+.gz .gz-amber.q2 { fill: var(--gz-warn-2); }
+.gz .gz-amber.q3 { fill: var(--gz-warn-3); }
 .gz .gz-redzone { fill: var(--gz-red); }
 .gz .gz-cut { stroke: var(--gz-ivory); }
 .gz .gz-red { stroke: var(--gz-red); }
@@ -2827,7 +2837,7 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   .gz .gz-line { stroke: CanvasText; stroke-opacity: 1; stroke-width: 1.2; }
   .gz .gz-ink { stroke: CanvasText; }
   .gz :is(.gz-num text, .gz-leg, .gz-leg2, .gz-pct) { fill: CanvasText; }
-  .gz .gz-amber { fill: GrayText; }
+  .gz .gz-amber, .gz .gz-amber:is(.q0, .q1, .q2, .q3) { fill: GrayText; }
   .gz .gz-cut { stroke: Canvas; }
   .gz .gz-redzone { fill: Highlight; }
   .gz .gz-red { stroke: Highlight; }
@@ -2897,15 +2907,15 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   .gz-etch pattern path { stroke: CanvasText; }
 }
 
-/* the theme's patch of itself, in Settings: a small dial on the black paint, the amber printed from 70,
-   its needle at 60 */
+/* the theme's patch of itself, in Settings: a small dial on the black paint, the warning arc's four
+   quarters printed from 70, its needle at 60 */
 .pick[data-pick="gauges"] .swatch { position: relative; background: #161513; }
 .pick[data-pick="gauges"] .swatch::before {
   content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
   background:
     radial-gradient(circle, #c9cdd0 0 1.3px, #1b1814 1.5px 2.1px, transparent 2.3px),
     radial-gradient(closest-side, #efe5cc 0 74%, transparent 76%),
-    conic-gradient(from 48deg, #d98a1f 0 72deg, transparent 0),
+    conic-gradient(from 48deg, #dbab24 0 18deg, #d98a1f 0 36deg, #d2651c 0 54deg, #c2401b 0 72deg, transparent 0),
     radial-gradient(circle at 42% 36%, #f8f2e1, #ddd0ad);
   box-shadow: 0 0 0 1px #0b0c0d, 0 0 0 2px #e2e5e6, 0 0 0 2.6px #4a4f53;
 }
@@ -3655,11 +3665,11 @@ function gzMetaMarkup(key) {
       </span>`;
 }
 
-/* The printed zones, from the thresholds the API serves: amber from the warning floor, red from
-   the critical cut where it stands clear of the cap, with a line of print across the band where
-   they meet, so the join does not rest on hue alone, lighter station marks cut into the amber at
-   the quarter points colourMarks gives, and the red line at the cap. Drawn again only when the
-   thresholds move. */
+/* The printed zones, from the thresholds the API serves: the warning arc from the warning floor,
+   in the quarters colourMarks' station marks divide it into, each painted a shade deeper (yellow,
+   amber, orange, red-orange) with lighter cuts between them; red from the critical cut where it
+   stands clear of the cap, with a line of print across the band where they meet, so the join does
+   not rest on hue alone; and the red line at the cap. Drawn again only when the thresholds move. */
 function gzZones(key, th) {
   const host = q(key, "gzzones");
   const warn = num(th && th.warningFloorPercent, NaN), cap = num(th && th.exhaustedPercent, 100);
@@ -3670,7 +3680,14 @@ function gzZones(key, th) {
   const crit = marks.find((m) => m.served && m.v > warn && m.v < cap);
   let s = "";
   if (isFinite(warn) && warn < cap) {
-    s += `<path d="${gzBand(warn, crit ? crit.v : cap, 138.5, 144.5)}" class="gz-amber"></path>`;
+    /* the quarter a stretch of the arc lies in, by its middle, so a red zone cutting a quarter short
+       leaves the rest of it its own paint */
+    const end = crit ? crit.v : cap, quarter = (cap - warn) / WARN_STATIONS;
+    const cuts = [warn, ...marks.filter((m) => !m.served && m.v > warn && m.v < end).map((m) => m.v), end];
+    for (let i = 0; i + 1 < cuts.length; i++) {
+      const k = clamp(Math.floor(((cuts[i] + cuts[i + 1]) / 2 - warn) / quarter), 0, WARN_STATIONS - 1);
+      s += `<path d="${gzBand(cuts[i], cuts[i + 1], 138.5, 144.5)}" class="gz-amber q${k}"></path>`;
+    }
     if (crit) s += `<path d="${gzBand(crit.v, cap, 138.5, 144.5)}" class="gz-redzone"></path>` + gzTick(crit.v, 137, 145.5, 1.6, "gz-ink");
     for (const m of marks) if (!m.served && m.v > warn && m.v < cap) s += gzTick(m.v, 138, 145, 1.3, "gz-cut");
   }
@@ -3835,8 +3852,8 @@ function gzLegend(o, th) {
     const warn = num(th && th.warningFloorPercent, NaN), cap = num(th && th.exhaustedPercent, 100), c = num(th && th.criticalPercent, NaN);
     const crit = th ? colourMarks(th).find((m) => m.served && m.v > warn && m.v < cap) : null;
     if (isFinite(warn) && warn < cap) {
-      s += " The amber arc, with lighter station marks at its quarter points, runs from the warning floor at " + showPct(warn) + "%" +
-        (crit ? ", red from critical at " + showPct(crit.v) + "%," : "") + " to the cap's red line, where a stop pin holds the needle." +
+      s += " The warning arc runs from the warning floor at " + showPct(warn) + "% to the cap's red line, where a stop pin holds the needle." +
+        " Its quarters deepen from yellow to red-orange" + (crit ? ", and from critical at " + showPct(crit.v) + "% it is red" : "") + "." +
         (!crit && isFinite(c) && c > warn && c < cap ? " The served critical cut at " + showPct(c) + "% sits too close to the cap to print." : "");
     } else if (th) s += " The red line is the cap, where a stop pin holds the needle.";
     s += " PACE lights over pace, LIMIT at the cap.";

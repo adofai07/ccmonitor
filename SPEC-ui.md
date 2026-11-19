@@ -346,18 +346,20 @@ the paint in B612. Its palette is fixed, and only an instrument's own convention
   falls at a fixed offset whatever its angle. Two stop pins stand at the scale's ends: with no
   reading the needle rests on the lower one, below 0, and at the cap it rests on the upper one, just
   past the red line, placed so the needle on it reads exactly 100.
-- **The zones are printed, from the thresholds the API serves.** An amber arc runs from the warning
-  floor to the cap, with lighter station marks cut into it at its quarter points, and a red line
-  marks the cap. A red zone is printed from critical only where critical stands clear of the cap,
-  with a line of print across the band where it meets the amber, so the join does not rest on hue;
-  the served 99% does not, and the detail says so. They are redrawn only when the thresholds move,
-  and only from a reading's: with none the plan is unknown and its critical cut a placeholder, so
-  the face keeps what the last reading printed, or, before any, the amber arc and the red line.
+- **The zones are printed, from the thresholds the API serves.** A warning arc runs from the
+  warning floor to the cap, cut by lighter station marks into the quarters colourMarks gives, each
+  painted a shade deeper toward the cap: yellow, amber, orange and red-orange, the instrument's own
+  paints and never the accent colours. A red line marks the cap. A red zone is printed from
+  critical only where critical stands clear of the cap, with a line of print across the band where
+  it meets the warning arc, so the join does not rest on hue; the served 99% does not, and the
+  detail says so. They are redrawn only when the thresholds move, and only from a reading's: with
+  none the plan is unknown and its critical cut a placeholder, so the face keeps what the last
+  reading printed, or, before any, the warning arc and the red line.
 - **Pace is a bug on the bezel.** A polished brass triangle, a colour no zone or lamp uses, stands
   on the bezel's black step at the clock's share of the window, and a brass span on the step joins
   it to the needle: dotted while it is headroom, solid and heavier the further the needle has
-  overrun the clock. On the step it stays clear of the face and the amber arc, so both read at 1x in
-  every state. Within 1.5 points of the clock there is no span, and with no reading, no reset
+  overrun the clock. On the step it stays clear of the face and the warning arc, so both read at 1x
+  in every state. Within 1.5 points of the clock there is no span, and with no reading, no reset
   instant or a dormant limit neither is drawn.
 - **Drums and lamps.** The percent rolls on odometer drums cut into the face below the hub: two
   figures, and a narrow hundreds wheel that turns up its 1 only at the cap. Every change slides one
@@ -424,8 +426,9 @@ the paint in B612. Its palette is fixed, and only an instrument's own convention
   wider than the screen at 320px.
 - Forced colours keep the words and the instrument and drop the paint, the chrome, the glass and
   every glow. The face is the system's ground; the print, the case, the pins and the drums' figures
-  are its text, and so is the line where a red zone meets the amber; the amber zone is grey; and
-  what reads the data, the needle, the bug and its span and the red line, is highlighted. A lit lamp is a filled lens and a dark one an empty ring, under
+  are its text, and so is the line where a red zone meets the warning arc; the warning arc is grey,
+  its quarters told apart by their cuts; and what reads the data, the needle, the bug and its span
+  and the red line, is highlighted. A lit lamp is a filled lens and a dark one an empty ring, under
   its word, and a flag is striped in the text colour round its word. On the recorder the paper is
   the ground and the fitted run, the cap and the ramp's end are highlighted; the plate's patterns
   are etched in the text colour, so the models are still told apart. In Settings the chosen theme is
