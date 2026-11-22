@@ -27,20 +27,21 @@ const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 // without this a hostile origin embeds the rings and the framed page reads /api/quota happily.
 // X-Frame-Options says the same thing to anything older than CSP.
 //
-// The rest is as tight as CSP goes because the page makes zero external requests: no script,
-// style or image may be fetched from anywhere. 'unsafe-inline' twice is what the page is — an
-// inline <style> and an inline <script>, no external ones to allow; `img-src data:` covers the
-// data-URI favicon and the noise background (the inline SVG is markup, not an image fetch);
-// connect-src 'self' is fetch()/EventSource to this same server. font-src 'self' is the
-// bundled typefaces, under public/fonts and served from the allowlist below —
-// this server, never a font CDN.
+// The rest is as tight as CSP goes because the page makes zero external requests: no script, style
+// or image may be fetched from anywhere else. 'unsafe-inline' twice is what the page is — an inline
+// <style> and an inline <script>; script-src 'self' adds the one script file it may load, the
+// Weather theme's renderer (public/weather/wx.js), from this server and only when that theme is
+// chosen, so the other themes never parse it; `img-src data:` covers the data-URI favicon and the
+// noise background (the inline SVG is markup, not an image fetch); connect-src 'self' is
+// fetch()/EventSource to this same server. font-src 'self' is the bundled typefaces, under
+// public/fonts and served from the allowlist below — this server, never a font CDN.
 const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'no-referrer',
   'content-security-policy': [
     "default-src 'none'",
-    "script-src 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'unsafe-inline'",
     'img-src data:',
     "connect-src 'self'",
@@ -51,13 +52,14 @@ const SECURITY_HEADERS = {
   ].join('; '),
 };
 
-// The dashboard is ONE page, public/index.html, self-contained but for the typefaces it uses
-// and the sprite sheet of the Train theme, all bundled rather than fetched
-// from anywhere. The sheet reaches the page through fetch(), so connect-src covers it and img-src
-// stays as it is. So the servable set is an allowlist of exactly the names it needs, not a
-// blocklist of the tricks a path can play. Nothing the client writes reaches the filesystem,
-// which retires traversal, percent-escapes, NUL bytes, FIFOs and symlinked directories in a
-// single rule instead of one guard each — a guarantee this page is small enough to simply afford.
+// The dashboard is ONE page, public/index.html, self-contained but for the typefaces it uses,
+// the sprite sheet of the Train theme and the Weather theme's renderer and cove, all bundled rather
+// than fetched from anywhere. The sheet and the cove reach the page through fetch(), so connect-src
+// covers them and img-src stays as it is; the renderer is a <script src>, under script-src 'self'.
+// So the servable set is an allowlist of exactly the names it needs, not a blocklist of the tricks
+// a path can play. Nothing the client writes reaches the filesystem, which retires traversal,
+// percent-escapes, NUL bytes, FIFOs and symlinked directories in a single rule instead of one guard
+// each — a guarantee this page is small enough to simply afford.
 const ASSETS = new Map([
   ['/', 'index.html'],
   ['/index.html', 'index.html'],
@@ -69,7 +71,33 @@ const ASSETS = new Map([
   ['/fonts/B612-Regular-Latin.woff2', 'fonts/B612-Regular-Latin.woff2'],
   ['/fonts/B612-Bold-Latin.woff2', 'fonts/B612-Bold-Latin.woff2'],
   ['/sprites/train.png', 'sprites/train.png'],
+  // the Weather theme's renderer, built from its sources by tools/build-weather.mjs
+  ['/weather/wx.js', 'weather/wx.js'],
 ]);
+
+// The cove is over a hundred files, too many to spell out here, so its names come from the list
+// that ships with them, public/weather/manifest.json, read once now. That keeps the set an exact
+// list fixed at start, never derived from a request: each name must also pass this pattern
+// (lowercase segments, a .glb or .webp at the end, no dots in a directory) before it may join, so a
+// hand-edited manifest cannot reach outside the folder or name anything but a model or a texture.
+const WEATHER_NAME = /^[a-z0-9_]+(\/[a-z0-9_]+)*\/[a-z0-9_.]+\.(glb|webp)$/;
+// A checkout without the cove (or with a broken list) still has the theme, over the open sea; the
+// page asks for the list either way, and a 404 would put a console line on every load that the
+// page cannot suppress. So the list then answers as an empty one, from memory.
+const WEATHER_EMPTY = '{"v":1,"models":[],"terrain":[],"files":{}}';
+const weatherListed = addWeather();
+function addWeather() {
+  let files;
+  try {
+    files = JSON.parse(readFileSync(join(PUBLIC_DIR, 'weather', 'manifest.json'), 'utf8')).files;
+  } catch {
+    return false; // missing or malformed: nothing joins
+  }
+  if (!files || typeof files !== 'object' || Array.isArray(files)) return false;
+  ASSETS.set('/weather/manifest.json', 'weather/manifest.json');
+  for (const name of Object.keys(files)) if (WEATHER_NAME.test(name)) ASSETS.set(`/weather/${name}`, `weather/${name}`);
+  return true;
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -79,7 +107,23 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.woff2': 'font/woff2',
+  '.glb': 'model/gltf-binary',
+  '.webp': 'image/webp',
 };
+
+// A typeface does not change under a running dashboard, and the Settings panel draws a sample in
+// each it offers, so every load would fetch them again; a day's cache ends that. The cove's files
+// are asked for as <name>?v=<the start of their sha-256> (the router reads only the path), so a
+// changed file is a new URL and the old one can be kept for good; the list that names them must be
+// asked again every time, or a new version of the page would see old names, and so must the
+// renderer, which has to be the one built for the page it runs in. The page itself is left
+// uncached, since it is the part that does change.
+const CACHE = {
+  '.woff2': 'max-age=86400',
+  '.glb': 'max-age=31536000, immutable',
+  '.webp': 'max-age=31536000, immutable',
+};
+const NO_CACHE = new Set(['weather/manifest.json', 'weather/wx.js']);
 
 export function createQuotaServer({ poller = new QuotaPoller() } = {}) {
   const streams = new Set();
@@ -213,6 +257,10 @@ const ROUTINE = new Set(['ENOENT', 'EISDIR', 'ENOTDIR', 'ENOTFILE', 'EESCAPE', .
 
 async function serveStatic(pathname, res) {
   const name = ASSETS.get(pathname);
+  if (name === undefined && pathname === '/weather/manifest.json' && !weatherListed) {
+    res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME['.json'], 'cache-control': 'no-cache' });
+    return res.end(WEATHER_EMPTY);
+  }
   if (name === undefined) return send(res, 404, { error: 'not found' });
 
   const file = join(PUBLIC_DIR, name); // a constant path; the client chose only which entry
@@ -238,9 +286,11 @@ async function serveStatic(pathname, res) {
     // itself and the inode is trivially the one just opened, so every check above passes and
     // `ln ~/.claude/.credentials.json public/index.html` is served as the dashboard. The extra
     // name is the only trace it leaves, and nlink is where that shows. The allowlist is what
-    // makes so blunt a rule safe to apply: public/ holds a few plain checked-out files, and
-    // package.json does not ship public/ at all, so this never runs out of a hard-linking
-    // package store (pnpm, an npm cache) where nlink > 1 would be an ordinary, honest file.
+    // makes so blunt a rule safe to apply: public/ holds plain checked-out files. package.json
+    // does ship public/ (the page, its typefaces and the cove), so an install from a store that
+    // hard-links its files (pnpm, some npm caches) has nlink > 1 on honest files and refuses them;
+    // the rule stays, since a checkout or a plain npm install is what this runs from, and a
+    // hard link is the one way to smuggle a file past the checks above.
     if (info.nlink !== 1) throw failed('EESCAPE');
     if (!info.isFile()) throw failed('ENOTFILE'); // a directory, FIFO, socket or device node
   } catch (err) {
@@ -253,11 +303,9 @@ async function serveStatic(pathname, res) {
     return send(res, 404, { error: 'not found' });
   }
 
-  // A typeface does not change under a running dashboard, and the Settings panel draws a sample
-  // in each it offers, so every load would fetch them again; a day's cache ends that. The page is
-  // left uncached, since it is the part that does change.
-  const cache = extname(file) === '.woff2' ? { 'cache-control': 'max-age=86400' } : {};
-  res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[extname(file)] ?? 'application/octet-stream', ...cache });
+  const ext = extname(file);
+  const cache = CACHE[ext] ? { 'cache-control': CACHE[ext] } : NO_CACHE.has(name) ? { 'cache-control': 'no-cache' } : {};
+  res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[ext] ?? 'application/octet-stream', ...cache });
   // pipeline, not pipe: it closes the file handle whichever end fails first, including the
   // client hanging up mid-file. An unhandled stream 'error' would be rethrown and kill us.
   await pipeline(handle.createReadStream(), res).catch(() => res.destroy());

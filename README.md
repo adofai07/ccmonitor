@@ -79,7 +79,8 @@ node bin/ccquota.js watch        # one line per reading
 node bin/ccquota.js serve        # http://127.0.0.1:8787
 npm start                        # same as serve
 node bin/ccquota.js statusline   # Claude Code's status line (see below); reads JSON on stdin
-npm test                         # the burn-rate fit and whose account a reading is filed under
+npm test                         # the burn-rate fit, whose account a reading is filed under,
+                                 # and the Weather theme's place, cove files and renderer
 ```
 
 No dependencies, no install step. Node >= 20. The tests run against synthetic readings in a
@@ -96,6 +97,23 @@ server looks), `XDG_STATE_HOME` (where a status line you took out is remembered,
 upstream body to `ccquota json`. `raw` is absent by default so the whole body is not in every
 response and SSE frame; `serve` inherits the variable like any process would, so it is meant
 for a one-shot `json`.
+
+### Weather on a hybrid-graphics laptop (Linux)
+
+The Weather theme draws on the GPU Chrome runs on. On a laptop with Intel or AMD graphics and an
+NVIDIA card, Chrome normally starts on the integrated GPU. To start it on the NVIDIA card through
+PRIME render offload:
+
+```sh
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia \
+__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json google-chrome
+```
+
+or `prime-run google-chrome` where your distribution provides `prime-run`. Quit every Chrome
+window first: a running Chrome hands the new window to the old process and its GPU. Open
+`chrome://gpu` and check that *GL_RENDERER* names NVIDIA and that *WebGL2* reads *Hardware
+accelerated*. In Settings, *Quality* High asks for the faster GPU and draws the view in full; Auto
+picks the level from the GPU it is given.
 
 ## Polling
 
@@ -519,10 +537,22 @@ this package; without it the footer just says so.
 
 `GET /healthz` — `{"ok":true,"version":"0.1.0"}`.
 
-Static files are the dashboard page, `public/index.html`, the typefaces it uses, in
-`public/fonts/` (their licences sit beside them and are not served), and the Train theme's sprite
-sheet, `public/sprites/train.png`. Only those exact files are served — an allowlist in `src/server.js`,
-not the directory — and the page's CSP lets it load fonts from this server alone. The page draws the weekly limit alone — the session limit is gone upstream
+Static files are the dashboard page, `public/index.html`, the typefaces it uses, in `public/fonts/`
+(their licences sit beside them and are not served), the Train theme's sprite sheet,
+`public/sprites/train.png`, the Weather theme's renderer, `public/weather/wx.js`, a script the page
+loads only when that theme is shown (the CSP's `script-src 'self'` is for it alone), and the theme's
+cove in `public/weather/`: the models and textures its `manifest.json` lists. Only those exact files
+are served — an allowlist in `src/server.js`, not the directory; the cove's names are read from its
+manifest once, at start, and each must be a lowercase path ending `.glb` or `.webp` — and the page's
+CSP lets it load fonts from this server alone. The page asks for each of the cove's files by its
+content hash (`?v=`), so they are cached for good, and for the manifest afresh every time; a
+checkout without the folder answers an empty manifest, and the theme shows the open sea. Weather's
+cove is built from CC0 models and textures by Poly Haven (polyhaven.com), photographed and made by
+Rob Tuytel, Rico Cilliers, James Ray Cock, Dario Barresi, Dimitrios Savva, Kuutti Siitonen and
+Nicolò Zubbini, each listed in `public/weather/README.md`; CC0 asks for no credit, so this is
+thanks.
+
+The page draws the weekly limit alone — the session limit is gone upstream
 and Fable is not used — while the API above keeps reporting all three.
 
 ### Access
@@ -583,7 +613,11 @@ bin/ccquota.js       json | watch | serve | statusline
 public/index.html    the dashboard: one page, inline style and script
 public/fonts/        bundled typefaces, with their licences and provenance
 public/sprites/      the Train theme's sprite sheet, built from art/
+public/weather/      the Weather theme's renderer (wx.js, built) and its cove: Poly Haven's CC0
+                     models and textures, with provenance
 art/                 the sprites' sources: Aseprite Lua and the packer; not served or shipped
+tools/               build-time scripts: the time zone table, and wx.js from the renderer's sources
+                     (node tools/build-weather.mjs --lab <dir>); not served or shipped
 ```
 
 ### Colour across the warning band

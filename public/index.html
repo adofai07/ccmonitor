@@ -16,8 +16,9 @@
    backdrop and to the ring's interior: the sky drifts on a ~30s loop
    and warms when the limit heats up, and the ring holds a small fluid
    stirred by the same heat. The arc, tick and chart move only when
-   data moves. Settings offers five more themes, Matrix, Train,
-   Neumorphism, Broadsheet and Gauges, at the end of this sheet.
+   data moves. Settings offers six more themes, Matrix, Train,
+   Neumorphism, Broadsheet, Gauges and Weather, at the end of this
+   sheet.
    ══════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -1087,6 +1088,307 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
     2px 0 #222034, 4px 0 #222034, 6px 0 #222034, 8px 0 #222034, 10px 0 #222034, 12px 0 #ac3232, 14px 0 #ac3232,
     16px 0 #ac3232, 18px 0 #ac3232, 20px 0 #d9a066, 0 2px #222034, 4px 2px #ac3232, 8px 2px #ac3232, 12px 2px #222034,
     16px 2px #222034, 20px 2px #222034, 4px -2px #222034, 18px -2px #222034, 18px -4px #222034, 16px -6px #fff, 14px -8px #fff;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Weather — the seventh theme, chosen in Settings: the sea and the sky
+   through a window, at the head of a rocky cove.
+
+   The view (the weather section of the script) is drawn on the graphics
+   card into a canvas of its own, which fills the window behind the page
+   and stays where it is when the page scrolls. The page is the same page,
+   so it says what Glass says and the keyboard and screen readers work as
+   they do there; it is reset as a game's display over the view: no panels
+   and no frosted glass, only words and lines in white with dark halos
+   hugging them, and a dark pool under each group, deeper the brighter the
+   view behind it (--wx-top, --wx-bot: the view measures itself twice a
+   second). The header and the limit stand at the top, over the sky, the
+   cost strip at the foot, over the near sea, and the horizon, the low sun
+   and the far sea are left clear between them.
+
+   Its palette is its own and fixed: white at every reading, the scale
+   printed on the ring's dark casing in fixed paints, and for the pace a
+   magenta no zone uses. Nothing follows the accent ramp. All of it keys on
+   data-weather, which is set only while the view can run, so a browser
+   that cannot draw it keeps the glass page.
+   ══════════════════════════════════════════════════════════════════ */
+.wx { position: fixed; inset: 0; z-index: 0; display: none; pointer-events: none; overflow: hidden; }
+/* the view fades up once there is a reading to show, and out when it is lost; a fade is not
+   motion, so it stays under reduced motion, as the train's does */
+.wx > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0;
+               transition: opacity .6s var(--ease) !important; }
+.wx[data-up="1"] > canvas { opacity: 1; transition: opacity 1.2s var(--ease) !important; }
+:root[data-weather] .wx { display: block; }
+:root[data-weather] :is(.sky, .grain, .vig) { display: none; }
+:root[data-weather] {
+  color-scheme: dark;
+  --tint:    255 255 255;
+  --ink-rgb: 244 247 250;
+  --hi:      #fff;
+  --ink:     rgb(var(--ink-rgb) / .96);
+  --ink-2:   rgb(var(--ink-rgb) / .84);
+  --ink-3:   rgb(var(--ink-rgb) / .72);
+  /* the faintest ink: .6 measured 4.45:1 over the pooled glitter, so a little more */
+  --ink-4:   rgb(var(--ink-rgb) / .68);
+  --base:    #05080c;
+  --hair:    rgb(255 255 255 / .16);
+  --edge:    rgb(255 255 255 / .3);
+  /* tabular figures in the display's own face, so the figures and the words are one hand */
+  --mono:    var(--font-noto);
+  /* the pools and halos are this near-black; the pools' strength is these until the view reports
+     its own, which the script writes on the root */
+  --wx-shade: 3 6 10;
+  --wx-top: .32; --wx-bot: .45;
+  --wx-halo: 0 1px 1px rgb(var(--wx-shade) / .7), 0 0 4px rgb(var(--wx-shade) / .55), 0 0 14px rgb(var(--wx-shade) / .35);
+  --wx-halo-big: 0 2px 2px rgb(var(--wx-shade) / .6), 0 0 8px rgb(var(--wx-shade) / .5), 0 0 28px rgb(var(--wx-shade) / .35);
+  /* the freshness lamp keeps its tones, green, yellow and red; the chart's warning line takes the
+     scale's yellow and its cap rule the scale's red; the pace is magenta */
+  --steady:    #bdf8b4;  --steady-rgb:    189 248 180;
+  --warning:   #ecc531;  --warning-rgb:   236 197  49;
+  --critical:  #dc5228;  --critical-rgb:  220  82  40;
+  --exhausted: #cf2b2c;  --exhausted-rgb: 207  43  44;
+  --unknown:   #98a2ad;  --unknown-rgb:   152 162 173;
+  --pace-hot:  #ee6cd4;  --pace-hot-rgb:  238 108 212;
+}
+
+/* the split: the header and the limit at the top, the rule pushed to the foot with the cost strip
+   under it; opening the detail grows the top group down, and a window too short for both scrolls */
+:root[data-weather] main { max-width: 1100px; justify-content: flex-start; text-shadow: var(--wx-halo); }
+:root[data-weather] .rule { margin-top: auto; }
+
+/* A dark pool under each group, the top one (the header and the limit) and the foot one (the rule
+   and the cost strip): a band the width of the window, solid under all of the group's words and
+   fading to nothing over a long ramp above and below them and past the window's sides (two
+   gradient masks, crossed). It has no edge to see and reads as the view darkening there, as a
+   graduated filter darkens a sky, rather than as a panel laid over it. It is drawn once and cached;
+   only its opacity changes. Nothing blurs the view itself, which would mean blurring it again every
+   frame. */
+:root[data-weather] :is(.glass, .cost)::before {
+  --pt: 52px; --pb: 52px;
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  /* from 10vw past the window's left edge to 10vw past its right (the groups are centred) */
+  left: calc((100% - 100vw) / 2 - 10vw); right: calc((100% - 100vw) / 2 - 10vw);
+  top: calc(-1 * var(--pt)); bottom: calc(-1 * var(--pb));
+  background: rgb(var(--wx-shade));
+  /* each ramp eased, 0 .16 .5 .84 1, so it has no line where it starts or ends */
+  --ramp-x: linear-gradient(to right, transparent, rgb(0 0 0 / .16) 5vw, rgb(0 0 0 / .5) 10vw, rgb(0 0 0 / .84) 15vw, #000 20vw,
+            #000 calc(100% - 20vw), rgb(0 0 0 / .84) calc(100% - 15vw), rgb(0 0 0 / .5) calc(100% - 10vw), rgb(0 0 0 / .16) calc(100% - 5vw), transparent);
+  --ramp-y: linear-gradient(to bottom, transparent, rgb(0 0 0 / .16) calc(var(--pt) * .25), rgb(0 0 0 / .5) calc(var(--pt) * .5),
+            rgb(0 0 0 / .84) calc(var(--pt) * .75), #000 var(--pt), #000 calc(100% - var(--pb)), rgb(0 0 0 / .84) calc(100% - var(--pb) * .75),
+            rgb(0 0 0 / .5) calc(100% - var(--pb) * .5), rgb(0 0 0 / .16) calc(100% - var(--pb) * .25), transparent);
+  -webkit-mask-image: var(--ramp-x), var(--ramp-y); -webkit-mask-composite: source-in;
+  mask-image: var(--ramp-x), var(--ramp-y); mask-composite: intersect;
+  opacity: var(--wx-bot); transition: opacity 1.5s var(--ease);
+}
+/* the top group's pool is the limit row's, reaching up under the header by the header's height and
+   the gap after it (--wx-head, which the script measures), so the two are one pool with no seam;
+   below the row it fades over a longer ramp, into the sky */
+:root[data-weather] .glass::before { --pb: 96px; top: calc(-1 * (var(--wx-head, 56px) + var(--pt))); opacity: var(--wx-top); }
+/* the foot's reaches up under the rule's words, fading over the same longer ramp above them */
+:root[data-weather] .cost::before { --pt: 88px; top: -124px; }
+
+/* no glass: the groups stand on their pools */
+:root[data-weather] .glass {
+  overflow: visible; border: 0; border-radius: 0; background: none; box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+:root[data-weather] .cost {
+  border: 0; border-left: 2px solid rgb(154 164 220 / .55); border-radius: 0; background: none; box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  /* the frost made the strip the box its pool is placed in; without it the pool would be placed in
+     main and darken the whole window */
+  position: relative;
+}
+
+/* Set in Noto Sans whatever the typeface says (the script sets data-font while the view runs), and
+   nothing under 11px: over a moving view a 9px label does not hold. */
+:root[data-weather] .mark h1 { font-size: 13px; font-weight: 700; letter-spacing: .22em; color: var(--ink); }
+:root[data-weather] :is(.plan, .fresh, .mlabel, .dxh, .ro dt, .chartcap, .rule .tag) {
+  font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+}
+:root[data-weather] :is(.ptitle, .phead, .pick .fn, .dband, .dclose, .ro dd small, .ctot .k, .ctab th, .cnote, .chead h2) { font-size: 11px; }
+:root[data-weather] .chartcap { color: var(--ink-3); }
+/* faint words step back by their ink, never by an opacity on top of it: Glass's .45 on the cost
+   heading's "/ ccusage" and its .58 on the labels while held would put them near 3:1 over the view */
+:root[data-weather] .chead h2 .sl { color: var(--ink-3); opacity: 1; }
+:root[data-weather] body[data-hold="1"] :is(.mclock, .dtitle) { opacity: 1; color: var(--ink-3); }
+:root[data-weather] body[data-hold="1"] :is(.mlabel, .chartcap, .ro dt) { opacity: 1; color: var(--ink-4); }
+:root[data-weather] .num { font-weight: 500; letter-spacing: -.02em; text-shadow: var(--wx-halo-big); }
+:root[data-weather] .pctsign { color: var(--ink-2); text-shadow: var(--wx-halo); }
+:root[data-weather] .ring[data-pace="over"] .num {
+  text-shadow: var(--wx-halo-big), 0 0 calc(8px + 26px * var(--psev)) rgb(var(--pace-hot-rgb) / calc(var(--psev) * .6));
+}
+:root[data-weather] .ring[data-state="unknown"] .num { color: var(--ink-3); text-shadow: var(--wx-halo-big); }
+:root[data-weather] .mclock { font-size: 16px; font-weight: 500; letter-spacing: 0; }
+:root[data-weather] .mclock.word { font-size: 13px; }
+:root[data-weather] :is(.mpace, .meta-eta) { font-size: 12.5px; font-weight: 450; line-height: 18px; min-height: 18px; color: var(--ink-3); }
+:root[data-weather] .meta-eta[data-on="1"] { color: var(--ink-2); }
+:root[data-weather] :is(.ro dd, .ctot .v) { font-size: 20px; font-weight: 600; letter-spacing: 0; }
+:root[data-weather] :is(.dtitle, .dfoot, .ro dd.est) { font-size: 12.5px; }
+:root[data-weather] .cwarn { color: var(--ink-2); }
+
+/* the header: the plan a small tag, the freshness its words and lamp with no pill, the gear a round
+   button, filled white while Settings is open, as a game marks its open menu */
+:root[data-weather] .plan { color: var(--ink-2); padding: 2px 7px; border: 1px solid rgb(255 255 255 / .45); border-radius: 3px; background: rgb(var(--wx-shade) / .3); }
+:root[data-weather] .fresh,
+:root[data-weather] .fresh[data-tone] { padding: 0; border: 0; border-radius: 0; background: none; color: var(--ink-2); }
+:root[data-weather] .fresh[data-tone="hold"] { color: #f6e3a6; }
+:root[data-weather] .fresh[data-tone="down"] { color: #f6c0c0; }
+:root[data-weather] .fresh .dot { box-shadow: 0 0 0 2px rgb(var(--wx-shade) / .6); }
+:root[data-weather] .gear { width: 34px; height: 34px; color: var(--ink); background: rgb(var(--wx-shade) / .32); border: 1px solid rgb(255 255 255 / .28); }
+:root[data-weather] .gear svg { width: 17px; height: 17px; }
+:root[data-weather] .gear:hover { background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .5); }
+:root[data-weather] .gear[aria-expanded="true"] { color: #05080c; background: #f4f7fa; border-color: #f4f7fa; }
+
+/* The ring stands on its casing: an opaque dark band under the track, against which the white arc
+   and the printed scale are judged, and a translucent well inside it, where the numeral sits. */
+.case, .scale { display: none; }
+:root[data-weather] .case { display: inline; fill: none; stroke: #04070b; stroke-width: 13; }
+:root[data-weather] .scale { display: inline; }
+:root[data-weather] .scale path { fill: none; stroke-width: 2.5; stroke-linecap: butt; }
+:root[data-weather] .scale line { stroke-width: 1.8; stroke-linecap: butt; }
+:root[data-weather] .well { fill: rgb(var(--wx-shade) / .58); }
+/* the numeral over the well, which is dark here (Glass's is all but clear, and draws over it) */
+:root[data-weather] .readout { z-index: 2; }
+:root[data-weather] .rim { stroke: rgb(255 255 255 / .22); }
+:root[data-weather] .track { stroke: rgb(255 255 255 / .14); }
+:root[data-weather] .arc.bloom,
+:root[data-weather] .thmarks { display: none; }
+:root[data-weather] .ring[data-band="exhausted"] .well { fill: rgb(255 255 255 / .18); }
+:root[data-weather] .ring[data-band="exhausted"] .rim { stroke: rgb(255 255 255 / .55); }
+:root[data-weather] .ring[data-state="unknown"] .track { stroke: #98a2ad; }
+:root[data-weather] body[data-hold="1"] .rim { stroke: rgb(255 255 255 / .4); }
+/* no hover fill: the well brightens; and while the detail is open, a line under the words */
+:root[data-weather] .ring:hover,
+:root[data-weather] .ring[aria-expanded="true"] { background: none; }
+:root[data-weather] .ring:hover .well { fill-opacity: .6; }
+:root[data-weather] .ring[aria-expanded="true"] .meta { box-shadow: 0 2px 0 #fff, 0 4px 3px rgb(var(--wx-shade) / .6); }
+
+/* the chart: white lines, the warning floor dashed in the scale's yellow and the cap in its red,
+   and every line edged in the dark, once, since it is redrawn only when its data changes */
+:root[data-weather] .chart { filter: drop-shadow(0 0 1px rgb(var(--wx-shade) / .9)) drop-shadow(0 1px 4px rgb(var(--wx-shade) / .5)); }
+:root[data-weather] .chart :is(.grid, .day) { stroke: rgb(255 255 255 / .16); }
+:root[data-weather] .chart .full { stroke: rgb(255 255 255 / .55); }
+:root[data-weather] .chart .area { fill: rgb(255 255 255 / .12); }
+:root[data-weather] .chart .since { stroke: rgb(255 255 255 / .35); }
+:root[data-weather] .chart .proj { stroke: #fff; opacity: 1; }
+:root[data-weather] .chart .warnln { stroke: #ecc531; stroke-width: 1.2; stroke-dasharray: 4 4; }
+:root[data-weather] .chart .capln { stroke: #cf2b2c; stroke-width: 1.4; }
+:root[data-weather] .chart .ax { fill: var(--ink-3); font-size: 11px; }
+:root[data-weather] .chart .lbl { stroke: rgb(var(--wx-shade) / .85); }
+:root[data-weather] .chartempty { border: 0; border-radius: 0; background: none; color: var(--ink-3); }
+
+/* the detail: no sheet, a lit seam, the four figures divided by hairlines, the band in a tag
+   outlined in white, and its buttons a game's */
+:root[data-weather] .detailInner { background: none; border-top: 1px solid rgb(255 255 255 / .3); }
+:root[data-weather] .seam { height: 2px; top: -1.5px; background: linear-gradient(90deg, transparent, #fff 22%, #fff 78%, transparent); }
+:root[data-weather] .readouts { gap: 0; background: none; border: 0; border-radius: 0; }
+:root[data-weather] .ro { background: none; padding: 6px 14px 8px; }
+:root[data-weather] .ro + .ro { border-left: 1px solid rgb(255 255 255 / .2); }
+:root[data-weather] .ro dt { color: var(--ink-3); }
+:root[data-weather] .dband { opacity: 1; border-radius: 3px; color: var(--ink) !important; border-color: #fff; background: rgb(var(--wx-shade) / .35); }
+:root[data-weather] :is(.dclose, .dxspan) {
+  border: 1px solid rgb(255 255 255 / .38); border-radius: 3px; color: var(--ink); background: rgb(var(--wx-shade) / .35);
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+}
+:root[data-weather] :is(.dclose, .dxspan):hover { background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .6); }
+:root[data-weather] .dxspan[aria-busy="true"] { color: #05080c; background: #f4f7fa; border-color: #f4f7fa; text-shadow: none; }
+:root[data-weather] .dxspan[aria-disabled="true"]:not([aria-busy]) { color: var(--ink-4); border-color: rgb(255 255 255 / .2); }
+:root[data-weather] .dexport { border-top-color: rgb(255 255 255 / .2); }
+
+/* the rule: two white lines with its words between; the cost strip in its own family's inks */
+:root[data-weather] .rule .ln,
+:root[data-weather] .rule .ln.r { height: 1px; background: rgb(255 255 255 / .25); box-shadow: 0 1px 2px rgb(var(--wx-shade) / .6); }
+:root[data-weather] .rule .tag { color: var(--ink-3); }
+:root[data-weather] .cbar { background: rgb(255 255 255 / .08); box-shadow: 0 0 0 1px rgb(var(--wx-shade) / .8); }
+:root[data-weather] .ctab th { color: var(--ink-3); border-bottom-color: rgb(255 255 255 / .2); }
+:root[data-weather] .ctab td { border-bottom-color: rgb(255 255 255 / .08); }
+:root[data-weather] .cnote { color: var(--ink-3); }
+
+/* focus: a white ring with a dark one round it, visible over any sky */
+:root[data-weather] :is(.ring, .gear, .dclose, .dxspan, .preset, .switch, .range, .pcolour):focus-visible,
+:root[data-weather] .pick:has(input:focus-visible),
+:root[data-weather] .seg input:focus-visible + span {
+  outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 6px rgb(var(--wx-shade) / .7);
+}
+
+/* Settings: a solid slab, no blur and no halos; the chosen theme outlined in white; the switches and
+   the quality keys squared */
+:root[data-weather] .panel {
+  background: rgb(6 9 14 / .94); border: 1px solid rgb(255 255 255 / .12); border-radius: 6px;
+  box-shadow: 0 18px 48px rgb(0 0 0 / .55); backdrop-filter: none; -webkit-backdrop-filter: none; text-shadow: none;
+}
+:root[data-weather] .pick { border-radius: 4px; }
+:root[data-weather] .pick:has(input:checked) { border-color: #fff; box-shadow: inset 0 0 0 1px #fff; background: rgb(255 255 255 / .06); }
+:root[data-weather] .pick .swatch { border-radius: 3px; }
+:root[data-weather] .switch { border-radius: 3px; }
+:root[data-weather] .switch::before { border-radius: 2px; }
+:root[data-weather] .switch:checked { background: rgb(255 255 255 / .34); border-color: rgb(255 255 255 / .6); }
+:root[data-weather] :is(.seg, .preset) { border-radius: 3px; }
+:root[data-weather] .seg span { border-radius: 2px; }
+/* Quality: its words, then its three keys under them, since it is a setting of its own and not one of
+   the switch above */
+.prow.stack { flex-direction: column; align-items: stretch; gap: 6px; cursor: default; }
+.prow.stack .seg { align-self: stretch; }
+
+/* the theme's patch of itself, in Settings: a golden hour over the sea, the sun's path on the water,
+   and two drops on the pane. Fixed: it follows neither the reading nor the hour */
+.pick[data-pick="weather"] .swatch {
+  position: relative;
+  background:
+    radial-gradient(circle at 72% 57%, #fff4d8 0 1.4px, rgb(255 214 150 / .55) 2.2px, transparent 7px),
+    linear-gradient(180deg, #22314e 0%, #5a5f80 30%, #c98a6a 51%, #f2c48e 56.5%,
+                    #1d3a52 57%, #15303f 76%, #0b1b27 100%);
+}
+.pick[data-pick="weather"] .swatch::before {
+  content: ""; position: absolute; left: 69.5%; top: 57%; width: 5%; height: 43%;
+  background: linear-gradient(180deg, rgb(255 222 172 / .75), transparent);
+}
+.pick[data-pick="weather"] .swatch::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 22% 30%, rgb(255 255 255 / .6) 0 .7px, rgb(18 28 42 / .5) 1.5px, transparent 2.3px),
+    radial-gradient(circle at 40% 66%, rgb(255 255 255 / .5) 0 .6px, rgb(18 28 42 / .45) 1.3px, transparent 2.1px);
+}
+
+/* Forced colours take the view away, and the context is kept: the window is the system's ground.
+   The pools and halos go, the casing is the ground, the printed scale is grey with its cuts, and
+   what reads the data, the arc, the fitted run and the tick, is highlighted. */
+@media (forced-colors: active) {
+  .wx { display: none !important; }
+  :root[data-weather] :is(.top, .glass, .cost)::before { display: none; }
+  :root[data-weather] :is(.art svg, .chart) { forced-color-adjust: none; filter: none; }
+  :root[data-weather] .case { stroke: Canvas; }
+  :root[data-weather] .well { fill: Canvas; }
+  :root[data-weather] .rim { stroke: CanvasText; }
+  :root[data-weather] .track,
+  :root[data-weather] .ring[data-state="unknown"] .track { stroke: CanvasText; stroke-opacity: .3; }
+  :root[data-weather] .scale :is(.wx-q, .wx-red) { stroke: GrayText; }
+  :root[data-weather] .scale .wx-cap { stroke: CanvasText; }
+  :root[data-weather] .arc.main { stroke: Highlight; }
+  :root[data-weather] .nb { stroke: Canvas; }
+  :root[data-weather] .nl { stroke: Highlight; }
+  :root[data-weather] .ncap { fill: Highlight; stroke: Highlight; }
+  :root[data-weather] .gap,
+  :root[data-weather] .ring[data-pace="over"] .gap { stroke: CanvasText; }
+  :root[data-weather] .ring[data-band="exhausted"] .well { fill: Canvas; }
+  :root[data-weather] .chart :is(.grid, .day, .since) { stroke: GrayText; }
+  :root[data-weather] .chart .full { stroke: CanvasText; }
+  :root[data-weather] .chart :is(.run, .proj) { stroke: Highlight; }
+  :root[data-weather] .chart .head { fill: Highlight; }
+  :root[data-weather] .chart .area { fill: Highlight; fill-opacity: .2; }
+  :root[data-weather] .chart :is(.warnln, .capln) { stroke: CanvasText; }
+  :root[data-weather] .chart :is(.ax, .lbl) { fill: CanvasText; }
+  :root[data-weather] .chart .lbl { stroke: Canvas; }
+  :root[data-weather] :is(.gear, .dclose, .dxspan, .preset, .pick, .plan, .dband) { border: 1px solid ButtonText; }
+  :root[data-weather] .gear[aria-expanded="true"] { background: Highlight; color: HighlightText; }
+  :root[data-weather] .pick:has(input:checked) { border: 3px solid Highlight; box-shadow: none; }
+  :root[data-weather] .panel { background: Canvas; border: 1px solid CanvasText; }
+  :root[data-weather] .switch { border: 1px solid ButtonText; }
+  :root[data-weather] .switch:checked { background: Highlight; border-color: Highlight; }
+  :root[data-weather] .switch::before { forced-color-adjust: none; background: ButtonText; box-shadow: none; }
+  :root[data-weather] .switch:checked::before { background: HighlightText; }
+  :root[data-weather] .ro + .ro { border-left: 1px solid CanvasText; }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2933,6 +3235,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 </div>
 <canvas class="mx" id="rain" aria-hidden="true"></canvas>
 <canvas class="scene" id="scene" aria-hidden="true"></canvas>
+<!-- the Weather theme's view: the scene puts its own canvas in it, and swaps it when it must -->
+<div class="wx" id="wx" aria-hidden="true"></div>
 <!-- samples a drawing on a 3px grid and grows each sample to a block; the Train theme's ring -->
 <svg class="pxdefs" aria-hidden="true" focusable="false">
   <filter id="pxgrid" filterUnits="userSpaceOnUse" x="-40" y="-40" width="240" height="240" color-interpolation-filters="sRGB">
@@ -3151,6 +3455,13 @@ const neuOn = () => document.documentElement.dataset.theme === "neumorphism";
 const neuLight = () => neuOn() && document.documentElement.dataset.clay !== "dark";
 const paperOn = () => document.documentElement.dataset.theme === "broadsheet";
 const gaugesOn = () => document.documentElement.dataset.theme === "gauges";
+/* whether Weather's view is what is on screen: not the same as Weather being chosen, if it cannot run */
+const weatherOn = () => document.documentElement.hasAttribute("data-weather");
+/* Weather's palette is its own and fixed (see the weather section): the arc white at every reading,
+   since the weather shows the band and the scale printed on the casing reads it; the grey for a ring
+   with no reading; and for the pace a magenta that no zone uses, the same at any severity, which the
+   overrun's weight carries instead */
+const WX_WHITE = [244, 247, 250], WX_GREY = [152, 162, 173], WX_MAGENTA = [238, 108, 212];
 /* Broadsheet's paper is a light ground too, so it prints the light clay's inks, unless forced colours
    have put a dark ground under it, where it reads Glass's ladder as the dark clay does */
 const FORCED_DARK = matchMedia("(forced-colors: active) and (prefers-color-scheme: dark)");
@@ -3159,6 +3470,7 @@ const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * 
 const rgbCss = (c) => "rgb(" + c[0] + " " + c[1] + " " + c[2] + ")";
 
 function rampOf(pct, th, band) {
+  if (weatherOn()) return { rgb: band === "unknown" || typeof pct !== "number" ? WX_GREY : WX_WHITE, bloom: 0 };
   const P = lightGround() ? STOP_LIGHT : STOP;
   if (band === "unknown" || typeof pct !== "number") return { rgb: P.unknown, bloom: BLOOM_STOP.unknown };
   const warn = num(th && th.warningFloorPercent, 70);
@@ -3256,8 +3568,8 @@ const PACE_INK_COLD = [141, 151, 166], PACE_MARK_COLD = [255, 255, 255], PACE_HO
 const PACE_LIGHT = { inkCold: [88, 98, 114], ink: [147, 64, 9], markCold: [42, 51, 66], mark: [147, 64, 9] };
 /* the dark clay's slate: above its faintest ink, so a mild verdict never reads quieter than "on pace" */
 const PACE_DARK_COLD = [153, 162, 177];
-const paceInk  = (sev) => (lightGround() ? mix(PACE_LIGHT.inkCold, PACE_LIGHT.ink, sev) : mix(neuOn() ? PACE_DARK_COLD : PACE_INK_COLD, PACE_HOT, sev));
-const paceMark = (sev) => (lightGround() ? mix(PACE_LIGHT.markCold, PACE_LIGHT.mark, sev) : mix(PACE_MARK_COLD, PACE_HOT, sev));
+const paceInk  = (sev) => (weatherOn() ? WX_MAGENTA : lightGround() ? mix(PACE_LIGHT.inkCold, PACE_LIGHT.ink, sev) : mix(neuOn() ? PACE_DARK_COLD : PACE_INK_COLD, PACE_HOT, sev));
+const paceMark = (sev) => (weatherOn() ? WX_MAGENTA : lightGround() ? mix(PACE_LIGHT.markCold, PACE_LIGHT.mark, sev) : mix(PACE_MARK_COLD, PACE_HOT, sev));
 
 /* The instant a pace judgement is made against. A countdown is a real
    clock and keeps running through a hold, but anything that COMPARES the
@@ -3946,7 +4258,10 @@ function buildRings() {
           </defs>
           <circle class="well" cx="60" cy="60" r="44.5"></circle>
           <circle class="rim" cx="60" cy="60" r="55.2"></circle>
+          <!-- Weather's casing, and the scale printed on it; the others do not draw them -->
+          <circle class="case" cx="60" cy="60" r="${R}"></circle>
           <circle class="track" cx="60" cy="60" r="${R}"></circle>
+          <g class="scale" data-r="scale"></g>
           <g class="thmarks" data-r="thmarks"></g>
           <g transform="rotate(-90 60 60)">
             <circle class="arc bloom" data-r="bloom" cx="60" cy="60" r="${R}"
@@ -4056,6 +4371,7 @@ function render() {
   roomHeat = heat;   // the Matrix theme's rain warms with it too
   if (matrix) matrix.heat();
   trainReading();    // and the Train theme's sky has somewhere new to walk to
+  weatherReading();  // and the Weather theme's view
 
   const sig = f.tone + "|" + (s && s.lastError ? s.lastError.code : "") + "|" +
     ORDER.map((k) => { const l = limitOf(k); return l && l.percent !== null ? showPct(l.percent) : "?"; }).join(",");
@@ -4206,6 +4522,8 @@ function marksAhead(th, pct) {
 }
 
 function paintThresholds(key, th, on, pct) {
+  /* Weather draws no marks ahead: the scale printed on its casing is the marks */
+  if (weatherOn()) paintScale(key, th);
   const host = q(key, "thmarks");
   const marks = on && th && typeof pct === "number" ? marksAhead(th, pct) : [];
   const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",") + (lightGround() ? " light" : "");
@@ -4217,6 +4535,44 @@ function paintThresholds(key, th, on, pct) {
     const col = rgbCss(rampOf(v, th, bandOf(v, th)).rgb);
     return `<line class="thmark${served ? "" : " station"}" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${col}"></line>`;
   }).join("");
+}
+
+/* Weather prints its scale on the ring's casing, as an instrument's is, in fixed paints from the
+   served thresholds: the warning band in its four quarters, each a shade deeper (yellow, amber,
+   orange, red-orange), the cuts between them left as narrow gaps; red from critical, only where it
+   stands clear of the cap (colourMarks' rule, so never on Max 20× or 5×); and a red line at the cap.
+   It is the same at every reading, so it is drawn again only when the thresholds move; before any
+   reading it prints the default table, as Gauges does. Every paint holds 3:1 on the casing. */
+const WX_PAINT = { q: ["#ecc531", "#ec9f2a", "#e67624", "#dc5228"], red: "#cf2b2c" };
+/* the print's radius and width (r 54 to 56.5 of the 120-unit ring, the casing's outer edge), and
+   the cut between two paints, in the same units along the arc */
+const WX_PRINT = { r: 55.25, w: 2.5, cut: 0.8 };
+function paintScale(key, th) {
+  const host = q(key, "scale");
+  let warn = num(th && th.warningFloorPercent, 70), cap = num(th && th.exhaustedPercent, 100);
+  if (!(warn > 0 && cap > warn && cap <= 100)) { warn = 70; cap = 100; }     // only a malformed table does this
+  const c = num(th && th.criticalPercent, NaN);
+  const crit = isFinite(c) && c > warn && cap - c > 1.5 ? c : null;
+  const stamp = warn + "|" + cap + "|" + crit;
+  if (host.dataset.k === stamp) return;
+  host.dataset.k = stamp;
+  const half = WX_PRINT.cut / 2 / (2 * Math.PI * WX_PRINT.r) * 100;   // half a cut, in percent of the turn
+  const band = (a, b, cls, ink) => {
+    const d = arcPath(WX_PRINT.r, a / 100, b / 100);
+    return d ? `<path class="${cls}" d="${d}" stroke="${ink}"></path>` : "";
+  };
+  const end = crit === null ? cap : crit, quarter = (cap - warn) / WARN_STATIONS;
+  let out = "";
+  for (let k = 0; k < WARN_STATIONS; k++) {
+    const a = warn + quarter * k, b = Math.min(warn + quarter * (k + 1), end);
+    if (b <= a) break;
+    out += band(a + (k ? half : 0), b - (b < cap ? half : 0), "wx-q", WX_PAINT.q[k]);
+  }
+  if (crit !== null) out += band(crit + half, cap, "wx-red", WX_PAINT.red);
+  /* the cap: a line across the print and a little into the groove, so it reads past the arc's end */
+  const a = ptAt(52.4, cap / 100), b = ptAt(56.5, cap / 100);
+  out += `<line class="wx-cap" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${WX_PAINT.red}"></line>`;
+  host.innerHTML = out;
 }
 
 /* How much this limit should warm the room: the worse of raw consumption
@@ -4765,6 +5121,11 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   if (warnOn) {
     s += `<line class="warnln" x1="${PL}" y1="${Y(warn).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(warn).toFixed(1)}"></line>`;
   }
+  /* Weather's chart prints the cap in the scale's red, as its ring does, wherever the axis reaches it */
+  const capPct = num(th && th.exhaustedPercent, 100);
+  if (weatherOn() && capPct <= ymax) {
+    s += `<line class="capln" x1="${PL}" y1="${Y(capPct).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(capPct).toFixed(1)}"></line>`;
+  }
   /* a saved graph of a day or more marks each midnight, and names the day that begins there */
   const days = [];
   if (src && src.days) {
@@ -5042,7 +5403,7 @@ function graphName(key, span) {
 
 function drawGraph(key, h, [sec, , spanWords]) {
   const { w: GW, h: GH, pad, scale, chartTop, chartH } = GRAPH, pixel = trainOn(), terminal = tuiOn(), soft = neuOn(), paper = paperOn();
-  const gz = gaugesOn();
+  const gz = gaugesOn(), wx = weatherOn();
   const canvas = document.createElement("canvas");
   canvas.width = GW * scale; canvas.height = GH * scale;
   const ctx = canvas.getContext("2d");
@@ -5058,7 +5419,7 @@ function drawGraph(key, h, [sec, , spanWords]) {
   try {
     ink = colour("var(--ink)"); dim = colour("var(--ink-3)"); faint = colour("var(--ink-4)"); hi = colour("var(--hi)");
     bg = pixel ? colour("var(--plate)") : terminal ? "#000" : soft ? colour("var(--clay)") : paper ? colour("var(--paper)")
-       : gz ? colour("var(--gz-paint)") : "#10131a";
+       : gz ? colour("var(--gz-paint)") : wx ? "#0b1119" : "#10131a";
     frame = pixel ? colour("var(--band)") : terminal ? MX_INK.line : colour("var(--edge)");
     if (soft) { lift = colour("var(--lift)"); shade = colour("var(--shade)"); }
     if (gz) gzInk = { print: colour("var(--gz-print)"), print2: colour("var(--gz-print-2)"), paper: colour("var(--gz-paper)"),
@@ -5133,18 +5494,41 @@ function drawGraph(key, h, [sec, , spanWords]) {
     rrect(card.x, card.y, card.w, card.h, 16); ctx.fill();
     ctx.restore();
     ctx.lineWidth = 1; ctx.strokeStyle = "#050505"; rrect(card.x - .5, card.y - .5, card.w + 1, card.h + 1, 16.5); ctx.stroke();
+  } else if (wx) {
+    /* Weather's is a frame of the view, as a game's photo mode takes one, darkened all over and more
+       so under the chart and the figures; a night-blue plate when there is no view to take */
+    const shot = weather ? weather.capture(GW * scale, GH * scale) : null;
+    ctx.fillRect(0, 0, GW, GH);
+    if (shot) {
+      ctx.drawImage(shot, 0, 0, GW, GH);
+      ctx.fillStyle = "rgb(3 6 10 / .35)"; ctx.fillRect(0, 0, GW, GH);
+      const fall = ctx.createLinearGradient(0, GH * .3, 0, GH);
+      fall.addColorStop(0, "rgb(3 6 10 / 0)"); fall.addColorStop(1, "rgb(3 6 10 / .7)");
+      ctx.fillStyle = fall; ctx.fillRect(0, GH * .3, GW, GH * .7);
+      /* and a little more under the heading and the figures at the top, which a bright sky is behind */
+      const head = ctx.createLinearGradient(0, 0, 0, chartTop);
+      head.addColorStop(0, "rgb(3 6 10 / .45)"); head.addColorStop(1, "rgb(3 6 10 / 0)");
+      ctx.fillStyle = head; ctx.fillRect(0, 0, GW, chartTop);
+    }
+    ctx.strokeStyle = "rgb(255 255 255 / .3)"; ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, GW - 1, GH - 1);
   } else {
     ctx.fillRect(0, 0, GW, GH);
     ctx.strokeStyle = frame; ctx.lineWidth = 1;
     ctx.strokeRect(0.5, 0.5, GW - 1, GH - 1);
   }
+  /* over the view every word has the display's dark halo, as on the page (a shadow's blur is in the
+     canvas's own pixels, so twice the page's) */
+  const halo = (on) => { ctx.shadowColor = on ? "rgb(3 6 10 / .8)" : "transparent"; ctx.shadowBlur = on ? 6 * scale : 0; };
 
   const write = (t, x, y, fill, px, fam, { align = "left", weight = 400, spacing = 0 } = {}) => {
     ctx.globalAlpha = 1;
+    halo(wx);
     ctx.font = weight + " " + px + "px " + fam;
     ctx.fillStyle = fill; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
     if ("letterSpacing" in ctx) ctx.letterSpacing = spacing + "px";
     ctx.fillText(t, x, y);
+    halo(false);
     return ctx.measureText(t).width;
   };
   const when = (ms) => new Date(ms).toLocaleString(LOCALE, { weekday: "short", day: "numeric", month: "short",
@@ -5214,7 +5598,7 @@ function drawGraph(key, h, [sec, , spanWords]) {
     const svg = host.querySelector("svg.chart");
     /* Gauges' card: its paper, kept inside the frame's rounded window */
     if (gz) { ctx.save(); rrect(L, chartTop, CW, chartH, 10); ctx.clip(); ctx.fillStyle = gzInk.paper; ctx.fillRect(L, chartTop, CW, chartH); }
-    if (svg) paintSvg(ctx, svg, L, chartTop);
+    if (svg) paintSvg(ctx, svg, L, chartTop, wx ? { edge: "rgb(3 6 10 / .85)", halo: ["rgb(3 6 10 / .8)", 6 * scale] } : null);
     else write("not enough readings over " + spanWords + " to draw a line", GW / 2, chartTop + chartH / 2,
                gz ? gzInk.print2 : faint, size.small, sans, { align: "center" });
     if (gz) {
@@ -5280,7 +5664,10 @@ function typeset(ctx, s) {
 
 /* An SVG painted onto a canvas, element by element, as the page has styled it: the shapes and the
    text the chart is made of, each with its own computed stroke, fill, dashes, opacity and type. */
-function paintSvg(ctx, svg, ox, oy) {
+/* `over`, for a chart drawn over a picture (Weather's): { edge, halo: [colour, blur] }, each line
+   stroked first 3px wider in the edge's colour, as strong as the line itself is (a faint grid line
+   gets a faint edge, or it would read as a dark bar), and each word given the halo */
+function paintSvg(ctx, svg, ox, oy, over = null) {
   const n = (v, d) => { const x = parseFloat(v); return isFinite(x) ? x : d; };
   const vb = svg.viewBox && svg.viewBox.baseVal;
   for (const el of svg.querySelectorAll("line, path, rect, circle, text")) {
@@ -5327,7 +5714,13 @@ function paintSvg(ctx, svg, ox, oy) {
       ctx.textAlign = s.textAnchor === "end" ? "right" : s.textAnchor === "middle" ? "center" : "left";
       ctx.textBaseline = "alphabetic";
       const t = el.textContent, x = at("x"), y = at("y");
-      paintFill = () => { if (fill) { toFill(); ctx.fillText(t, x, y); } };
+      paintFill = () => {
+        if (!fill) return;
+        toFill();
+        if (over) { ctx.shadowColor = over.halo[0]; ctx.shadowBlur = over.halo[1]; }
+        ctx.fillText(t, x, y);
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+      };
       paintStroke = () => { if (stroke && sw > 0) { toStroke(); ctx.strokeText(t, x, y); } };
     } else {
       const p = new Path2D();
@@ -5336,7 +5729,18 @@ function paintSvg(ctx, svg, ox, oy) {
       else if (tag === "rect") p.rect(at("x"), at("y"), at("width"), at("height"));
       else p.arc(at("cx"), at("cy"), at("r"), 0, Math.PI * 2);
       paintFill = () => { if (fill && tag !== "line") { toFill(); ctx.fill(p); } };
-      paintStroke = () => { if (stroke && sw > 0) { toStroke(); ctx.stroke(p); } };
+      paintStroke = () => {
+        if (!stroke || !(sw > 0)) return;
+        toStroke();
+        if (over) {
+          const ink = ctx.strokeStyle, alpha = ctx.globalAlpha;
+          const a = /rgba\([^)]*,\s*([\d.]+)\)/.exec(stroke);
+          ctx.strokeStyle = over.edge; ctx.lineWidth = sw + 3; ctx.globalAlpha = clamp((a ? Number(a[1]) : 1) * alpha / .6, 0, 1);
+          ctx.stroke(p);
+          ctx.strokeStyle = ink; ctx.lineWidth = sw; ctx.globalAlpha = alpha;
+        }
+        ctx.stroke(p);
+      };
     }
     if (strokeFirst) { paintStroke(); paintFill(); } else { paintFill(); paintStroke(); }
     ctx.restore();
@@ -5838,8 +6242,8 @@ document.addEventListener("visibilitychange", boilMotion);
    Switched off in Settings, the loop stops and the canvas is hidden, so the plain well shows
    through. The GPU contexts are kept, so switching back on resumes rather than rebuilds. */
 function fluidMotion() {
-  /* the terminal, the scene, the clay, the paper and the instrument have no fluid, so under them the loop stops too */
-  const on = PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn() && !gaugesOn();
+  /* the terminal, the scene, the clay, the paper, the instrument and the view have no fluid, so under them the loop stops too */
+  const on = PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn() && !gaugesOn() && !weatherOn();
   for (const key of ORDER) {
     if (!FLUIDS[key]) continue;
     const canvas = q(key, "fluid");
@@ -8208,6 +8612,232 @@ function trainMotion() {
   train.play(PREFS.scene && !REDUCE.matches);
 }
 
+/* ═════════════════════════ weather ═════════════════════════
+   The Weather theme is the view through a window over a cove: the sea and the sky, drawn on the
+   graphics card by makeWeather, whose code is its own file, public/weather/wx.js (built by
+   tools/build-weather.mjs), loaded the first time the view is wanted, so no other theme fetches or
+   parses it. The page's part is here: what the view is told (the hottest
+   reading, whether the feed is held, the place and whether to follow the real time, the quality,
+   whether it may move) and what it tells the page back, how bright it is behind each group of
+   words, which sets the pools under them.
+
+   makeWeather(host, hooks) -> null | W, the one seam between the page and the view:
+     host   the <div class="wx"> the view lives in. makeWeather puts its own <canvas> in it, and
+            swaps that canvas when the context must be made again with other attributes (Quality to
+            or from High). It shows the view by setting host.dataset.up = "1" (CSS fades it in over
+            1.2 s) and clears it on a loss or before any reading.
+     hooks.onDead()       the view can no longer run (no restore in 10 s, 3 losses in 10 min, a build
+                          that failed): the page drops data-weather and stands as Glass. At most once.
+     hooks.onScrim(grid, peak)  two Float32Array(32) of display luminance 0..1 on a grid 4 cells wide
+                          and 8 high, row 0 at the top, lightning left out, at most twice a second:
+                          each cell's mean, and its brightest tap (peak may be null).
+     hooks.quality        the stored Quality, so the first context is already the right one.
+     It returns null at once when this browser cannot draw the view.
+     W.start()                  the theme is on screen: build, or resume
+     W.stop()                   off screen, hidden or forced colours: no frames and no timers; keeps everything
+     W.play(moving)             moving, or still (reduced motion, Moving scene off)
+     W.reading(p, th, misted)   p the hottest percent or null; th the served thresholds; misted: held, or
+                                blank after a reading was seen (ignored before the first reading)
+     W.sky(follow, place)       Follow real time; place {lat, lon, zone, from} from wxPlace()
+     W.quality(q)               "auto" | "high" | "low"
+     W.resize()                 the window or the dpr changed (debounced inside)
+     W.capture(w, h)            a canvas holding the view now, covering w × h, or null              */
+let weather = null, weatherBroken = false;
+/* The top group's pool lies under the limit's row and reaches up under the header, as far as the
+   header is tall, with the most gap the page leaves after it; a header that wraps grows it. */
+if (typeof ResizeObserver !== "undefined") {
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty("--wx-head", document.querySelector(".top").offsetHeight + 22 + "px");
+  }).observe(document.querySelector(".top"));
+}
+/* The view's file is asked for, and the context made, only once the numbers have painted (the file is
+   300 KB and makeWeather a few to a few hundred ms of main thread on first use), so until then the
+   theme stands with its dark window and no view. */
+let wxPainted = false;
+
+/* The hottest reading drawn, for the view to walk to, as Train's; and whether the pane mists: a
+   held reading, or one lost after a reading was seen (the view ignores it before the first). */
+function weatherReading() {
+  if (!weather) return;
+  const f = freshness();
+  let p = null;
+  if (!f.blank) for (const key of ORDER) {
+    const l = limitOf(key);
+    if (l && typeof l.percent === "number") p = Math.max(p === null ? 0 : p, l.percent);
+  }
+  weather.reading(p, S.snap ? S.snap.thresholds : null, !!f.hold || !!f.blank);
+}
+
+/* What the view should be doing now: nothing outside the theme; under forced colours or in a hidden
+   tab, nothing either, though the page stays Weather's; moving while it may; otherwise one still of
+   it. A browser that cannot draw it is told once, and the glass page stands from then on. */
+function weatherMotion() {
+  const root = document.documentElement;
+  const on = PREFS.theme === "weather" && !weatherBroken;
+  if (!on) {
+    if (weather) weather.stop();
+    if (root.hasAttribute("data-weather")) {
+      root.removeAttribute("data-weather");
+      root.style.removeProperty("--wx-top");
+      root.style.removeProperty("--wx-bot");
+    }
+    return;
+  }
+  root.setAttribute("data-weather", "");
+  /* no context under forced colours, where there is no view to show, nor before the first paint */
+  if (!weather) {
+    if (FORCED.matches || !wxPainted) return;
+    if (wxMake === null) { wxLoad(); return; }      // asked for; this runs again once it is in
+    if (!wxMake) { weatherDead(); return; }         // missing, broken, or not a renderer
+    try { weather = wxMake($("wx"), { onDead: weatherDead, onScrim: wxScrim, quality: PREFS.wxQuality }); } catch (_) { weather = null; }
+    if (!weather) { weatherDead(); return; }
+  }
+  weather.sky(PREFS.realTime, wxPlace());
+  weather.quality(PREFS.wxQuality);
+  if (FORCED.matches || document.visibilityState === "hidden") { weather.stop(); return; }
+  weather.start();
+  weatherReading();
+  weather.play(PREFS.scene && !REDUCE.matches);
+}
+/* the view cannot run, or no longer can: the glass page, its settings and the reader's own face,
+   once the call that found out has returned */
+function weatherDead() {
+  if (weatherBroken) return;
+  weatherBroken = true;
+  if (weather) weather.stop();
+  weather = null;
+  $("wx").replaceChildren();   // its canvases, so what their contexts hold can be let go
+  queueMicrotask(showPrefs);
+}
+document.addEventListener("visibilitychange", weatherMotion);
+/* focus and blur change only the view's frame rate, which it reads for itself; and coming back to
+   the window is a moment to place the sky again */
+addEventListener("focus", weatherMotion);
+addEventListener("blur", weatherMotion);
+/* the place is read again every half hour, so a laptop carried across zones follows */
+setInterval(() => { if (weather && weatherOn() && document.visibilityState !== "hidden") weather.sky(PREFS.realTime, wxPlace()); }, 1800000);
+
+/* The pools under the groups of words: for each group, the brightest cell of the view's grid under
+   its box, and from it the pool's strength, clamp(.24 + .9 L, .24, .82): .26 at night, about .42
+   under an overcast, .64 under a clear sky and .82 over the sun's path on the water. A cell's L is
+   its mean, or a share of its brightest tap where that is more: a narrow bright thing, the sun's
+   path above all, hardly moves a cell's mean but stands right under the words. The header and the
+   limit share the top pool's strength, the rule and the cost strip the foot's; a value is written
+   only when it moves by .02 or more, and CSS eases it over 1.5 s. The meter leaves lightning out, so
+   from the band's third quarter on, where the view's lightning starts, every pool stands .1 deeper:
+   a flash then lights the view behind the words without the pools having to move. */
+const WX_POOL = { lo: .24, k: .9, hi: .82, step: .02, peak: .6, flash: .1 };
+const wxPool = { top: null, bot: null };
+/* whether the hottest reading has reached the third quarter of the warning band, where strikes begin */
+function wxStormy() {
+  const th = S.snap ? S.snap.thresholds : null;
+  let warn = num(th && th.warningFloorPercent, 70), cap = num(th && th.exhaustedPercent, 100);
+  if (!(warn > 0 && cap > warn)) { warn = 70; cap = 100; }
+  const f = freshness();
+  if (f.blank) return false;
+  for (const key of ORDER) {
+    const l = limitOf(key);
+    if (l && typeof l.percent === "number" && l.percent >= warn + (cap - warn) * 3 / WARN_STATIONS) return true;
+  }
+  return false;
+}
+function wxScrim(grid, peak) {
+  if (!weatherOn() || !grid || grid.length < 32) return;
+  const cell = (i) => (peak && peak.length >= 32 ? Math.max(grid[i], WX_POOL.peak * peak[i]) : grid[i]);
+  const deeper = wxStormy() ? WX_POOL.flash : 0;
+  const W = innerWidth, H = innerHeight;
+  const under = (els) => {
+    let L = 0;
+    for (const el of els) {
+      if (!el || el.offsetParent === null) continue;
+      const r = el.getBoundingClientRect();
+      if (r.bottom <= 0 || r.top >= H || r.width === 0) continue;
+      const r0 = clamp(Math.floor((r.top / H) * 8), 0, 7), r1 = clamp(Math.floor(((r.bottom - 1) / H) * 8), 0, 7);
+      const c0 = clamp(Math.floor((r.left / W) * 4), 0, 3), c1 = clamp(Math.floor(((r.right - 1) / W) * 4), 0, 3);
+      for (let y = r0; y <= r1; y++) for (let x = c0; x <= c1; x++) L = Math.max(L, cell(y * 4 + x));
+    }
+    return clamp(WX_POOL.lo + WX_POOL.k * L + deeper, WX_POOL.lo, WX_POOL.hi);
+  };
+  const root = document.documentElement;
+  const put = (name, key, v) => {
+    if (wxPool[key] !== null && Math.abs(v - wxPool[key]) < WX_POOL.step) return;
+    wxPool[key] = v;
+    root.style.setProperty(name, v.toFixed(3));
+  };
+  put("--wx-top", "top", under([document.querySelector(".top"), document.querySelector(".glass")]));
+  put("--wx-bot", "bot", under([document.querySelector(".rule"), document.querySelector(".cost")]));
+}
+
+/* ── the place: where the sky is computed for, from the time zone alone ──
+   No permission is asked and nothing leaves the page. The zone's principal city to the nearest
+   degree, from the time zone database (WX_ZONES, made by tools/zones.mjs); the UTC zones at
+   Greenwich; and a zone not in the table on its standard meridian, at 40° N, or at 35° S where its
+   summer time falls in January. Self-contained between its markers, which the tests read it by. */
+/* wx-place:begin */
+/* wx-zones:begin */
+/* tzdata 2026e: 418 zones and 100 older names, each at its principal city to the nearest degree (tools/zones.mjs) */
+const WX_ZONES = "Africa:Abidjan 5 -4,Accra 6 0,Addis_Ababa 9 39,Algiers 37 3,Asmara 15 39,Asmera 15 39,Bamako 13 -8,Bangui 4 19,Banjul 13 -17,Bissau 12 -16,Blantyre -16 35,Brazzaville -4 15,Bujumbura -3 29,Cairo 30 31,Casablanca 34 -8,Ceuta 36 -5,Conakry 10 -14,Dakar 15 -17,Dar_es_Salaam -7 39,Djibouti 12 43,Douala 4 10,El_Aaiun 27 -13,Freetown 9 -13,Gaborone -25 26,Harare -18 31,Johannesburg -26 28,Juba 5 32,Kampala 0 32,Khartoum 16 33,Kigali -2 30,Kinshasa -4 15,Lagos 6 3,Libreville 0 9,Lome 6 1,Luanda -9 13,Lubumbashi -12 27,Lusaka -15 28,Malabo 4 9,Maputo -26 33,Maseru -29 28,Mbabane -26 31,Mogadishu 2 45,Monrovia 6 -11,Nairobi -1 37,Ndjamena 12 15,Niamey 14 2,Nouakchott 18 -16,Ouagadougou 12 -2,Porto-Novo 6 3,Sao_Tome 0 7,Timbuktu 13 -8,Tripoli 33 13,Tunis 37 10,Windhoek -23 17;America:Adak 52 -177,Anchorage 61 -150,Anguilla 18 -63,Antigua 17 -62,Araguaina -7 -48,Argentina/Buenos_Aires -35 -58,Argentina/Catamarca -28 -66,Argentina/ComodRivadavia -28 -66,Argentina/Cordoba -31 -64,Argentina/Jujuy -24 -65,Argentina/La_Rioja -29 -67,Argentina/Mendoza -33 -69,Argentina/Rio_Gallegos -52 -69,Argentina/Salta -25 -65,Argentina/San_Juan -32 -69,Argentina/San_Luis -33 -66,Argentina/Tucuman -27 -65,Argentina/Ushuaia -55 -68,Aruba 13 -70,Asuncion -25 -58,Atikokan 49 -92,Atka 52 -177,Bahia -13 -39,Bahia_Banderas 21 -105,Barbados 13 -60,Belem -1 -48,Belize 18 -88,Blanc-Sablon 51 -57,Boa_Vista 3 -61,Bogota 5 -74,Boise 44 -116,Buenos_Aires -35 -58,Cambridge_Bay 69 -105,Campo_Grande -20 -55,Cancun 21 -87,Caracas 11 -67,Catamarca -28 -66,Cayenne 5 -52,Cayman 19 -81,Chicago 42 -88,Chihuahua 29 -106,Ciudad_Juarez 32 -106,Coral_Harbour 49 -92,Cordoba -31 -64,Costa_Rica 10 -84,Coyhaique -46 -72,Creston 49 -117,Cuiaba -16 -56,Curacao 12 -69,Danmarkshavn 77 -19,Dawson 64 -139,Dawson_Creek 56 -120,Denver 40 -105,Detroit 42 -83,Dominica 15 -61,Edmonton 54 -113,Eirunepe -7 -70,El_Salvador 14 -89,Ensenada 33 -117,Fort_Nelson 59 -123,Fort_Wayne 40 -86,Fortaleza -4 -38,Glace_Bay 46 -60,Godthab 64 -52,Goose_Bay 53 -60,Grand_Turk 21 -71,Grenada 12 -62,Guadeloupe 16 -62,Guatemala 15 -91,Guayaquil -2 -80,Guyana 7 -58,Halifax 45 -64,Havana 23 -82,Hermosillo 29 -111,Indiana/Indianapolis 40 -86,Indiana/Knox 41 -87,Indiana/Marengo 38 -86,Indiana/Petersburg 38 -87,Indiana/Tell_City 38 -87,Indiana/Vevay 39 -85,Indiana/Vincennes 39 -88,Indiana/Winamac 41 -87,Indianapolis 40 -86,Inuvik 68 -134,Iqaluit 64 -68,Jamaica 18 -77,Jujuy -24 -65,Juneau 58 -134,Kentucky/Louisville 38 -86,Kentucky/Monticello 37 -85,Knox_IN 41 -87,Kralendijk 12 -68,La_Paz -16 -68,Lima -12 -77,Los_Angeles 34 -118,Louisville 38 -86,Lower_Princes 18 -63,Maceio -10 -36,Managua 12 -86,Manaus -3 -60,Marigot 18 -63,Martinique 15 -61,Matamoros 26 -97,Mazatlan 23 -106,Mendoza -33 -69,Menominee 45 -88,Merida 21 -90,Metlakatla 55 -132,Mexico_City 19 -99,Miquelon 47 -56,Moncton 46 -65,Monterrey 26 -100,Montevideo -35 -56,Montreal 44 -79,Montserrat 17 -62,Nassau 25 -77,New_York 41 -74,Nipigon 44 -79,Nome 65 -165,Noronha -4 -32,North_Dakota/Beulah 47 -102,North_Dakota/Center 47 -101,North_Dakota/New_Salem 47 -101,Nuuk 64 -52,Ojinaga 30 -104,Panama 9 -80,Pangnirtung 64 -68,Paramaribo 6 -55,Phoenix 33 -112,Port-au-Prince 19 -72,Port_of_Spain 11 -62,Porto_Acre -10 -68,Porto_Velho -9 -64,Puerto_Rico 18 -66,Punta_Arenas -53 -71,Rainy_River 50 -97,Rankin_Inlet 63 -92,Recife -8 -35,Regina 50 -105,Resolute 75 -95,Rio_Branco -10 -68,Rosario -31 -64,Santa_Isabel 33 -117,Santarem -2 -55,Santiago -33 -71,Santo_Domingo 18 -70,Sao_Paulo -24 -47,Scoresbysund 70 -22,Shiprock 40 -105,Sitka 57 -135,St_Barthelemy 18 -63,St_Johns 48 -53,St_Kitts 17 -63,St_Lucia 14 -61,St_Thomas 18 -65,St_Vincent 13 -61,Swift_Current 50 -108,Tegucigalpa 14 -87,Thule 77 -69,Thunder_Bay 44 -79,Tijuana 33 -117,Toronto 44 -79,Tortola 18 -65,Vancouver 49 -123,Virgin 18 -65,Whitehorse 61 -135,Winnipeg 50 -97,Yakutat 60 -140,Yellowknife 54 -113;Antarctica:Casey -66 111,Davis -69 78,DumontDUrville -67 140,Macquarie -54 159,Mawson -68 63,McMurdo -78 167,Palmer -65 -64,Rothera -68 -68,South_Pole -78 167,Syowa -69 40,Troll -72 3,Vostok -78 107;Arctic:Longyearbyen 78 16;Asia:Aden 13 45,Almaty 43 77,Amman 32 36,Anadyr 65 177,Aqtau 45 50,Aqtobe 50 57,Ashgabat 38 58,Ashkhabad 38 58,Atyrau 47 52,Baghdad 33 44,Bahrain 26 51,Baku 40 50,Bangkok 14 101,Barnaul 53 84,Beirut 34 36,Bishkek 43 75,Brunei 5 115,Calcutta 23 88,Chita 52 113,Choibalsan 48 107,Chongqing 31 121,Chungking 31 121,Colombo 7 80,Dacca 24 90,Damascus 34 36,Dhaka 24 90,Dili -9 126,Dubai 25 55,Dushanbe 39 69,Famagusta 35 34,Gaza 32 34,Harbin 31 121,Hebron 32 35,Ho_Chi_Minh 11 107,Hong_Kong 22 114,Hovd 48 92,Irkutsk 52 104,Istanbul 41 29,Jakarta -6 107,Jayapura -3 141,Jerusalem 32 35,Kabul 35 69,Kamchatka 53 159,Karachi 25 67,Kashgar 44 88,Kathmandu 28 85,Katmandu 28 85,Khandyga 63 136,Kolkata 23 88,Krasnoyarsk 56 93,Kuala_Lumpur 3 102,Kuching 2 110,Kuwait 29 48,Macao 22 114,Macau 22 114,Magadan 60 151,Makassar -5 119,Manila 15 121,Muscat 24 59,Nicosia 35 33,Novokuznetsk 54 87,Novosibirsk 55 83,Omsk 55 73,Oral 51 51,Phnom_Penh 12 105,Pontianak 0 109,Pyongyang 39 126,Qatar 25 52,Qostanay 53 64,Qyzylorda 45 65,Rangoon 17 96,Riyadh 25 47,Saigon 11 107,Sakhalin 47 143,Samarkand 40 67,Seoul 38 127,Shanghai 31 121,Singapore 1 104,Srednekolymsk 67 154,Taipei 25 122,Tashkent 41 69,Tbilisi 42 45,Tehran 36 51,Tel_Aviv 32 35,Thimbu 27 90,Thimphu 27 90,Tokyo 36 140,Tomsk 57 85,Ujung_Pandang -5 119,Ulaanbaatar 48 107,Ulan_Bator 48 107,Urumqi 44 88,Ust-Nera 65 143,Vientiane 18 103,Vladivostok 43 132,Yakutsk 62 130,Yangon 17 96,Yekaterinburg 57 61,Yerevan 40 45;Atlantic:Azores 38 -26,Bermuda 32 -65,Canary 28 -15,Cape_Verde 15 -24,Faeroe 62 -7,Faroe 62 -7,Jan_Mayen 60 11,Madeira 33 -17,Reykjavik 64 -22,South_Georgia -54 -37,St_Helena -16 -6,Stanley -52 -58;Australia:ACT -34 151,Adelaide -35 139,Brisbane -27 153,Broken_Hill -32 141,Canberra -34 151,Currie -43 147,Darwin -12 131,Eucla -32 129,Hobart -43 147,LHI -32 159,Lindeman -20 149,Lord_Howe -32 159,Melbourne -38 145,NSW -34 151,North -12 131,Perth -32 116,Queensland -27 153,South -35 139,Sydney -34 151,Tasmania -43 147,Victoria -38 145,West -32 116,Yancowinna -32 141;Brazil:Acre -10 -68,DeNoronha -4 -32,East -24 -47,West -3 -60;Canada:Atlantic 45 -64,Central 50 -97,Eastern 44 -79,Mountain 54 -113,Newfoundland 48 -53,Pacific 49 -123,Saskatchewan 50 -105,Yukon 61 -135;Chile:Continental -33 -71,EasterIsland -27 -109;Europe:Amsterdam 52 5,Andorra 43 2,Astrakhan 46 48,Athens 38 24,Belfast 52 0,Belgrade 45 21,Berlin 53 13,Bratislava 48 17,Brussels 51 4,Bucharest 44 26,Budapest 48 19,Busingen 48 9,Chisinau 47 29,Copenhagen 56 13,Dublin 53 -6,Gibraltar 36 -5,Guernsey 49 -3,Helsinki 60 25,Isle_of_Man 54 -4,Istanbul 41 29,Jersey 49 -2,Kaliningrad 55 21,Kiev 50 31,Kirov 59 50,Kyiv 50 31,Lisbon 39 -9,Ljubljana 46 15,London 52 0,Luxembourg 50 6,Madrid 40 -4,Malta 36 15,Mariehamn 60 20,Minsk 54 28,Monaco 44 7,Moscow 56 38,Nicosia 35 33,Oslo 60 11,Paris 49 2,Podgorica 42 19,Prague 50 14,Riga 57 24,Rome 42 12,Samara 53 50,San_Marino 44 12,Sarajevo 44 18,Saratov 52 46,Simferopol 45 34,Skopje 42 21,Sofia 43 23,Stockholm 59 18,Tallinn 59 25,Tirane 41 20,Tiraspol 47 29,Ulyanovsk 54 48,Uzhgorod 50 31,Vaduz 47 10,Vatican 42 12,Vienna 48 16,Vilnius 55 25,Volgograd 49 44,Warsaw 52 21,Zagreb 46 16,Zaporozhye 50 31,Zurich 47 9;Indian:Antananarivo -19 48,Chagos -7 72,Christmas -10 106,Cocos -12 97,Comoro -12 43,Kerguelen -49 70,Mahe -5 55,Maldives 4 74,Mauritius -20 58,Mayotte -13 45,Reunion -21 55;Mexico:BajaNorte 33 -117,BajaSur 23 -106,General 19 -99;Pacific:Apia -14 -172,Auckland -37 175,Bougainville -6 156,Chatham -44 -177,Chuuk 7 152,Easter -27 -109,Efate -18 168,Enderbury -3 -172,Fakaofo -9 -171,Fiji -18 178,Funafuti -9 179,Galapagos -1 -90,Gambier -23 -135,Guadalcanal -10 160,Guam 13 145,Honolulu 21 -158,Johnston 21 -158,Kanton -3 -172,Kiritimati 2 -157,Kosrae 5 163,Kwajalein 9 167,Majuro 7 171,Marquesas -9 -139,Midway 28 -177,Nauru -1 167,Niue -19 -170,Norfolk -29 168,Noumea -22 166,Pago_Pago -14 -171,Palau 7 134,Pitcairn -25 -130,Pohnpei 7 158,Ponape 7 158,Port_Moresby -9 147,Rarotonga -21 -160,Saipan 15 146,Samoa -14 -171,Tahiti -18 -150,Tarawa 1 173,Tongatapu -21 -175,Truk 7 152,Wake 19 167,Wallis -13 -176,Yap 7 152;US:Alaska 61 -150,Aleutian 52 -177,Arizona 33 -112,Central 42 -88,East-Indiana 40 -86,Eastern 41 -74,Hawaii 21 -158,Indiana-Starke 41 -87,Michigan 42 -83,Mountain 40 -105,Pacific 34 -118,Samoa -14 -171";
+/* wx-zones:end */
+let wxZoneMap = null;
+function wxZone(zone) {
+  if (!wxZoneMap) {
+    wxZoneMap = new Map();
+    for (const group of WX_ZONES.split(";")) {
+      const cut = group.indexOf(":"), region = group.slice(0, cut);
+      for (const row of group.slice(cut + 1).split(",")) {
+        const [city, lat, lon] = row.split(" ");
+        wxZoneMap.set(region + "/" + city, [Number(lat), Number(lon)]);
+      }
+    }
+  }
+  return wxZoneMap.get(zone) || null;
+}
+/* The offset from UTC, in minutes east, that a zone keeps at an instant: by its name where the
+   browser knows it, else the page's own clock (which is in that zone). */
+function wxOffset(zone, at) {
+  const m = /^([+-])(\d\d):?(\d\d)$/.exec(zone);
+  if (m) return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
+  try {
+    const part = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "longOffset" })
+      .formatToParts(at).find((x) => x.type === "timeZoneName");
+    const o = /^GMT(?:([+-])(\d\d):(\d\d))?$/.exec(part ? part.value : "");
+    if (o) return o[1] ? (o[1] === "-" ? -1 : 1) * (Number(o[2]) * 60 + Number(o[3])) : 0;
+  } catch (_) { /* a zone this browser cannot name: its own clock below */ }
+  return -at.getTimezoneOffset();
+}
+const WX_UTC = /^(Etc\/)?(UTC|UCT|GMT|GMT[+-]?0|Greenwich|Universal|Zulu)$|^[+-]00:?00$/;
+function wxPlace(zone) {
+  if (zone === undefined) {
+    try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (_) { zone = ""; }
+  }
+  if (WX_UTC.test(zone)) return { lat: 51, lon: 0, zone, from: "zone" };
+  const hit = wxZone(zone);
+  if (hit) return { lat: hit[0], lon: hit[1], zone, from: "zone" };
+  /* standard time is the lesser of January's offset and July's, in either hemisphere, so summer
+     time does not move the guess by 15°; and summer in January is the south */
+  const y = new Date().getFullYear(), jan = wxOffset(zone, new Date(y, 0, 1)), jul = wxOffset(zone, new Date(y, 6, 1));
+  const lon = ((((Math.min(jan, jul) / 4) % 360) + 540) % 360) - 180;
+  return { lat: jan > jul ? -35 : 40, lon: Math.round(lon), zone, from: "offset" };
+}
+const fmtPlace = (p) => Math.abs(p.lat) + "°" + (p.lat < 0 ? "S" : "N") + " " + Math.abs(p.lon) + "°" + (p.lon < 0 ? "W" : "E");
+/* wx-place:end */
+
+/* The view's code: one script, asked for once, the first time the theme wants a view. It leaves
+   window.WEATHER = { makeWeather } and nothing else. A file that is missing, fails to load or brings
+   no makeWeather counts as a browser that cannot draw the view: the glass page, as for a null. */
+let wxMake = null;                 // null: not in yet; then the makeWeather it brought, or false
+let wxAsked = false;
+function wxLoad() {
+  if (wxAsked) return;
+  wxAsked = true;
+  const done = (make) => { wxMake = make; weatherMotion(); };
+  const el = document.createElement("script");
+  el.src = "weather/wx.js";
+  el.onload = () => done(window.WEATHER && typeof window.WEATHER.makeWeather === "function" ? window.WEATHER.makeWeather : false);
+  el.onerror = () => done(false);
+  document.head.appendChild(el);
+}
+
 /* ═════════════════════════ settings ═════════════════════════
    How the page looks, never what it measures: the theme, and each
    theme's own — Glass's fluid, its speed, the shake, the moving
@@ -8215,8 +8845,11 @@ function trainMotion() {
    of it falls, how fast, and its two colours; whether Train's scene
    moves, and its own shake, which shares Glass's switch; and
    Neumorphism's clay, light, dark or as the system is, and its shake
-   and typeface, which share Glass's; Broadsheet's boiling ink; and
-   the tremble of Gauges' needle, which shares the shake's switch. One
+   and typeface, which share Glass's; Broadsheet's boiling ink; the
+   tremble of Gauges' needle, which shares the shake's switch; and
+   Weather's: whether its view moves, which shares Train's switch, its
+   shake, which shares Glass's, whether its sky follows the real time
+   or holds a fixed late afternoon, and how finely it is drawn. One
    belongs to no theme:
    whether the cost strip is shown. The
    panel lists only the settings of the theme on screen, and that one;
@@ -8231,11 +8864,14 @@ function trainMotion() {
 const PREFS_KEY = "ccquota.prefs";
 const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true,
                         rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", scene: true, cost: true, font: "system",
-                        clay: "system", boil: true };
+                        clay: "system", boil: true, realTime: true, wxQuality: "auto" };
 /* key, label, and the glyphs on its swatch */
 const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""], ["neumorphism", "Neumorphism", ""],
-                ["broadsheet", "Broadsheet", ""], ["gauges", "Gauges", ""]];
+                ["broadsheet", "Broadsheet", ""], ["gauges", "Gauges", ""], ["weather", "Weather", ""]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
+/* how finely Weather's view is drawn: Auto finer or coarser to keep it smooth, High in full on the
+   faster graphics card where there is one, Low coarser and at half the frame rate */
+const QUALITIES = [["auto", "Auto"], ["high", "High"], ["low", "Low"]];
 /* Neumorphism's clay: light, dark, or whichever the system asks for, followed as it changes. Under
    forced colours the ground is the system's, so the clay follows the system's palette whatever
    was chosen, and the choice returns when they are off. */
@@ -8248,12 +8884,14 @@ const FONTS = [["system", "System", "--font-system"], ["source-serif-4", "Source
                ["noto-sans", "Noto Sans", "--font-noto"], ["fira-code", "Fira Code", "--font-code"]];
 /* key, label, hint, and the themes it belongs to, or "all" */
 const SWITCHES = [["fluid", "Fluid simulation", "Moving dye inside the ring", "glass"],
-                  ["shake", "Vibration", "The ring shakes while over pace", "glass train neumorphism gauges"],
+                  ["shake", "Vibration", "The ring shakes while over pace", "glass train neumorphism gauges weather"],
                   ["sky", "Animated background", "The colour drifting behind the glass", "glass"],
                   ["rain", "Rain", "Digits, letters and signs falling behind the page", "matrix"],
-                  ["scene", "Moving scene", "The train, its smoke and the fire", "train"],
+                  ["scene", "Moving scene", "The train, its smoke and the fire", "train weather"],
                   ["cost", "Local token accounting", "The cost strip below the limit", "all"],
-                  ["boil", "Boiling ink", "The lines and letters tremble, as drawn ones do", "broadsheet"]];
+                  ["boil", "Boiling ink", "The lines and letters tremble, as drawn ones do", "broadsheet"],
+                  /* at the end, so the indices above hold; its hint is written with the place (syncPrefs) */
+                  ["realTime", "Follow real time", "The sun, the moon and the stars as they are now", "weather"]];
 /* The rain's sliders: key, label, the least, the most and the step, then its value as shown and as
    read aloud. Amount is the share of the columns falling at once; Speed, of MX.hz steps a second. */
 const SLIDERS = [["rainAmount", "Amount", 5, 100, 5, (v) => v + "%", (v) => v + " percent of the columns falling"],
@@ -8264,7 +8902,8 @@ const COLOURS = [["rain1", "Colour #1", "The rain"],
 const isHex = (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
 /* a slider's value put on its steps, without the dust of binary fractions */
 const onStep = (v, lo, hi, step) => Number((lo + Math.round((clamp(v, lo, hi) - lo) / step) * step).toFixed(2));
-/* the face in force: Matrix, Broadsheet and Gauges set their own, and the reader's choice waits for the theme to change back */
+/* the face in force: Matrix, Broadsheet and Gauges set their own, and the reader's choice waits for the theme to change back
+   (Train's and Weather's go with their scenes, in applyPrefs, so a browser that cannot run one keeps the reader's) */
 const faceOf = (p) => (p.theme === "matrix" ? "fira-code" : p.theme === "broadsheet" ? "caveat" : p.theme === "gauges" ? "b612" : p.font);
 
 /* Never trusts the stored copy further than it can be checked: a stale or hand-edited entry
@@ -8277,6 +8916,7 @@ function loadPrefs() {
   for (const [k] of SWITCHES) if (typeof saved[k] === "boolean") p[k] = saved[k];
   if (SPEEDS.some(([v]) => v === saved.speed)) p.speed = saved.speed;
   if (CLAYS.some(([k]) => k === saved.clay)) p.clay = saved.clay;
+  if (QUALITIES.some(([k]) => k === saved.wxQuality)) p.wxQuality = saved.wxQuality;
   for (const [k, , lo, hi, step] of SLIDERS) {
     if (typeof saved[k] === "number" && saved[k] >= lo && saved[k] <= hi) p[k] = onStep(saved[k], lo, hi, step);
   }
@@ -8319,7 +8959,7 @@ function buildPrefs() {
       <div class="picks" role="radiogroup" aria-labelledby="ph-theme">${THEMES.map(([k, label, sample]) =>
         `<label class="pick" data-pick="${k}"><input type="radio" name="theme" value="${k}"><span class="swatch" aria-hidden="true">${sample}</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-motion" data-for="glass matrix train broadsheet gauges">
+    <div class="psec" role="group" aria-labelledby="ph-motion" data-for="glass matrix train broadsheet gauges weather">
       <div class="phead" id="ph-motion">Motion</div>
       ${sw(SWITCHES[0])}
       <div class="prow sub" id="prefsSpeed" data-for="glass">
@@ -8335,7 +8975,16 @@ function buildPrefs() {
       ${SLIDERS.map(slider).join("")}
       <p class="pnote" id="prefsStill" hidden>Your system asks for reduced motion, so the page stays still whatever these say.</p>
     </div>
-    <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train broadsheet gauges">
+    <div class="psec" role="group" aria-labelledby="ph-scene" data-for="weather">
+      <div class="phead" id="ph-scene">Scene</div>
+      ${sw(SWITCHES[7])}
+      <div class="prow stack" data-for="weather">
+        <span class="ptext"><span class="pname" id="pn-wxq">Quality</span><span class="phint">Auto draws the view finer or coarser to keep it smooth. High draws it in full, on the faster graphics card where there is one.</span></span>
+        <div class="seg" role="radiogroup" aria-labelledby="pn-wxq">${QUALITIES.map(([k, label]) =>
+          `<label><input type="radio" name="wxQuality" value="${k}"><span>${label}</span></label>`).join("")}</div>
+      </div>
+    </div>
+    <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train broadsheet gauges weather">
       <div class="phead" id="ph-page">Page</div>
       ${sw(SWITCHES[5])}
     </div>
@@ -8348,7 +8997,7 @@ function buildPrefs() {
       <div class="picks" role="radiogroup" aria-labelledby="ph-font">${FONTS.map(([k, label, v]) =>
         `<label class="pick"><input type="radio" name="font" value="${k}"><span class="fs" style="font-family:var(${v})">Aa 42</span><span class="fn">${label}</span></label>`).join("")}</div>
     </div>
-    <div class="pfoot" data-for="glass matrix train broadsheet gauges"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
+    <div class="pfoot" data-for="glass matrix train broadsheet gauges weather"><span>Saved in this browser</span><button class="preset" id="prefsReset" type="button">Reset to defaults</button></div>`;
 
   /* a slider or a colour, read into the settings: put on its steps, or refused if it is no colour;
      false for any other control */
@@ -8364,6 +9013,7 @@ function buildPrefs() {
     else if (t.name === "speed") PREFS.speed = Number(t.value);
     else if (t.name === "font") PREFS.font = t.value;
     else if (t.name === "theme") PREFS.theme = t.value;
+    else if (t.name === "wxQuality" && QUALITIES.some(([k]) => k === t.value)) PREFS.wxQuality = t.value;
     else if (!knob(t)) return;
     savePrefs();
     showPrefs();
@@ -8432,6 +9082,7 @@ function syncPrefs() {
   for (const [k] of SWITCHES) panel.querySelector(`input[name="${k}"]`).checked = PREFS[k];
   panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; });
   panel.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === PREFS.font; });
+  panel.querySelectorAll('input[name="wxQuality"]').forEach((r) => { r.checked = r.value === PREFS.wxQuality; });
   /* a value is written only when it differs, so a slider being dragged or an open picker is left alone */
   for (const [k, , lo, hi, , show, say] of SLIDERS) {
     const r = panel.querySelector(`input[name="${k}"]`), v = String(PREFS[k]);
@@ -8449,13 +9100,22 @@ function syncPrefs() {
   /* Only the settings of the theme on screen are listed — the glass page's when a theme cannot
      run, whatever was chosen — the fluid's speed only while there is a fluid to speed up,
      and the rain's amount and speed only while the rain is on. */
-  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : neuOn() ? "neumorphism" : paperOn() ? "broadsheet" : gaugesOn() ? "gauges" : "glass";
+  const shown = tuiOn() ? "matrix" : trainOn() ? "train" : neuOn() ? "neumorphism" : paperOn() ? "broadsheet" : gaugesOn() ? "gauges"
+    : weatherOn() ? "weather" : "glass";
   panel.querySelectorAll("[data-for]").forEach((el) => {
     el.hidden = el.dataset.for !== "all" && !el.dataset.for.split(" ").includes(shown);
   });
   /* one switch, but under Gauges it is the needle that trembles */
   panel.querySelector('input[name="shake"]').closest(".prow").querySelector(".phint").textContent =
     gaugesOn() ? "The needle trembles while over pace" : SWITCHES[1][2];
+  /* and under Weather the moving scene is the view's, and the real time is placed from the zone */
+  panel.querySelector('input[name="scene"]').closest(".prow").querySelector(".phint").textContent =
+    weatherOn() ? "The clouds, the sea and the rain" : SWITCHES[4][2];
+  if (weatherOn()) {
+    const at = wxPlace();
+    panel.querySelector('input[name="realTime"]').closest(".prow").querySelector(".phint").textContent =
+      SWITCHES[7][2] + ", near " + fmtPlace(at) + (at.from === "zone" ? ", placed from your time zone" : ", guessed from the UTC offset");
+  }
   if (!PREFS.fluid) $("prefsSpeed").hidden = true;
   if (!PREFS.rain) panel.querySelectorAll("[data-rain]").forEach((el) => { el.hidden = true; });
   $("prefsStill").hidden = !REDUCE.matches;
@@ -8483,9 +9143,11 @@ function applyPrefs() {
   /* the terminal and the scene first: whether they run decides the fluid, the wording and the controls */
   matrixMotion();
   trainMotion();
+  weatherMotion();
   /* the scene's face goes with the scene, so a browser that cannot run it keeps the reader's own */
   if (trainOn()) root.dataset.font = "jersey-10";
-  if (PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn() && !gaugesOn()) startFluids();
+  if (weatherOn()) root.dataset.font = "noto-sans";
+  if (PREFS.fluid && !tuiOn() && !trainOn() && !neuOn() && !paperOn() && !gaugesOn() && !weatherOn()) startFluids();
   fluidMotion();
   boilMotion();
   if (!gaugesOn()) gzRest();
@@ -8527,7 +9189,7 @@ addEventListener("storage", (e) => {
   PREFS = loadPrefs();
   showPrefs();
 });
-if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); boilMotion(); gzMotion(); gzStill(); syncPrefs(); });
+if (REDUCE.addEventListener) REDUCE.addEventListener("change", () => { fluidMotion(); matrixMotion(); trainMotion(); weatherMotion(); boilMotion(); gzMotion(); gzStill(); syncPrefs(); });
 /* the system turning dark or light turns a clay that follows it, at once */
 if (DARK.addEventListener) DARK.addEventListener("change", () => { if (PREFS.clay === "system" || FORCED.matches) showPrefs(); });
 if (FORCED.addEventListener) FORCED.addEventListener("change", () => showPrefs());
@@ -8598,6 +9260,25 @@ buildGraphSpans();
 applyPrefs();   // before the first render, so the first frame is already in the chosen look
 $("detailOuter").inert = true;
 render();
+/* Weather's view is asked for, and makes its context, only once the numbers are on screen: the first
+   paint with words in it shown (or 1.5 s, where the browser does not report it), the typefaces in,
+   then the browser idle (or soon after, where it cannot say) */
+{
+  let started = false;
+  const go = () => { wxPainted = true; if (PREFS.theme === "weather") showPrefs(); };
+  const idle = () => { if ("requestIdleCallback" in window) requestIdleCallback(go, { timeout: 300 }); else setTimeout(go, 0); };
+  const start = () => {
+    if (started) return;
+    started = true;
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(idle, idle); else idle();
+  };
+  try {
+    new PerformanceObserver((list, seen) => {
+      if (list.getEntriesByName("first-contentful-paint").length) { seen.disconnect(); start(); }
+    }).observe({ type: "paint", buffered: true });
+  } catch (_) { /* no paint timing: the timer below */ }
+  setTimeout(start, 1500);
+}
 
 function apply(next) {
   if (!next || !Array.isArray(next.limits)) return;
@@ -8674,6 +9355,7 @@ addEventListener("resize", () => {
     for (const key of ORDER) if (FLUIDS[key]) FLUIDS[key].resize();
     matrixMotion();
     if (train) train.resize();
+    if (weather) weather.resize();
     if (prefsOpen()) panelRoom();
     placeSeam();
   });

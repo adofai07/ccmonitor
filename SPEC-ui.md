@@ -9,9 +9,10 @@ not a wall display, not a tiny widget. Dense enough to be useful at arm's length
 
 ## Theme
 
-Six themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, **Train**, a
+Seven themes, chosen in *Settings*: **Glass**, the default, **Matrix**, a terminal, **Train**, a
 pixel scene, **Neumorphism**, soft clay, light or dark, **Broadsheet**, a newspaper written and
-drawn by hand, and **Gauges**, a motorcar's instrument panel.
+drawn by hand, **Gauges**, a motorcar's instrument panel, and **Weather**, the sea and the sky
+through a window in the rain.
 
 **Glass: dark glass over an animated gradient.**
 
@@ -20,8 +21,8 @@ drawn by hand, and **Gauges**, a motorcar's instrument panel.
 - Motion is confined to the backdrop, the ring's interior (see *Ring interior* below) and
   one alarm, the shake of the ring while it is over pace (see *Over pace*). The arc, tick and
   chart otherwise only move when the data moves. Each of the three can be switched off in
-  *Settings*. (Matrix, Train and Broadsheet have motion of their own, Neumorphism only the
-  shake and Gauges only its needle's; see below.)
+  *Settings*. (Matrix, Train, Broadsheet and Weather have motion of their own, Neumorphism
+  only the shake and Gauges only its needle's; see below.)
 - `prefers-reduced-motion` freezes the gradient, holds the ring's fluid as a still frame and
   stops the shake.
 
@@ -438,6 +439,143 @@ the paint in B612. Its palette is fixed, and only an instrument's own convention
   and the recorder's card in its chrome frame, its lamps' light at the rim only while the dial's is
   lit.
 
+### Weather
+
+The sea and the sky through a window, from a room some metres above the water at the head of a
+rocky cove. Rain beads on the pane and runs down it, bending the view behind it, and the pane mists
+over while the reading is held. The weather is the reading. The sky, the clouds, the sea and the
+rain are drawn on the graphics card as the page runs, from noise and from the physics of light: the
+sky and its haze from the sun's light scattered through the air, the clouds as volumes the light is
+marched through, the sea as a field of waves raised by the wind and lit by the sky, and the drops
+on the glass bending a blurred copy of the view. The code that draws it is a file of its own, which
+the page loads from its own server the first time Weather is shown, so no other theme loads it. The
+cove is built from photographed models of real cliffs, rocks, a pier and an old ship, given to the
+public domain by Poly Haven and bundled with the dashboard. The page fetches them from its own
+server and nowhere else, and shows the open sea alone if they are missing.
+
+The page is the same page as Glass, so it says the same things and the keyboard and screen readers
+work the same way. It is reset as a game's display over the view: no panels and no frosted glass,
+only words and drawings in white with soft dark shadows, set in Noto Sans whatever the typeface
+says, and a dark pool under each group of them. The header and the limit stand at the top of the
+window, over the sky, and the cost strip at its foot, over the near sea, so the horizon, the low
+sun and the far sea are left clear between them. Opening the detail pushes the cost strip down;
+in a short window the page scrolls over the view, which stays where it is.
+
+**The sky is the real one.** The sun and the moon stand where they are for the viewer's date and
+time, the moon in its phase and the stars turned to the hour, so dawn, day, dusk and night follow
+the clock. The window looks west-south-west (west-north-west in the southern hemisphere and due
+west near the equator), so the afternoon sun and most sunsets are over the sea. The place is
+estimated from the time zone the browser reports, through a table of each zone's principal city
+from the time zone database, to the nearest degree, or from the zone's UTC offset at 40°N (35°S
+where its summer time falls in January) when it is not in the table; no permission is asked and
+nothing leaves the page. *Follow real time*, on by
+default, can hold a fixed late afternoon instead, the sun 8° up and a little right of the middle of
+the view.
+
+**The cove holds still while the weather moves over it.** Two headlands frame the window, the
+higher on the left, and between them the horizon stays open where the sun goes down for most of
+the year. An old ship lies at anchor left of the middle, a red buoy marks the channel, a wooden
+pier runs out from the near right, and a reef right of the middle breaks the swell. The ship swings
+a few degrees on its moorings and rides the waves, and the buoy rocks; neither ever leaves its
+place. The swell breaks white over the reef and round the rocks, more as the wind rises, and in the
+storm the spray goes up the cliffs' feet. Rain darkens the rock and the wood and leaves water
+standing on the flat tops; it dries within two minutes of the rain stopping, and while a reading
+holds in the rain the cove stays as wet as that rain makes it. The plants on the tops bend with the
+wind. The low sun throws the cliffs' shadows across the water, the cove is mirrored in a calm sea
+and broken up in a rough one, and at night the ship shows its anchor light and a lantern burns at
+the pier's end.
+
+**The weather turns on the served cut points**, so it lands on the marks the ring prints:
+
+| reading | weather |
+| --- | --- |
+| 0 | fair: a few small cumulus and strands of cirrus, a light air, a calm sea under a long low swell, the horizon sharp |
+| up to the warning floor (70%) | the cumulus build in from the sea and gather into a broken grey sky, and the breeze freshens with the reading to force 5 and breaks the first whitecaps; it stays dry |
+| at the warning floor | the cloud closes and the rain begins: the first drops strike the pane and bead on it |
+| from there to the band's first quarter point (77.5%) | light rain; the drops gather and grow, and the wind reaches force 6 |
+| from the first quarter point | rain under a lowering grey: the drops run down the glass in trails, the rain shows in streaks outside, and the sea runs in long white crests |
+| from the second (85%) | heavy rain: the glass streams, the horizon goes grey into the rain, a near gale blows the foam in streaks |
+| from the third (92.5%) | a squall: the cloud towers into thunderheads with rain hanging from them in curtains, a gale, and lightning flickering inside the cloud far out |
+| at critical, where it stands clear of the cap | a thunderstorm overhead: bolts strike the sea in a strong gale |
+| at the cap (100%) | the storm at its height: lightning every few seconds, a storm-force wind, the sea white and the horizon gone |
+
+The hour never changes the weather. Night only darkens it: the moon and the stars show only
+through gaps in the cloud, a town's glow out of sight lights the undersides of a low deck, and
+lightning lights the cloud from inside. A reading past the cap is the cap. Critical counts only
+where it stands more than 1.5 points clear of the cap, as the ring draws it; on the tiers where it
+does not, the storm builds from the third quarter point straight to the cap. Only the percent sets
+the weather: over pace the ring shakes as on the glass, and the sky says nothing of it, since a
+fast burn at 9% is the ring's to say and not a storm.
+
+**No change happens at once.** Nothing in the view follows a reading directly. The scene keeps its
+own reading, which walks after the real one at 0.6 points a second, and the cloud, the wind and the
+sea follow it, so however far a reading jumps the weather passes through everything between, in
+order; from 0 to the cap takes under three minutes. The rain sets in over 20 s when the scene's
+reading reaches the warning floor and eases off over 20 s when it falls below it, and the drops
+left on the pane run off and dry within a minute and a half; the lightning comes and goes over
+30 s at the third quarter point. A stronger wind raises the waves already running, and a weaker one
+lays them; the sea is never swapped for another.
+
+- **The first reading is where the scene starts,** however late it comes: no view is drawn before
+  it, and the window stays dark behind the page. The view fades up already in that reading's
+  weather, the pane already as wet as that rain leaves it, so a page opened at 95% opens in the
+  squall.
+- **A held reading** is walked to like any other, and the pane mists over from inside in 20 s,
+  the view softening behind it to light and shapes; it clears over 30 s when the feed comes back.
+  A reading lost after one was seen leaves the weather as it was, misted.
+- **Going back.** A reading that falls, as one does when the week resets, walks back the same way:
+  the lightning goes, the rain eases and stops, the pane drains, the cloud breaks and the sea goes
+  down with the wind.
+- **It holds at any reading.** Every weather is a loop: the clouds drift in from the sea and pass,
+  the rain keeps falling at its rate and the pane sheds as many drops as it takes, and the waves
+  roll. Nothing fills, empties or travels; after three days at 60% it is the same broken sky and
+  fresh breeze as after three minutes. Only the sun, the moon and the stars move, as the real ones
+  do.
+- **Its palette is its own.** The words, the rules, the buttons, the arc and the chart's lines
+  are white at every reading, and the view does not follow the ring: the weather shows the band.
+  The scale is printed on the ring's dark casing as an instrument's is, from the served
+  thresholds: the warning band in quarters each painted a shade deeper, yellow, amber, orange and
+  red-orange, a red zone from critical where it stands clear of the cap, and a red line at the
+  cap. The chart prints the warning floor in the same yellow and the cap in the red. The pace
+  channel is the one colour that moves: a magenta no zone uses, dotted while it is headroom and
+  solid, heavier the further the reading has overrun the clock. None of it is the accent ramp.
+- **The view never hides a reading.** Each group of words stands on a dark pool, deeper the
+  brighter the view behind it, which the scene measures twice a second, leaving lightning out so a
+  flash does not make the page pulse; from the band's third quarter, where the strikes begin, each
+  pool stands a step deeper, so a flash finds the words already covered. Every word has a dark
+  shadow hugging its glyphs. The ring stands on its casing, opaque under the track, and
+  translucent in the well, where the numeral sits; the chart's lines are edged in the same dark.
+  The faintest text holds 4.5:1 at noon against a white cloud, over the sun's path on the water,
+  in a lightning flash and while a reading is held, when the labels step back to the faintest ink
+  rather than fading further. Nothing blurs the view behind the page, which would mean blurring it
+  again every frame.
+- **The ring** is drawn as on the glass, on its casing: the white tick, the overshoot span, the
+  well flooding at the cap, the dashed rim while held. There is no fluid and no bloom. It shakes
+  while over pace as it does in Glass, by the same rule and on the same switch.
+- **Lightning never strobes.** A strike lights the sky once, rising and fading in under a second;
+  only the thin channel of a bolt may flicker. Strikes are at least two and a half seconds apart,
+  so no second holds more than one flash.
+- *Moving scene*, shared with Train, off stops the clouds, the sea and the rain where they stand,
+  and `prefers-reduced-motion` does the same. A still view cannot walk, so it dissolves into the
+  next over 4 s when a reading moves the weather or the mist comes or goes, and, while it follows
+  real time, as the sun moves; a still has no lightning. A hidden tab stops the view and the walk
+  picks up where it was; a tab coming back after a minute or more dissolves over two seconds to
+  the sky as it now is. A window that is visible but not focused is drawn at half the frame rate.
+- *Quality*: Auto, the default, draws the view finer or coarser to keep it smooth; High draws it
+  in full whatever it costs, on the faster graphics card where there is one; Low draws it coarser
+  and at half the frame rate. None of them changes what is shown.
+- Forced colours take the view away: the window is the system's ground, and the page is drawn in
+  the system's colours, the arc, the fitted run and the tick highlighted.
+- Settings lists the theme, the vibration, the moving scene, *Follow real time*, the quality and
+  the cost strip. A browser that cannot draw the view keeps the glass page, its settings and the
+  reader's own typeface: one with no WebGL 2, or no float targets it can draw to, or only a
+  software renderer in place of a graphics card, or one whose graphics context is lost and does
+  not come back; so does a page whose view's code is missing or does not load. One too slow to draw
+  it moving shows it still, as reduced motion does.
+- The saved graph is a frame of the view, darkened under the chart and the figures, which are drawn
+  over it in the page's white and the printed scale's paints; without a view to take, a night-blue
+  plate.
+
 ## Primary view — the weekly limit, a ring and its chart
 
 ```
@@ -515,7 +653,8 @@ Shape of the rule (values pending the probe):
 Colorblind safety: the bands must differ in **lightness** as well as hue, and the pace
 marker carries the same warning independent of color. Neumorphism's light clay reads the same
 ladder in darker inks whose lightness still falls with danger; its dark clay reads the ladder as it
-is (see *Neumorphism*).
+is (see *Neumorphism*). Weather prints the scale on the ring and keeps the arc white; see
+*Weather*.
 
 ## Dormant limits
 
@@ -561,8 +700,8 @@ DOWNLOAD THE GRAPH   [1h] [12h] [1d] [3d] [7d]   saved quota-week-7d-2026-11-04-
   was saved. On it: the limit's name, the span and its dates, the reading now and its reset, the
   cap's time and how far off it is, the chart, and the burn rate as the chart's caption gives it.
 - The chart is the page's own, laid out again at the picture's size, so the picture is in the
-  theme on screen: its colours, its type, in Train its pixels and stepped corners, and in
-  Neumorphism its clay. A span of
+  theme on screen: its colours, its type, in Train its pixels and stepped corners, in
+  Neumorphism its clay, and in Weather a frame of the view. A span of
   a day or more marks each midnight with the name of the day, wherever the name, measured in its
   own face, clears the axis' two ends and the other names.
 - The axis always covers the whole span. The server keeps about twenty days of readings (see the
@@ -591,15 +730,16 @@ The panel lists the theme, then only the settings of the theme on screen, and th
 belongs to no theme; nothing is shown greyed out. Under Neumorphism it lists only the theme: that
 theme's settings, and the cost strip's, are keys and switches on the page itself (see
 *Neumorphism*), so there it has no reset either. Under Broadsheet it lists the theme, the boil and
-the cost strip, and under Gauges the theme, the vibration and the cost strip.
+the cost strip, under Gauges the theme, the vibration and the cost strip, and under Weather the
+theme, the vibration, the moving scene, *Follow real time*, the quality and the cost strip.
 
 | theme | setting | choices | default |
 | --- | --- | --- | --- |
-| all | Theme | Glass, Matrix, Train, Neumorphism, Broadsheet, Gauges | Glass |
+| all | Theme | Glass, Matrix, Train, Neumorphism, Broadsheet, Gauges, Weather | Glass |
 | Neumorphism, on the page | Clay | Light, Dark, System — System follows the system's dark mode, as it changes | System |
 | Glass | Fluid simulation | on / off — off shows the plain well and stops the GPU loop | on |
 | Glass | Speed | slow / normal / fast (0.25×, 0.5×, 1×) — listed only while the fluid is on | normal |
-| Glass, Train, Gauges; Neumorphism on the page | Vibration | on / off — the shake of a ring over pace; in Gauges the needle's tremble | on |
+| Glass, Train, Gauges, Weather; Neumorphism on the page | Vibration | on / off — the shake of a ring over pace; in Gauges the needle's tremble | on |
 | Glass | Animated background | on / off — off pauses the drifting sky where it stands | on |
 | Glass; Neumorphism on the page | Typeface | System, Source Serif 4, Noto Sans, Fira Code | System |
 | Matrix | Rain | on / off — off stops the rain where it stands | on |
@@ -607,7 +747,9 @@ the cost strip, and under Gauges the theme, the vibration and the cost strip.
 | Matrix | Speed | slider, 0.25×–2.5× of 22 steps a second — listed only while the rain is on | 1× |
 | Matrix | Colour #1 | any colour — the rain; its heads are the colour lit toward white, less so the darker it is | green `#00ff66` |
 | Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
-| Train | Moving scene | on / off — off stops the train, its smoke, the fire and the station clock where they stand | on |
+| Train, Weather | Moving scene | on / off — off stops the train, its smoke, the fire and the station clock where they stand; in Weather the clouds, the sea and the rain, as a still view that still follows the sky | on |
+| Weather | Follow real time | on / off — the sun, the moon and the stars as they are now, near the place the time zone gives; off holds a fixed late afternoon | on |
+| Weather | Quality | Auto, High, Low — Auto draws the view finer or coarser to keep it smooth; High draws it in full, on the faster graphics card where there is one; Low draws it coarser, at half the frame rate | Auto |
 | Broadsheet | Boiling ink | on / off — off holds the ink still, on the plain drawing | on |
 | all; Neumorphism on the page | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
 
@@ -622,10 +764,10 @@ everything, and the panel (in Neumorphism, the vibration's plate) says so while 
 The three named typefaces are bundled with the dashboard and served by it, never fetched from a
 font service. Fira Code also takes over the figures, which are otherwise set in the system's
 monospaced face. Matrix is set in Fira Code, Train in Jersey 10, Broadsheet in Caveat, a
-handwriting face, and Gauges in B612, a face drawn for aircraft cockpits, whatever the typeface
-says; the reader's own choice is kept, and returns with Glass or Neumorphism. Jersey 10 is not
-offered as a choice: it is a bitmap face, set at a few fixed sizes that the rest of the page does
-not keep to.
+handwriting face, Gauges in B612, a face drawn for aircraft cockpits, and Weather in Noto Sans,
+whatever the typeface says; the reader's own choice is kept, and returns with Glass or
+Neumorphism. Jersey 10 is not offered as a choice: it is a bitmap face, set at a few fixed sizes
+that the rest of the page does not keep to.
 
 The page writes its times, weekdays, dates and amounts in English, on a 24-hour clock with the day
 before the month (British English), whatever the browser's language. So it reads the same

@@ -1,0 +1,1795 @@
+{
+ "v": 1,
+ "generated": "2026-11-20",
+ "source": "Poly Haven (polyhaven.com), CC0 1.0; processed by the assets workflow (pipeline.mjs)",
+ "format": {
+  "geometry": "GLB 2.0; KHR_mesh_quantization: POSITION int16 normalized, NORMAL int8 normalized, TEXCOORD_0 uint16 normalized (float32 when UVs leave [0,1]), interleaved with byteStride 16 (20 with float UVs); uint16 indices; positions are dequantized by the node translation + uniform scale; variant assets add a parent node holding the source placement.",
+  "textures": "EXT_texture_webp (required), external files relative to the GLB, default folder 1k/ (replace with 2k/ or 512/). basecolor is sRGB (alpha = cut-out for MASK), normal is tangent-space OpenGL +Y (negate green in a dP/dv cotangent frame with glTF UVs), orm is R=AO G=roughness B=metalness (linear). normalTexture.scale is the source strength (default 1); maps marked normalFlippedY had their green inverted at build time because the source map was green-down. No tangents: derive the frame from derivatives.",
+  "forbidden": "no Draco, no EXT_meshopt_compression, no KHR_texture_basisu",
+  "lod": "LOD1 ~25% and LOD2 ~6% of LOD0 triangles; err* = distance from 20k sampled source vertices to the LOD surface (capped at 5% of the extent: missingFrac counts samples at the cap, i.e. removed parts such as ropes or pebbles); px1At1080M = distance where the p99 error is one pixel at 1080p with a 50 degree vertical FOV."
+ },
+ "models": [
+  {
+   "id": "coastal_cliff_01",
+   "name": "Coastal Cliff 01",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coastal_cliff_01",
+   "kind": "cliff",
+   "bboxM": {
+    "min": [
+     -45.056,
+     -0.65,
+     -6.206
+    ],
+    "max": [
+     46.924,
+     9.676,
+     4.761
+    ],
+    "size": [
+     91.98,
+     10.326,
+     10.967
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coastal_cliff_01/coastal_cliff_01_lod1.glb",
+     "triangles": 30000,
+     "vertices": 17908,
+     "bytes": 468540,
+     "px1At1080M": 79.2
+    },
+    {
+     "lod": 2,
+     "file": "coastal_cliff_01/coastal_cliff_01_lod2.glb",
+     "triangles": 7200,
+     "vertices": 5554,
+     "bytes": 134072,
+     "px1At1080M": 239
+    }
+   ],
+   "tex": {
+    "set": "1k",
+    "px": 1024,
+    "gpu": [
+     512,
+     512,
+     512,
+     1024,
+     1024
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coastal_cliff_01/1k/main_basecolor.webp",
+      "normal": "coastal_cliff_01/1k/main_normal.webp",
+      "orm": "coastal_cliff_01/1k/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "coastal_cliff_02",
+   "name": "Coastal Cliff 02",
+   "authors": {
+    "Rob Tuytel": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coastal_cliff_02",
+   "kind": "cliff",
+   "bboxM": {
+    "min": [
+     -20.515,
+     -0.228,
+     -4.495
+    ],
+    "max": [
+     20.412,
+     9.825,
+     4.153
+    ],
+    "size": [
+     40.928,
+     10.053,
+     8.648
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coastal_cliff_02/coastal_cliff_02_lod1.glb",
+     "triangles": 30000,
+     "vertices": 17790,
+     "bytes": 466660,
+     "px1At1080M": 64.4
+    },
+    {
+     "lod": 2,
+     "file": "coastal_cliff_02/coastal_cliff_02_lod2.glb",
+     "triangles": 7200,
+     "vertices": 5437,
+     "bytes": 132204,
+     "px1At1080M": 187.3
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     512,
+     512,
+     512,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coastal_cliff_02/512/main_basecolor.webp",
+      "normal": "coastal_cliff_02/512/main_normal.webp",
+      "orm": "coastal_cliff_02/512/main_orm.webp",
+      "normalFlippedY": true
+     }
+    }
+   }
+  },
+  {
+   "id": "coastal_cliff_04",
+   "name": "Coastal Cliff 04",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coastal_cliff_04",
+   "kind": "cliff",
+   "bboxM": {
+    "min": [
+     -47.425,
+     -0.648,
+     -9.038
+    ],
+    "max": [
+     39.347,
+     10.352,
+     15.21
+    ],
+    "size": [
+     86.772,
+     11,
+     24.247
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coastal_cliff_04/coastal_cliff_04_lod1.glb",
+     "triangles": 30000,
+     "vertices": 19607,
+     "bytes": 495724,
+     "px1At1080M": 136.1
+    },
+    {
+     "lod": 2,
+     "file": "coastal_cliff_04/coastal_cliff_04_lod2.glb",
+     "triangles": 7200,
+     "vertices": 6749,
+     "bytes": 153192,
+     "px1At1080M": 578.7
+    }
+   ],
+   "tex": {
+    "set": "1k",
+    "px": 1024,
+    "gpu": [
+     512,
+     512,
+     512,
+     1024,
+     1024
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coastal_cliff_04/1k/main_basecolor.webp",
+      "normal": "coastal_cliff_04/1k/main_normal.webp",
+      "orm": "coastal_cliff_04/1k/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "coast_line_01",
+   "name": "Coast Line 01",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_line_01",
+   "kind": "shore",
+   "bboxM": {
+    "min": [
+     -26.139,
+     -1.168,
+     -20.763
+    ],
+    "max": [
+     28.473,
+     1.466,
+     22.201
+    ],
+    "size": [
+     54.612,
+     2.634,
+     42.964
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coast_line_01/coast_line_01_lod1.glb",
+     "triangles": 29999,
+     "vertices": 15903,
+     "bytes": 436464,
+     "px1At1080M": 110
+    },
+    {
+     "lod": 2,
+     "file": "coast_line_01/coast_line_01_lod2.glb",
+     "triangles": 7199,
+     "vertices": 4151,
+     "bytes": 111624,
+     "px1At1080M": 191.5
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     512,
+     512,
+     512,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coast_line_01/512/main_basecolor.webp",
+      "normal": "coast_line_01/512/main_normal.webp",
+      "orm": "coast_line_01/512/main_orm.webp",
+      "normalFlippedY": true
+     }
+    }
+   }
+  },
+  {
+   "id": "coast_line_02",
+   "name": "Coast Line 02",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_line_02",
+   "kind": "shore",
+   "bboxM": {
+    "min": [
+     -22.731,
+     -0.592,
+     -10.802
+    ],
+    "max": [
+     22.908,
+     1.695,
+     12.479
+    ],
+    "size": [
+     45.639,
+     2.287,
+     23.281
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coast_line_02/coast_line_02_lod1.glb",
+     "triangles": 30000,
+     "vertices": 16471,
+     "bytes": 445544,
+     "px1At1080M": 95.3
+    },
+    {
+     "lod": 2,
+     "file": "coast_line_02/coast_line_02_lod2.glb",
+     "triangles": 7200,
+     "vertices": 4556,
+     "bytes": 118096,
+     "px1At1080M": 184.1
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     256,
+     256,
+     256,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coast_line_02/512/main_basecolor.webp",
+      "normal": "coast_line_02/512/main_normal.webp",
+      "orm": "coast_line_02/512/main_orm.webp",
+      "normalFlippedY": true
+     }
+    }
+   }
+  },
+  {
+   "id": "coast_rocks_01",
+   "name": "Coast Rocks 01",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_rocks_01",
+   "kind": "shore",
+   "bboxM": {
+    "min": [
+     -32.152,
+     -1.978,
+     -26.894
+    ],
+    "max": [
+     27.355,
+     1.311,
+     15.625
+    ],
+    "size": [
+     59.507,
+     3.289,
+     42.52
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coast_rocks_01/coast_rocks_01_lod1.glb",
+     "triangles": 30000,
+     "vertices": 17340,
+     "bytes": 459452,
+     "px1At1080M": 83.1
+    },
+    {
+     "lod": 2,
+     "file": "coast_rocks_01/coast_rocks_01_lod2.glb",
+     "triangles": 7200,
+     "vertices": 5019,
+     "bytes": 125512,
+     "px1At1080M": 237.7
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     512,
+     512,
+     512,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coast_rocks_01/512/main_basecolor.webp",
+      "normal": "coast_rocks_01/512/main_normal.webp",
+      "orm": "coast_rocks_01/512/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "coast_rocks_02",
+   "name": "Coast Rocks 02",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_rocks_02",
+   "kind": "shore",
+   "bboxM": {
+    "min": [
+     -29.023,
+     -0.92,
+     -15.69
+    ],
+    "max": [
+     16.942,
+     2.252,
+     33.775
+    ],
+    "size": [
+     45.965,
+     3.171,
+     49.465
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coast_rocks_02/coast_rocks_02_lod1.glb",
+     "triangles": 29999,
+     "vertices": 18796,
+     "bytes": 482740,
+     "px1At1080M": 109.2
+    },
+    {
+     "lod": 2,
+     "file": "coast_rocks_02/coast_rocks_02_lod2.glb",
+     "triangles": 7199,
+     "vertices": 5846,
+     "bytes": 138736,
+     "px1At1080M": 328.2
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     512,
+     512,
+     512,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coast_rocks_02/512/main_basecolor.webp",
+      "normal": "coast_rocks_02/512/main_normal.webp",
+      "orm": "coast_rocks_02/512/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "coast_land_rocks_02",
+   "name": "Coast Land Rocks 02",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_land_rocks_02",
+   "kind": "rock",
+   "bboxM": {
+    "min": [
+     -2.448,
+     -0.155,
+     -4.998
+    ],
+    "max": [
+     2.441,
+     1.243,
+     5.457
+    ],
+    "size": [
+     4.889,
+     1.398,
+     10.454
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coast_land_rocks_02/coast_land_rocks_02_lod1.glb",
+     "triangles": 14999,
+     "vertices": 9370,
+     "bytes": 241936,
+     "px1At1080M": 44.5
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     256,
+     256,
+     256,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coast_land_rocks_02/512/main_basecolor.webp",
+      "normal": "coast_land_rocks_02/512/main_normal.webp",
+      "orm": "coast_land_rocks_02/512/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "coast_land_rocks_04",
+   "name": "Coast Land Rocks 04",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_land_rocks_04",
+   "kind": "rock",
+   "bboxM": {
+    "min": [
+     -4.962,
+     -0.064,
+     -6.009
+    ],
+    "max": [
+     5.001,
+     0.782,
+     5.492
+    ],
+    "size": [
+     9.963,
+     0.846,
+     11.501
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 2,
+     "file": "coast_land_rocks_04/coast_land_rocks_04_lod2.glb",
+     "triangles": 3831,
+     "vertices": 2441,
+     "bytes": 64064,
+     "px1At1080M": 94.3
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     128,
+     128,
+     128,
+     256,
+     256
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coast_land_rocks_04/512/main_basecolor.webp",
+      "normal": "coast_land_rocks_04/512/main_normal.webp",
+      "orm": "coast_land_rocks_04/512/main_orm.webp",
+      "normalFlippedY": true
+     }
+    }
+   }
+  },
+  {
+   "id": "coast_rocks_05",
+   "name": "Coast Rocks 05",
+   "authors": {
+    "Rob Tuytel": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_rocks_05",
+   "kind": "rock",
+   "bboxM": {
+    "min": [
+     -1.851,
+     -0.253,
+     -2.102
+    ],
+    "max": [
+     2.187,
+     1.077,
+     1.646
+    ],
+    "size": [
+     4.039,
+     1.331,
+     3.748
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "coast_rocks_05/coast_rocks_05_lod1.glb",
+     "triangles": 14995,
+     "vertices": 9679,
+     "bytes": 246844,
+     "px1At1080M": 21.4
+    },
+    {
+     "lod": 2,
+     "file": "coast_rocks_05/coast_rocks_05_lod2.glb",
+     "triangles": 3599,
+     "vertices": 2908,
+     "bytes": 70132,
+     "px1At1080M": 52.3
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     512,
+     512,
+     512,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "coast_rocks_05/512/main_basecolor.webp",
+      "normal": "coast_rocks_05/512/main_normal.webp",
+      "orm": "coast_rocks_05/512/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "sand_rocks_small_01",
+   "name": "Sand Rocks Small 01",
+   "authors": {
+    "Rob Tuytel": "Photography, processing",
+    "Rico Cilliers": "cleanup"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/sand_rocks_small_01",
+   "kind": "rock",
+   "bboxM": {
+    "min": [
+     -2.475,
+     -0.104,
+     -1.916
+    ],
+    "max": [
+     2.152,
+     0.431,
+     1.967
+    ],
+    "size": [
+     4.627,
+     0.535,
+     3.883
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "sand_rocks_small_01/sand_rocks_small_01_lod1.glb",
+     "triangles": 15000,
+     "vertices": 9998,
+     "bytes": 251992,
+     "px1At1080M": 14.4
+    },
+    {
+     "lod": 2,
+     "file": "sand_rocks_small_01/sand_rocks_small_01_lod2.glb",
+     "triangles": 3599,
+     "vertices": 3134,
+     "bytes": 73764,
+     "px1At1080M": 42.4
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     512,
+     512,
+     512,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "sand_rocks_small_01/512/main_basecolor.webp",
+      "normal": "sand_rocks_small_01/512/main_normal.webp",
+      "orm": "sand_rocks_small_01/512/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "mountainside",
+   "name": "Mountainside",
+   "authors": {
+    "Dario Barresi": "Photography",
+    "Rico Cilliers": "processing"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/mountainside",
+   "kind": "rock",
+   "bboxM": {
+    "min": [
+     -5.027,
+     -0.2,
+     -3.681
+    ],
+    "max": [
+     5.183,
+     10.322,
+     1.566
+    ],
+    "size": [
+     10.209,
+     10.522,
+     5.247
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "mountainside/mountainside_lod1.glb",
+     "triangles": 14999,
+     "vertices": 8526,
+     "bytes": 228412,
+     "px1At1080M": 48.3
+    },
+    {
+     "lod": 2,
+     "file": "mountainside/mountainside_lod2.glb",
+     "triangles": 3599,
+     "vertices": 2323,
+     "bytes": 60760,
+     "px1At1080M": 126.2
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     256,
+     256,
+     256,
+     512,
+     512
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "mountainside/512/main_basecolor.webp",
+      "normal": "mountainside/512/main_normal.webp",
+      "orm": "mountainside/512/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "dutch_ship_large_01",
+   "name": "Dutch Ship Large 01",
+   "authors": {
+    "James Ray Cock": "model, textures, cleanup",
+    "Rico Cilliers": "sails model, textures",
+    "Nicolò Zubbini": "original model"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/dutch_ship_large_01",
+   "kind": "vessel",
+   "bboxM": {
+    "min": [
+     -13.837,
+     -1.916,
+     -4.096
+    ],
+    "max": [
+     20.415,
+     30.163,
+     4.291
+    ],
+    "size": [
+     34.251,
+     32.079,
+     8.387
+    ]
+   },
+   "materials": [
+    {
+     "name": "hull",
+     "alphaMode": "OPAQUE",
+     "doubleSided": true
+    },
+    {
+     "name": "rigging",
+     "alphaMode": "OPAQUE",
+     "doubleSided": true
+    },
+    {
+     "name": "sails",
+     "alphaMode": "MASK",
+     "alphaCutoff": 0.5,
+     "doubleSided": true
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "dutch_ship_large_01/dutch_ship_large_01_lod1.glb",
+     "triangles": 59786,
+     "vertices": 72594,
+     "bytes": 1807240,
+     "px1At1080M": 20.1
+    },
+    {
+     "lod": 2,
+     "file": "dutch_ship_large_01/dutch_ship_large_01_lod2.glb",
+     "triangles": 27037,
+     "vertices": 44482,
+     "bytes": 1054220,
+     "px1At1080M": 281.6
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     256,
+     256,
+     256,
+     512,
+     512
+    ],
+    "materials": {
+     "hull": {
+      "basecolor": "dutch_ship_large_01/512/hull_basecolor.webp",
+      "normal": "dutch_ship_large_01/512/hull_normal.webp",
+      "orm": "dutch_ship_large_01/512/hull_orm.webp"
+     },
+     "rigging": {
+      "basecolor": "dutch_ship_large_01/512/rigging_basecolor.webp",
+      "normal": "dutch_ship_large_01/512/rigging_normal.webp",
+      "orm": "dutch_ship_large_01/512/rigging_orm.webp"
+     },
+     "sails": {
+      "basecolor": "dutch_ship_large_01/512/sails_basecolor.webp",
+      "normal": "dutch_ship_large_01/512/sails_normal.webp",
+      "orm": "dutch_ship_large_01/512/sails_orm.webp",
+      "alphaCoverage": 0.9957,
+      "alphaScale": 1.076
+     }
+    }
+   }
+  },
+  {
+   "id": "modular_wooden_pier",
+   "name": "Modular Wooden Pier",
+   "authors": {
+    "Rico Cilliers": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/modular_wooden_pier",
+   "kind": "prop",
+   "bboxM": {
+    "min": [
+     -1.527,
+     -0.994,
+     -11.974
+    ],
+    "max": [
+     1.575,
+     6.522,
+     7.052
+    ],
+    "size": [
+     3.102,
+     7.516,
+     19.026
+    ]
+   },
+   "materials": [
+    {
+     "name": "poles",
+     "alphaMode": "OPAQUE",
+     "doubleSided": true
+    },
+    {
+     "name": "planks",
+     "alphaMode": "OPAQUE",
+     "doubleSided": true
+    }
+   ],
+   "lods": [
+    {
+     "lod": 1,
+     "file": "modular_wooden_pier/modular_wooden_pier_lod1.glb",
+     "triangles": 21167,
+     "vertices": 15899,
+     "bytes": 394036,
+     "px1At1080M": 14.7
+    },
+    {
+     "lod": 2,
+     "file": "modular_wooden_pier/modular_wooden_pier_lod2.glb",
+     "triangles": 5021,
+     "vertices": 5381,
+     "bytes": 128812,
+     "px1At1080M": 49.1
+    }
+   ],
+   "tex": {
+    "set": "1k",
+    "px": 1024,
+    "gpu": [
+     256,
+     256,
+     256,
+     512,
+     512
+    ],
+    "materials": {
+     "poles": {
+      "basecolor": "modular_wooden_pier/1k/poles_basecolor.webp",
+      "normal": "modular_wooden_pier/1k/poles_normal.webp",
+      "orm": "modular_wooden_pier/1k/poles_orm.webp"
+     },
+     "planks": {
+      "basecolor": "modular_wooden_pier/1k/planks_basecolor.webp",
+      "normal": "modular_wooden_pier/1k/planks_normal.webp",
+      "orm": "modular_wooden_pier/1k/planks_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "lateral_sea_marker",
+   "name": "Lateral Sea Marker",
+   "authors": {
+    "James Ray Cock": "Additional texture wear",
+    "Kuutti Siitonen": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/lateral_sea_marker",
+   "kind": "prop",
+   "bboxM": {
+    "min": [
+     -1.502,
+     -1.282,
+     -1.502
+    ],
+    "max": [
+     1.502,
+     5.557,
+     1.502
+    ],
+    "size": [
+     3.005,
+     6.839,
+     3.005
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": false
+    }
+   ],
+   "lods": [
+    {
+     "lod": 2,
+     "file": "lateral_sea_marker/lateral_sea_marker_lod2.glb",
+     "triangles": 2174,
+     "vertices": 2958,
+     "bytes": 62396,
+     "px1At1080M": 204.7
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     128,
+     128,
+     128,
+     128,
+     128
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "lateral_sea_marker/512/main_basecolor.webp",
+      "normal": "lateral_sea_marker/512/main_normal.webp",
+      "orm": "lateral_sea_marker/512/main_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "wooden_lantern_01",
+   "name": "Wooden Lantern 01",
+   "authors": {
+    "James Ray Cock": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/wooden_lantern_01",
+   "kind": "prop",
+   "bboxM": {
+    "min": [
+     -0.111,
+     -0.011,
+     -0.111
+    ],
+    "max": [
+     0.111,
+     0.519,
+     0.124
+    ],
+    "size": [
+     0.221,
+     0.53,
+     0.235
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": true
+    },
+    {
+     "name": "glass",
+     "alphaMode": "BLEND",
+     "doubleSided": true
+    }
+   ],
+   "lods": [
+    {
+     "lod": 2,
+     "file": "wooden_lantern_01/wooden_lantern_01_lod2.glb",
+     "triangles": 775,
+     "vertices": 1323,
+     "bytes": 29100,
+     "px1At1080M": 30.7
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     128,
+     128,
+     128,
+     128,
+     128
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "wooden_lantern_01/512/main_basecolor.webp",
+      "normal": "wooden_lantern_01/512/main_normal.webp",
+      "orm": "wooden_lantern_01/512/main_orm.webp"
+     },
+     "glass": {
+      "basecolor": "wooden_lantern_01/512/glass_basecolor.webp",
+      "normal": "wooden_lantern_01/512/glass_normal.webp",
+      "orm": "wooden_lantern_01/512/glass_orm.webp"
+     }
+    }
+   }
+  },
+  {
+   "id": "island_tree_01",
+   "name": "Island Tree 01",
+   "authors": {
+    "Rob Tuytel": "scanning, processing",
+    "Rico Cilliers": "cleanup, processing"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/island_tree_01",
+   "kind": "vegetation",
+   "bboxM": {
+    "min": [
+     -2.344,
+     -0.02,
+     -2.584
+    ],
+    "max": [
+     2.411,
+     5.007,
+     2.234
+    ],
+    "size": [
+     4.755,
+     5.027,
+     4.818
+    ]
+   },
+   "materials": [
+    {
+     "name": "main",
+     "alphaMode": "OPAQUE",
+     "doubleSided": true
+    },
+    {
+     "name": "leaves",
+     "alphaMode": "MASK",
+     "alphaCutoff": 0.5,
+     "doubleSided": true
+    },
+    {
+     "name": "branches",
+     "alphaMode": "OPAQUE",
+     "doubleSided": true
+    }
+   ],
+   "lods": [
+    {
+     "lod": 2,
+     "file": "island_tree_01/island_tree_01_lod2.glb",
+     "triangles": 3488,
+     "vertices": 7001,
+     "bytes": 143572,
+     "px1At1080M": 279.5
+    }
+   ],
+   "tex": {
+    "set": "512",
+    "px": 512,
+    "gpu": [
+     128,
+     128,
+     128,
+     128,
+     128
+    ],
+    "materials": {
+     "main": {
+      "basecolor": "island_tree_01/512/main_basecolor.webp",
+      "normal": "island_tree_01/512/main_normal.webp",
+      "orm": "island_tree_01/512/main_orm.webp"
+     },
+     "leaves": {
+      "basecolor": "island_tree_01/512/leaves_basecolor.webp",
+      "normal": "island_tree_01/512/leaves_normal.webp",
+      "orm": "island_tree_01/512/leaves_orm.webp",
+      "alphaCoverage": 0.2509,
+      "alphaScale": 1.008
+     },
+     "branches": {
+      "basecolor": "island_tree_01/512/branches_basecolor.webp",
+      "normal": "island_tree_01/512/branches_normal.webp",
+      "orm": "island_tree_01/512/branches_orm.webp"
+     }
+    }
+   }
+  }
+ ],
+ "terrain": [
+  {
+   "id": "aerial_rocks_02",
+   "layer": "rock",
+   "name": "Aerial Rocks 02",
+   "authors": {
+    "Rob Tuytel": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/aerial_rocks_02",
+   "tileSizeM": [
+    50,
+    50
+   ],
+   "set": "512",
+   "px": 512,
+   "files": {
+    "albedo": "terrain/aerial_rocks_02/512/albedo.webp",
+    "normal": "terrain/aerial_rocks_02/512/normal.webp",
+    "orm": "terrain/aerial_rocks_02/512/orm.webp",
+    "height": "terrain/aerial_rocks_02/512/height.webp"
+   }
+  },
+  {
+   "id": "seaside_rock",
+   "layer": "wet rock",
+   "name": "Seaside Rock",
+   "authors": {
+    "Dimitrios Savva": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/seaside_rock",
+   "tileSizeM": [
+    2,
+    2
+   ],
+   "set": "512",
+   "px": 512,
+   "files": {
+    "albedo": "terrain/seaside_rock/512/albedo.webp",
+    "normal": "terrain/seaside_rock/512/normal.webp",
+    "orm": "terrain/seaside_rock/512/orm.webp",
+    "height": "terrain/seaside_rock/512/height.webp"
+   }
+  },
+  {
+   "id": "coast_sand_01",
+   "layer": "sand and pebbles",
+   "name": "Coast Sand 01",
+   "authors": {
+    "Rob Tuytel": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/coast_sand_01",
+   "tileSizeM": [
+    15,
+    15
+   ],
+   "set": "512",
+   "px": 512,
+   "files": {
+    "albedo": "terrain/coast_sand_01/512/albedo.webp",
+    "normal": "terrain/coast_sand_01/512/normal.webp",
+    "orm": "terrain/coast_sand_01/512/orm.webp",
+    "height": "terrain/coast_sand_01/512/height.webp"
+   }
+  },
+  {
+   "id": "aerial_grass_rock",
+   "layer": "cliff-top grass",
+   "name": "Aerial Grass Rock",
+   "authors": {
+    "Rob Tuytel": "All"
+   },
+   "license": "CC0 1.0",
+   "url": "https://polyhaven.com/a/aerial_grass_rock",
+   "tileSizeM": [
+    15,
+    15
+   ],
+   "set": "512",
+   "px": 512,
+   "files": {
+    "albedo": "terrain/aerial_grass_rock/512/albedo.webp",
+    "normal": "terrain/aerial_grass_rock/512/normal.webp",
+    "orm": "terrain/aerial_grass_rock/512/orm.webp",
+    "height": "terrain/aerial_grass_rock/512/height.webp"
+   }
+  }
+ ],
+ "files": {
+  "coastal_cliff_01/coastal_cliff_01_lod1.glb": {
+   "bytes": 468540,
+   "sha": "3507244d"
+  },
+  "coastal_cliff_01/coastal_cliff_01_lod2.glb": {
+   "bytes": 134072,
+   "sha": "ba073dcd"
+  },
+  "coastal_cliff_01/1k/main_basecolor.webp": {
+   "bytes": 131910,
+   "sha": "c2447d3b"
+  },
+  "coastal_cliff_01/1k/main_normal.webp": {
+   "bytes": 302994,
+   "sha": "923076fb"
+  },
+  "coastal_cliff_01/1k/main_orm.webp": {
+   "bytes": 82308,
+   "sha": "ac42a89d"
+  },
+  "coastal_cliff_02/coastal_cliff_02_lod1.glb": {
+   "bytes": 466660,
+   "sha": "19b08970"
+  },
+  "coastal_cliff_02/coastal_cliff_02_lod2.glb": {
+   "bytes": 132204,
+   "sha": "de769b70"
+  },
+  "coastal_cliff_02/512/main_basecolor.webp": {
+   "bytes": 49750,
+   "sha": "77182fe2"
+  },
+  "coastal_cliff_02/512/main_normal.webp": {
+   "bytes": 71410,
+   "sha": "56099ca0"
+  },
+  "coastal_cliff_02/512/main_orm.webp": {
+   "bytes": 36290,
+   "sha": "82060c9b"
+  },
+  "coastal_cliff_04/coastal_cliff_04_lod1.glb": {
+   "bytes": 495724,
+   "sha": "5c3ad3cd"
+  },
+  "coastal_cliff_04/coastal_cliff_04_lod2.glb": {
+   "bytes": 153192,
+   "sha": "9de5cf44"
+  },
+  "coastal_cliff_04/1k/main_basecolor.webp": {
+   "bytes": 164356,
+   "sha": "dfdf1247"
+  },
+  "coastal_cliff_04/1k/main_normal.webp": {
+   "bytes": 513064,
+   "sha": "4994def6"
+  },
+  "coastal_cliff_04/1k/main_orm.webp": {
+   "bytes": 115734,
+   "sha": "85c2f94b"
+  },
+  "coast_line_01/coast_line_01_lod1.glb": {
+   "bytes": 436464,
+   "sha": "02e86315"
+  },
+  "coast_line_01/coast_line_01_lod2.glb": {
+   "bytes": 111624,
+   "sha": "38da0f9e"
+  },
+  "coast_line_01/512/main_basecolor.webp": {
+   "bytes": 35584,
+   "sha": "441dd85e"
+  },
+  "coast_line_01/512/main_normal.webp": {
+   "bytes": 72308,
+   "sha": "a41a528b"
+  },
+  "coast_line_01/512/main_orm.webp": {
+   "bytes": 35934,
+   "sha": "5e6cf3c8"
+  },
+  "coast_line_02/coast_line_02_lod1.glb": {
+   "bytes": 445544,
+   "sha": "647fbe91"
+  },
+  "coast_line_02/coast_line_02_lod2.glb": {
+   "bytes": 118096,
+   "sha": "16fef7c5"
+  },
+  "coast_line_02/512/main_basecolor.webp": {
+   "bytes": 41830,
+   "sha": "99676960"
+  },
+  "coast_line_02/512/main_normal.webp": {
+   "bytes": 91054,
+   "sha": "77955a73"
+  },
+  "coast_line_02/512/main_orm.webp": {
+   "bytes": 31458,
+   "sha": "69c91344"
+  },
+  "coast_rocks_01/coast_rocks_01_lod1.glb": {
+   "bytes": 459452,
+   "sha": "75bd5c3e"
+  },
+  "coast_rocks_01/coast_rocks_01_lod2.glb": {
+   "bytes": 125512,
+   "sha": "1583bd0e"
+  },
+  "coast_rocks_01/512/main_basecolor.webp": {
+   "bytes": 50234,
+   "sha": "ed8bc892"
+  },
+  "coast_rocks_01/512/main_normal.webp": {
+   "bytes": 74378,
+   "sha": "d3f32ee6"
+  },
+  "coast_rocks_01/512/main_orm.webp": {
+   "bytes": 18760,
+   "sha": "0c5413e9"
+  },
+  "coast_rocks_02/coast_rocks_02_lod1.glb": {
+   "bytes": 482740,
+   "sha": "8e3455bc"
+  },
+  "coast_rocks_02/coast_rocks_02_lod2.glb": {
+   "bytes": 138736,
+   "sha": "82017405"
+  },
+  "coast_rocks_02/512/main_basecolor.webp": {
+   "bytes": 48492,
+   "sha": "b71aa85b"
+  },
+  "coast_rocks_02/512/main_normal.webp": {
+   "bytes": 66036,
+   "sha": "7a1740a2"
+  },
+  "coast_rocks_02/512/main_orm.webp": {
+   "bytes": 37096,
+   "sha": "2b3a0f13"
+  },
+  "coast_land_rocks_02/coast_land_rocks_02_lod1.glb": {
+   "bytes": 241936,
+   "sha": "f8c6de91"
+  },
+  "coast_land_rocks_02/512/main_basecolor.webp": {
+   "bytes": 59038,
+   "sha": "7533a553"
+  },
+  "coast_land_rocks_02/512/main_normal.webp": {
+   "bytes": 121468,
+   "sha": "ab5ac9e9"
+  },
+  "coast_land_rocks_02/512/main_orm.webp": {
+   "bytes": 51260,
+   "sha": "0e140e69"
+  },
+  "coast_land_rocks_04/coast_land_rocks_04_lod2.glb": {
+   "bytes": 64064,
+   "sha": "eb52eb5c"
+  },
+  "coast_land_rocks_04/512/main_basecolor.webp": {
+   "bytes": 62832,
+   "sha": "586c79ff"
+  },
+  "coast_land_rocks_04/512/main_normal.webp": {
+   "bytes": 99914,
+   "sha": "288fe6ae"
+  },
+  "coast_land_rocks_04/512/main_orm.webp": {
+   "bytes": 54972,
+   "sha": "05564cec"
+  },
+  "coast_rocks_05/coast_rocks_05_lod1.glb": {
+   "bytes": 246844,
+   "sha": "764404af"
+  },
+  "coast_rocks_05/coast_rocks_05_lod2.glb": {
+   "bytes": 70132,
+   "sha": "e4c7ae69"
+  },
+  "coast_rocks_05/512/main_basecolor.webp": {
+   "bytes": 64802,
+   "sha": "8ed6e4a1"
+  },
+  "coast_rocks_05/512/main_normal.webp": {
+   "bytes": 163562,
+   "sha": "8874def5"
+  },
+  "coast_rocks_05/512/main_orm.webp": {
+   "bytes": 50366,
+   "sha": "a3286212"
+  },
+  "sand_rocks_small_01/sand_rocks_small_01_lod1.glb": {
+   "bytes": 251992,
+   "sha": "c34a65de"
+  },
+  "sand_rocks_small_01/sand_rocks_small_01_lod2.glb": {
+   "bytes": 73764,
+   "sha": "eb9b99e9"
+  },
+  "sand_rocks_small_01/512/main_basecolor.webp": {
+   "bytes": 45266,
+   "sha": "d5ac5161"
+  },
+  "sand_rocks_small_01/512/main_normal.webp": {
+   "bytes": 76572,
+   "sha": "e08d1a51"
+  },
+  "sand_rocks_small_01/512/main_orm.webp": {
+   "bytes": 38460,
+   "sha": "c66634df"
+  },
+  "mountainside/mountainside_lod1.glb": {
+   "bytes": 228412,
+   "sha": "b0f27fe9"
+  },
+  "mountainside/mountainside_lod2.glb": {
+   "bytes": 60760,
+   "sha": "c73b049c"
+  },
+  "mountainside/512/main_basecolor.webp": {
+   "bytes": 66114,
+   "sha": "ed58c5b1"
+  },
+  "mountainside/512/main_normal.webp": {
+   "bytes": 142066,
+   "sha": "5830849b"
+  },
+  "mountainside/512/main_orm.webp": {
+   "bytes": 42180,
+   "sha": "5bfc61a8"
+  },
+  "dutch_ship_large_01/dutch_ship_large_01_lod1.glb": {
+   "bytes": 1807240,
+   "sha": "d6d03a3c"
+  },
+  "dutch_ship_large_01/dutch_ship_large_01_lod2.glb": {
+   "bytes": 1054220,
+   "sha": "a215c093"
+  },
+  "dutch_ship_large_01/512/hull_basecolor.webp": {
+   "bytes": 39070,
+   "sha": "fbb4b4f1"
+  },
+  "dutch_ship_large_01/512/hull_normal.webp": {
+   "bytes": 95656,
+   "sha": "0fd7e8ce"
+  },
+  "dutch_ship_large_01/512/hull_orm.webp": {
+   "bytes": 67822,
+   "sha": "0671cef1"
+  },
+  "dutch_ship_large_01/512/rigging_basecolor.webp": {
+   "bytes": 22332,
+   "sha": "2cc7e6b3"
+  },
+  "dutch_ship_large_01/512/rigging_normal.webp": {
+   "bytes": 48750,
+   "sha": "bddc9fad"
+  },
+  "dutch_ship_large_01/512/rigging_orm.webp": {
+   "bytes": 26412,
+   "sha": "c12a1aaa"
+  },
+  "dutch_ship_large_01/512/sails_basecolor.webp": {
+   "bytes": 26238,
+   "sha": "79ad7c06"
+  },
+  "dutch_ship_large_01/512/sails_normal.webp": {
+   "bytes": 61380,
+   "sha": "df1a8841"
+  },
+  "dutch_ship_large_01/512/sails_orm.webp": {
+   "bytes": 8974,
+   "sha": "395db7b0"
+  },
+  "modular_wooden_pier/modular_wooden_pier_lod1.glb": {
+   "bytes": 394036,
+   "sha": "7034cd47"
+  },
+  "modular_wooden_pier/modular_wooden_pier_lod2.glb": {
+   "bytes": 128812,
+   "sha": "2eaac57a"
+  },
+  "modular_wooden_pier/1k/poles_basecolor.webp": {
+   "bytes": 207594,
+   "sha": "8147384c"
+  },
+  "modular_wooden_pier/1k/poles_normal.webp": {
+   "bytes": 369486,
+   "sha": "8df5eb6c"
+  },
+  "modular_wooden_pier/1k/poles_orm.webp": {
+   "bytes": 148578,
+   "sha": "203a222a"
+  },
+  "modular_wooden_pier/1k/planks_basecolor.webp": {
+   "bytes": 174490,
+   "sha": "c6cc0a3a"
+  },
+  "modular_wooden_pier/1k/planks_normal.webp": {
+   "bytes": 410498,
+   "sha": "795f239c"
+  },
+  "modular_wooden_pier/1k/planks_orm.webp": {
+   "bytes": 100196,
+   "sha": "fca84bc6"
+  },
+  "lateral_sea_marker/lateral_sea_marker_lod2.glb": {
+   "bytes": 62396,
+   "sha": "7d1cb45d"
+  },
+  "lateral_sea_marker/512/main_basecolor.webp": {
+   "bytes": 37300,
+   "sha": "e697c1e9"
+  },
+  "lateral_sea_marker/512/main_normal.webp": {
+   "bytes": 46730,
+   "sha": "e3a8b41e"
+  },
+  "lateral_sea_marker/512/main_orm.webp": {
+   "bytes": 47498,
+   "sha": "acb4d5af"
+  },
+  "wooden_lantern_01/wooden_lantern_01_lod2.glb": {
+   "bytes": 29100,
+   "sha": "da3939c1"
+  },
+  "wooden_lantern_01/512/main_basecolor.webp": {
+   "bytes": 32174,
+   "sha": "3bc45157"
+  },
+  "wooden_lantern_01/512/main_normal.webp": {
+   "bytes": 57004,
+   "sha": "53c16833"
+  },
+  "wooden_lantern_01/512/main_orm.webp": {
+   "bytes": 44572,
+   "sha": "e50ce160"
+  },
+  "wooden_lantern_01/512/glass_basecolor.webp": {
+   "bytes": 7086,
+   "sha": "dd81f1a2"
+  },
+  "wooden_lantern_01/512/glass_normal.webp": {
+   "bytes": 4628,
+   "sha": "1848f088"
+  },
+  "wooden_lantern_01/512/glass_orm.webp": {
+   "bytes": 13120,
+   "sha": "218e448c"
+  },
+  "island_tree_01/island_tree_01_lod2.glb": {
+   "bytes": 143572,
+   "sha": "f0e64206"
+  },
+  "island_tree_01/512/main_basecolor.webp": {
+   "bytes": 47926,
+   "sha": "8aee8045"
+  },
+  "island_tree_01/512/main_normal.webp": {
+   "bytes": 142970,
+   "sha": "f8b818ef"
+  },
+  "island_tree_01/512/main_orm.webp": {
+   "bytes": 38586,
+   "sha": "973ea44c"
+  },
+  "island_tree_01/512/leaves_basecolor.webp": {
+   "bytes": 22120,
+   "sha": "830db7af"
+  },
+  "island_tree_01/512/leaves_normal.webp": {
+   "bytes": 29570,
+   "sha": "13c97c06"
+  },
+  "island_tree_01/512/leaves_orm.webp": {
+   "bytes": 28438,
+   "sha": "c70e6d2d"
+  },
+  "island_tree_01/512/branches_basecolor.webp": {
+   "bytes": 43342,
+   "sha": "7a65f283"
+  },
+  "island_tree_01/512/branches_normal.webp": {
+   "bytes": 102424,
+   "sha": "1a5024b6"
+  },
+  "island_tree_01/512/branches_orm.webp": {
+   "bytes": 18054,
+   "sha": "76d0eec5"
+  },
+  "terrain/aerial_rocks_02/512/albedo.webp": {
+   "bytes": 76724,
+   "sha": "8f4692a4"
+  },
+  "terrain/aerial_rocks_02/512/normal.webp": {
+   "bytes": 123052,
+   "sha": "4637345c"
+  },
+  "terrain/aerial_rocks_02/512/orm.webp": {
+   "bytes": 45130,
+   "sha": "994a5a54"
+  },
+  "terrain/aerial_rocks_02/512/height.webp": {
+   "bytes": 12986,
+   "sha": "8f175028"
+  },
+  "terrain/seaside_rock/512/albedo.webp": {
+   "bytes": 54358,
+   "sha": "919451da"
+  },
+  "terrain/seaside_rock/512/normal.webp": {
+   "bytes": 118774,
+   "sha": "93e3d399"
+  },
+  "terrain/seaside_rock/512/orm.webp": {
+   "bytes": 10196,
+   "sha": "a14dfab5"
+  },
+  "terrain/seaside_rock/512/height.webp": {
+   "bytes": 18026,
+   "sha": "225c9379"
+  },
+  "terrain/coast_sand_01/512/albedo.webp": {
+   "bytes": 60994,
+   "sha": "e42c0b53"
+  },
+  "terrain/coast_sand_01/512/normal.webp": {
+   "bytes": 111378,
+   "sha": "7181bdcf"
+  },
+  "terrain/coast_sand_01/512/orm.webp": {
+   "bytes": 13880,
+   "sha": "351442d5"
+  },
+  "terrain/coast_sand_01/512/height.webp": {
+   "bytes": 20662,
+   "sha": "b45d035e"
+  },
+  "terrain/aerial_grass_rock/512/albedo.webp": {
+   "bytes": 61004,
+   "sha": "b88157e6"
+  },
+  "terrain/aerial_grass_rock/512/normal.webp": {
+   "bytes": 103368,
+   "sha": "968c827d"
+  },
+  "terrain/aerial_grass_rock/512/orm.webp": {
+   "bytes": 42272,
+   "sha": "c404c439"
+  },
+  "terrain/aerial_grass_rock/512/height.webp": {
+   "bytes": 24626,
+   "sha": "851137cd"
+  }
+ }
+}
