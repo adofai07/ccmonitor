@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather lab</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #05080c; color: #dfe6ee; font: 12px/1.35 system-ui, sans-serif; overflow: hidden; }
+  #c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #panel { position: fixed; top: 8px; right: 8px; width: 270px; max-height: calc(100vh - 16px); overflow: auto;
+           background: rgb(6 9 14 / .82); border: 1px solid rgb(255 255 255 / .14); border-radius: 6px; padding: 8px; }
+  #panel label { display: grid; grid-template-columns: 82px 1fr 42px; gap: 6px; align-items: center; margin: 2px 0; }
+  #panel output { text-align: right; font-variant-numeric: tabular-nums; }
+  #panel button, #panel select { margin: 3px 3px 0 0; background: #111a24; color: inherit; border: 1px solid #2a3a4c; border-radius: 3px; }
+  #panel pre { white-space: pre-wrap; font-size: 11px; margin: 6px 0 0; color: #9fb0c2; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="panel"></div>
+<script>
+/* The lab's loader. Every module is fetched as text and run as an inline script, which is how it
+   will run inside index.html under the product's CSP (script-src 'unsafe-inline' only, no eval,
+   no workers, no blob:). ?live=atmo,ocean loads only those passes from passes/ and the rest from
+   stub/ (frozen placeholders); the default, live=all, loads every pass from passes/.
+   [v1.1] core/assets.js (the scenery stream's loader) and the coast pass; the cove's files are
+   fetched by the coast pass from weather/ at run time, as index.html will fetch them.
+   [1.2] ?strip=1 removes every lab-only span (contract WX.LAB_MARKERS) from the modules the merge
+   inlines (core/ and passes/; never core/lab.js or stub/), so the lab runs the product's code. */
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const CORE = ["contract", "gl", "renderer", "assets", "astro", "director", "api"];
+  const PASSES = ["atmo", "clouds", "night", "sky", "coast", "ocean", "bolt", "post", "rain", "pane"];
+  const live = (Q.get("live") || "all").split(",");
+  const files = CORE.map((n) => "core/" + n + ".js")
+    .concat(PASSES.map((n) => (live.includes("all") || live.includes(n) ? "passes/" : "stub/") + n + ".js"))
+    .concat(["core/lab.js"]);
+  window.WXLAB_FILES = files;
+  const strip = Q.get("strip") === "1", OPEN = "/" + "*@lab*" + "/", CLOSE = "/" + "*@end*" + "/";
+  const cut = (t) => { let o = "", i = 0; for (;;) { const a = t.indexOf(OPEN, i); if (a < 0) return o + t.slice(i); const b = t.indexOf(CLOSE, a); if (b < 0) throw new Error("unclosed lab-only span"); o += t.slice(i, a); i = b + CLOSE.length; } };
+  window.WXLAB_STRIPPED = 0;
+  for (const f of files) {
+    const r = await fetch(f, { cache: "no-store" });
+    if (!r.ok) { (window.WXLAB_LOAD_ERRORS = window.WXLAB_LOAD_ERRORS || []).push(f + " " + r.status); continue; }
+    let src = await r.text();
+    if (strip && f !== "core/lab.js" && !f.startsWith("stub/")) { const n = src.length; src = cut(src); window.WXLAB_STRIPPED += n - src.length; }
+    const s = document.createElement("script");
+    s.textContent = src + "\n//# sourceURL=" + f;
+    document.body.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>

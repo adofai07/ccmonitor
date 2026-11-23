@@ -5,9 +5,10 @@
 // its template strings, wrapped as one function that leaves window.WEATHER = { makeWeather } and
 // nothing else behind. The page loads that file only when the Weather theme is chosen.
 //
-//   node tools/build-weather.mjs --lab <dir> [--out <file>] [--check]
+//   node tools/build-weather.mjs [--lab <dir>] [--out <file>] [--check]
 //
-// --lab is the folder holding index.html, core/ and passes/. --out defaults to public/weather/wx.js;
+// --lab is the folder holding index.html, core/ and passes/: weather/ in this repository by default
+// (its README says how to run the lab page). --out defaults to public/weather/wx.js;
 // --check builds in memory and fails if the file on disk differs. Zero dependencies, and the output
 // is a function of the sources alone: no dates, paths or environment end up in it, so the same
 // sources give the same bytes on any machine.
@@ -432,8 +433,7 @@ export function build(labDir, { expose = false } = {}) {
 
 function main(argv) {
   const arg = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
-  const labDir = arg('--lab');
-  if (!labDir) { process.stderr.write('usage: node tools/build-weather.mjs --lab <dir> [--out <file>] [--check] [--expose]\n'); return 2; }
+  const labDir = arg('--lab') || join(ROOT, 'weather');
   const out = resolve(arg('--out') || join(ROOT, 'public', 'weather', 'wx.js'));
   const { code, files, order, stats, id } = build(labDir, { expose: argv.includes('--expose') });
   const size = Buffer.byteLength(code), gz = gzipSync(code, { level: 9 }).length;

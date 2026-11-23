@@ -113,3 +113,9 @@ test('the shipped renderer parses, and leaves window.WEATHER = { makeWeather } a
   // a browser without WebGL2 (this context has none) gets null at once, the page's cue for the glass page
   assert.equal(win.WEATHER.makeWeather({}, {}), null);
 });
+
+test('the shipped renderer is what the sources in weather/ build, byte for byte', () => {
+  const { code } = build(join(ROOT, 'weather'));
+  assert.ok(readFileSync(join(ROOT, 'public', 'weather', 'wx.js'), 'utf8') === code,
+    'public/weather/wx.js is not the build of weather/: run node tools/build-weather.mjs');
+});

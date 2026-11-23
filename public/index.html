@@ -1180,6 +1180,13 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   mask-image: var(--ramp-x), var(--ramp-y); mask-composite: intersect;
   opacity: var(--wx-bot); transition: opacity 1.5s var(--ease);
 }
+/* the pools reach 10vw past the window's sides, which made the page 10vw wider than the window: the
+   body's overflow-x: hidden passes to the viewport, and a viewport that hides its overflow still
+   scrolls sideways when told to (a field scrolled into view, find in page, a phone's pan). The body
+   clips them at the window's edge instead (clip makes no scroll container and leaves the vertical
+   alone); the root's own clip keeps the body's value on the body. Nothing inside the window changes. */
+:root[data-weather] { overflow-x: clip; }
+:root[data-weather] body { overflow-x: clip; }
 /* the top group's pool is the limit row's, reaching up under the header by the header's height and
    the gap after it (--wx-head, which the script measures), so the two are one pool with no seam;
    below the row it fades over a longer ramp, into the sky */
@@ -1330,6 +1337,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    the switch above */
 .prow.stack { flex-direction: column; align-items: stretch; gap: 6px; cursor: default; }
 .prow.stack .seg { align-self: stretch; }
+/* a row of options that differ in length: each as wide as its label, the room left shared out */
+.seg.fit label { flex: 1 1 auto; }
 
 /* the theme's patch of itself, in Settings: a golden hour over the sea, the sun's path on the water,
    and two drops on the pane. Fixed: it follows neither the reading nor the hour */
@@ -8631,7 +8640,9 @@ function trainMotion() {
      hooks.onScrim(grid, peak)  two Float32Array(32) of display luminance 0..1 on a grid 4 cells wide
                           and 8 high, row 0 at the top, lightning left out, at most twice a second:
                           each cell's mean, and its brightest tap (peak may be null).
-     hooks.quality        the stored Quality, so the first context is already the right one.
+     hooks.quality        the stored Quality: how finely the view is drawn.
+     hooks.gpu            the stored GPU setting, so the first context already asks for that graphics card.
+     hooks.fps            the stored Frame rate.
      It returns null at once when this browser cannot draw the view.
      W.start()                  the theme is on screen: build, or resume
      W.stop()                   off screen, hidden or forced colours: no frames and no timers; keeps everything
@@ -8640,6 +8651,8 @@ function trainMotion() {
                                 blank after a reading was seen (ignored before the first reading)
      W.sky(follow, place)       Follow real time; place {lat, lon, zone, from} from wxPlace()
      W.quality(q)               "auto" | "high" | "low"
+     W.gpu(g)                   "auto" | "low" | "high": the powerPreference asked for; a change makes a new context
+     W.fps(f)                   "auto" | "30" | "60" | "120" | "display": frames a second, or every refresh
      W.resize()                 the window or the dpr changed (debounced inside)
      W.capture(w, h)            a canvas holding the view now, covering w × h, or null              */
 let weather = null, weatherBroken = false;
@@ -8689,11 +8702,15 @@ function weatherMotion() {
     if (FORCED.matches || !wxPainted) return;
     if (wxMake === null) { wxLoad(); return; }      // asked for; this runs again once it is in
     if (!wxMake) { weatherDead(); return; }         // missing, broken, or not a renderer
-    try { weather = wxMake($("wx"), { onDead: weatherDead, onScrim: wxScrim, quality: PREFS.wxQuality }); } catch (_) { weather = null; }
+    try {
+      weather = wxMake($("wx"), { onDead: weatherDead, onScrim: wxScrim, quality: PREFS.wxQuality, gpu: PREFS.wxGpu, fps: PREFS.wxFps });
+    } catch (_) { weather = null; }
     if (!weather) { weatherDead(); return; }
   }
   weather.sky(PREFS.realTime, wxPlace());
   weather.quality(PREFS.wxQuality);
+  weather.gpu(PREFS.wxGpu);
+  weather.fps(PREFS.wxFps);
   if (FORCED.matches || document.visibilityState === "hidden") { weather.stop(); return; }
   weather.start();
   weatherReading();
@@ -8724,9 +8741,9 @@ setInterval(() => { if (weather && weatherOn() && document.visibilityState !== "
    path above all, hardly moves a cell's mean but stands right under the words. The header and the
    limit share the top pool's strength, the rule and the cost strip the foot's; a value is written
    only when it moves by .02 or more, and CSS eases it over 1.5 s. The meter leaves lightning out, so
-   from the band's third quarter on, where the view's lightning starts, every pool stands .1 deeper:
+   from the band's third quarter on, where the view's lightning starts, every pool stands .15 deeper:
    a flash then lights the view behind the words without the pools having to move. */
-const WX_POOL = { lo: .24, k: .9, hi: .82, step: .02, peak: .6, flash: .1 };
+const WX_POOL = { lo: .24, k: .9, hi: .82, step: .02, peak: .6, flash: .15 };
 const wxPool = { top: null, bot: null };
 /* whether the hottest reading has reached the third quarter of the warning band, where strikes begin */
 function wxStormy() {
@@ -8864,14 +8881,21 @@ function wxLoad() {
 const PREFS_KEY = "ccquota.prefs";
 const PREF_DEFAULTS = { theme: "glass", fluid: true, speed: FLUID.speed, shake: true, sky: true, rain: true,
                         rainAmount: 40, rainSpeed: 1, rain1: "#00ff66", rain2: "#ff3028", scene: true, cost: true, font: "system",
-                        clay: "system", boil: true, realTime: true, wxQuality: "auto" };
+                        clay: "system", boil: true, realTime: true, wxQuality: "auto",
+                        wxFps: "auto", wxGpu: "auto" };
 /* key, label, and the glyphs on its swatch */
 const THEMES = [["glass", "Glass", ""], ["matrix", "Matrix", "1A0%Z"], ["train", "Train", ""], ["neumorphism", "Neumorphism", ""],
                 ["broadsheet", "Broadsheet", ""], ["gauges", "Gauges", ""], ["weather", "Weather", ""]];
 const SPEEDS = [[0.25, "Slow"], [0.5, "Normal"], [1, "Fast"]];
-/* how finely Weather's view is drawn: Auto finer or coarser to keep it smooth, High in full on the
-   faster graphics card where there is one, Low coarser and at half the frame rate */
+/* how finely Weather's view is drawn: Auto finer or coarser to keep it smooth, High in full, Low
+   coarser (and, at an Auto frame rate, at half of it) */
 const QUALITIES = [["auto", "Auto"], ["high", "High"], ["low", "Low"]];
+/* how often it is drawn: Auto up to 75 frames a second; or 30, 60, 120, or every refresh of the screen
+   as far as the graphics card keeps up. Every rate halves while the window is in the background. */
+const FRAMERATES = [["auto", "Auto"], ["30", "30"], ["60", "60"], ["120", "120"], ["display", "Display"]];
+/* which graphics card the view asks for where there are two (WebGL's powerPreference): a request the
+   browser may not follow. Every choice draws the same weather. */
+const GPUS = [["auto", "Auto"], ["low", "Low power"], ["high", "High power"]];
 /* Neumorphism's clay: light, dark, or whichever the system asks for, followed as it changes. Under
    forced colours the ground is the system's, so the clay follows the system's palette whatever
    was chosen, and the choice returns when they are off. */
@@ -8917,6 +8941,8 @@ function loadPrefs() {
   if (SPEEDS.some(([v]) => v === saved.speed)) p.speed = saved.speed;
   if (CLAYS.some(([k]) => k === saved.clay)) p.clay = saved.clay;
   if (QUALITIES.some(([k]) => k === saved.wxQuality)) p.wxQuality = saved.wxQuality;
+  if (FRAMERATES.some(([k]) => k === saved.wxFps)) p.wxFps = saved.wxFps;
+  if (GPUS.some(([k]) => k === saved.wxGpu)) p.wxGpu = saved.wxGpu;
   for (const [k, , lo, hi, step] of SLIDERS) {
     if (typeof saved[k] === "number" && saved[k] >= lo && saved[k] <= hi) p[k] = onStep(saved[k], lo, hi, step);
   }
@@ -8979,9 +9005,19 @@ function buildPrefs() {
       <div class="phead" id="ph-scene">Scene</div>
       ${sw(SWITCHES[7])}
       <div class="prow stack" data-for="weather">
-        <span class="ptext"><span class="pname" id="pn-wxq">Quality</span><span class="phint">Auto draws the view finer or coarser to keep it smooth. High draws it in full, on the faster graphics card where there is one.</span></span>
+        <span class="ptext"><span class="pname" id="pn-wxq">Quality</span><span class="phint">Auto draws the view finer or coarser to keep it smooth. High draws it in full, Low coarser.</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="pn-wxq">${QUALITIES.map(([k, label]) =>
           `<label><input type="radio" name="wxQuality" value="${k}"><span>${label}</span></label>`).join("")}</div>
+      </div>
+      <div class="prow stack" data-for="weather">
+        <span class="ptext"><span class="pname" id="pn-wxfps">Frame rate</span><span class="phint">Auto draws up to 75 frames a second. Display draws on every refresh of the screen, as often as the graphics card keeps up. Every rate halves while the window is in the background.</span></span>
+        <div class="seg fit" role="radiogroup" aria-labelledby="pn-wxfps">${FRAMERATES.map(([k, label]) =>
+          `<label><input type="radio" name="wxFps" value="${k}"><span>${label}</span></label>`).join("")}</div>
+      </div>
+      <div class="prow stack" data-for="weather">
+        <span class="ptext"><span class="pname" id="pn-wxgpu">Graphics card</span><span class="phint">Which one to ask for, where there are two. The browser has the last word: on Linux it keeps the card it was started on, and the README says how to start it on the faster one.</span></span>
+        <div class="seg fit" role="radiogroup" aria-labelledby="pn-wxgpu">${GPUS.map(([k, label]) =>
+          `<label><input type="radio" name="wxGpu" value="${k}"><span>${label}</span></label>`).join("")}</div>
       </div>
     </div>
     <div class="psec" role="group" aria-labelledby="ph-page" data-for="glass matrix train broadsheet gauges weather">
@@ -9014,6 +9050,8 @@ function buildPrefs() {
     else if (t.name === "font") PREFS.font = t.value;
     else if (t.name === "theme") PREFS.theme = t.value;
     else if (t.name === "wxQuality" && QUALITIES.some(([k]) => k === t.value)) PREFS.wxQuality = t.value;
+    else if (t.name === "wxFps" && FRAMERATES.some(([k]) => k === t.value)) PREFS.wxFps = t.value;
+    else if (t.name === "wxGpu" && GPUS.some(([k]) => k === t.value)) PREFS.wxGpu = t.value;
     else if (!knob(t)) return;
     savePrefs();
     showPrefs();
@@ -9083,6 +9121,8 @@ function syncPrefs() {
   panel.querySelectorAll('input[name="speed"]').forEach((r) => { r.checked = Number(r.value) === PREFS.speed; });
   panel.querySelectorAll('input[name="font"]').forEach((r) => { r.checked = r.value === PREFS.font; });
   panel.querySelectorAll('input[name="wxQuality"]').forEach((r) => { r.checked = r.value === PREFS.wxQuality; });
+  panel.querySelectorAll('input[name="wxFps"]').forEach((r) => { r.checked = r.value === PREFS.wxFps; });
+  panel.querySelectorAll('input[name="wxGpu"]').forEach((r) => { r.checked = r.value === PREFS.wxGpu; });
   /* a value is written only when it differs, so a slider being dragged or an open picker is left alone */
   for (const [k, , lo, hi, , show, say] of SLIDERS) {
     const r = panel.querySelector(`input[name="${k}"]`), v = String(PREFS[k]);

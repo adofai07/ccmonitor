@@ -459,7 +459,8 @@ only words and drawings in white with soft dark shadows, set in Noto Sans whatev
 says, and a dark pool under each group of them. The header and the limit stand at the top of the
 window, over the sky, and the cost strip at its foot, over the near sea, so the horizon, the low
 sun and the far sea are left clear between them. Opening the detail pushes the cost strip down;
-in a short window the page scrolls over the view, which stays where it is.
+in a short window the page scrolls over the view, which stays where it is. It never scrolls
+sideways: the pools fade out past the window's edges, and nothing reaches beyond them.
 
 **The sky is the real one.** The sun and the moon stand where they are for the viewer's date and
 time, the moon in its phase and the stars turned to the hour, so dawn, day, dusk and night follow
@@ -562,16 +563,29 @@ lays them; the sea is never swapped for another.
   picks up where it was; a tab coming back after a minute or more dissolves over two seconds to
   the sky as it now is. A window that is visible but not focused is drawn at half the frame rate.
 - *Quality*: Auto, the default, draws the view finer or coarser to keep it smooth; High draws it
-  in full whatever it costs, on the faster graphics card where there is one; Low draws it coarser
-  and at half the frame rate. None of them changes what is shown.
+  in full whatever it costs; Low draws it coarser. None of them changes what is shown, and a step
+  finer or coarser, or a new window size, is drawn in the frame that takes it: the view never shows
+  an empty frame.
+- *Frame rate*: Auto, the default, draws up to 75 frames a second, on whole refreshes of the screen
+  (60 on a 60 or 240 Hz screen, 75 on a 75 Hz one), and half as many at Low quality. 30, 60 and 120
+  draw that many a second, as evenly as the screen's refresh allows (60 on a 75 Hz screen draws four
+  refreshes of every five); Display draws on every refresh. A rate the graphics card cannot keep up
+  with is drawn as often as it can: Auto's choice of detail judges the card against Auto's pace, so
+  a faster rate costs smoothness on a slow card, never detail. Every rate halves while the window is
+  in the background.
+- *Graphics card*: Auto, Low power or High power, the card the view asks the browser for where
+  there are two (WebGL's power preference). It is a request the browser may not follow: on Linux
+  it keeps the card it was started on (the README says how to start it on the faster one). A change
+  makes the view's graphics context again, the old view shown until the new one is up; every choice
+  draws the same weather.
 - Forced colours take the view away: the window is the system's ground, and the page is drawn in
   the system's colours, the arc, the fitted run and the tick highlighted.
-- Settings lists the theme, the vibration, the moving scene, *Follow real time*, the quality and
-  the cost strip. A browser that cannot draw the view keeps the glass page, its settings and the
-  reader's own typeface: one with no WebGL 2, or no float targets it can draw to, or only a
-  software renderer in place of a graphics card, or one whose graphics context is lost and does
-  not come back; so does a page whose view's code is missing or does not load. One too slow to draw
-  it moving shows it still, as reduced motion does.
+- Settings lists the theme, the vibration, the moving scene, *Follow real time*, the quality, the
+  frame rate, the graphics card and the cost strip. A browser that cannot draw the view keeps the
+  glass page, its settings and the reader's own typeface: one with no WebGL 2, or no float targets
+  it can draw to, or only a software renderer in place of a graphics card, or one whose graphics
+  context is lost and does not come back; so does a page whose view's code is missing or does not
+  load. One too slow to draw it moving shows it still, as reduced motion does.
 - The saved graph is a frame of the view, darkened under the chart and the figures, which are drawn
   over it in the page's white and the printed scale's paints; without a view to take, a night-blue
   plate.
@@ -749,7 +763,9 @@ theme, the vibration, the moving scene, *Follow real time*, the quality and the 
 | Matrix | Colour #2 | any colour — the warm rain, more of it the hotter the limit runs | red `#ff3028` |
 | Train, Weather | Moving scene | on / off — off stops the train, its smoke, the fire and the station clock where they stand; in Weather the clouds, the sea and the rain, as a still view that still follows the sky | on |
 | Weather | Follow real time | on / off — the sun, the moon and the stars as they are now, near the place the time zone gives; off holds a fixed late afternoon | on |
-| Weather | Quality | Auto, High, Low — Auto draws the view finer or coarser to keep it smooth; High draws it in full, on the faster graphics card where there is one; Low draws it coarser, at half the frame rate | Auto |
+| Weather | Quality | Auto, High, Low — Auto draws the view finer or coarser to keep it smooth; High draws it in full; Low draws it coarser | Auto |
+| Weather | Frame rate | Auto, 30, 60, 120, Display — Auto draws up to 75 frames a second (half at Low quality); the numbers that many a second; Display every refresh of the screen, as often as the card keeps up; each halves while the window is in the background | Auto |
+| Weather | Graphics card | Auto, Low power, High power — the card the view asks the browser for where there are two; the browser may keep the one it runs on | Auto |
 | Broadsheet | Boiling ink | on / off — off holds the ink still, on the plain drawing | on |
 | all; Neumorphism on the page | Local token accounting | on / off — off hides the cost strip and its rule, and the page stops asking ccusage | on |
 

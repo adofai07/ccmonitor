@@ -100,20 +100,31 @@ for a one-shot `json`.
 
 ### Weather on a hybrid-graphics laptop (Linux)
 
-The Weather theme draws on the GPU Chrome runs on. On a laptop with Intel or AMD graphics and an
-NVIDIA card, Chrome normally starts on the integrated GPU. To start it on the NVIDIA card through
-PRIME render offload:
+The Weather theme draws on the graphics card the browser runs on. On a laptop with Intel or AMD
+graphics and an NVIDIA card, browsers start on the integrated one, and on Linux a page cannot move
+them: the theme's *Graphics card* setting asks for a card, but the browser keeps the one it was
+started on. To start it on the NVIDIA card through PRIME render offload, quit every window of that
+browser first (a running browser hands a new window to its old process and its card), then:
 
 ```sh
+# Chrome, Brave or Chromium (google-chrome, brave-browser, chromium)
 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia \
-__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json google-chrome
+__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json brave-browser
+
+# Firefox
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia \
+__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json firefox
 ```
 
-or `prime-run google-chrome` where your distribution provides `prime-run`. Quit every Chrome
-window first: a running Chrome hands the new window to the old process and its GPU. Open
-`chrome://gpu` and check that *GL_RENDERER* names NVIDIA and that *WebGL2* reads *Hardware
-accelerated*. In Settings, *Quality* High asks for the faster GPU and draws the view in full; Auto
-picks the level from the GPU it is given.
+or `prime-run <browser>` where your distribution provides `prime-run`. To check:
+
+- Chrome or Brave: open `chrome://gpu` (`brave://gpu`). *GL_RENDERER* should name NVIDIA and
+  *WebGL2* read *Hardware accelerated*. If it still names the integrated card, add
+  `--use-angle=vulkan`; if WebGL is off, add `--ignore-gpu-blocklist`.
+- Firefox: open `about:support`; under *Graphics*, *WebGL 2 Driver Renderer* should name NVIDIA.
+
+In Settings, *Quality* sets how finely the view is drawn and *Frame rate* how often: Auto draws
+up to 75 frames a second, or pick 30, 60, 120, or Display for every refresh of the screen.
 
 ## Polling
 
@@ -615,9 +626,11 @@ public/fonts/        bundled typefaces, with their licences and provenance
 public/sprites/      the Train theme's sprite sheet, built from art/
 public/weather/      the Weather theme's renderer (wx.js, built) and its cove: Poly Haven's CC0
                      models and textures, with provenance
+weather/             the renderer's sources (WebGL2 passes, the pacing and detail, the API) and
+                     its lab page; wx.js is built from them; not served or shipped
 art/                 the sprites' sources: Aseprite Lua and the packer; not served or shipped
-tools/               build-time scripts: the time zone table, and wx.js from the renderer's sources
-                     (node tools/build-weather.mjs --lab <dir>); not served or shipped
+tools/               build-time scripts: the time zone table, and wx.js from weather/
+                     (node tools/build-weather.mjs); not served or shipped
 ```
 
 ### Colour across the warning band
