@@ -1904,6 +1904,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   :root[data-theme="neumorphism"] .spark::before { border: 1px solid CanvasText; }
   :root[data-theme="neumorphism"] :is(.ring, .gear, .dclose, .dxspan, .pick) { border: 1px solid ButtonText; }
   :root[data-theme="neumorphism"] .ring[aria-expanded="true"] { outline: 1px solid CanvasText; }
+  /* focus outranks the open mark, so the ring still shows where focus is while its detail is open */
+  :root[data-theme="neumorphism"] .ring[aria-expanded="true"]:focus-visible { outline: 3px solid Highlight; outline-offset: 4px; }
   :root[data-theme="neumorphism"] .pick:has(input:checked) { border: 3px solid Highlight; }
   :root[data-theme="neumorphism"] .switch { border: 1px solid ButtonText; }
   :root[data-theme="neumorphism"] .switch:checked { background: Highlight; border-color: Highlight; }
@@ -2378,6 +2380,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   :root[data-theme="broadsheet"] .ctab thead tr { background: none; }
   :root[data-theme="broadsheet"] .ctab th { border-bottom: 1px solid CanvasText; }
   :root[data-theme="broadsheet"] .ring[aria-expanded="true"] { outline: 1px solid CanvasText; }
+  /* focus outranks the open mark, so the ring still shows where focus is while its detail is open */
+  :root[data-theme="broadsheet"] .ring[aria-expanded="true"]:focus-visible { outline: 3px solid Highlight; outline-offset: 4px; }
   /* the ring's and the chart's ink is drawn, not printed, so it takes the system's colours by hand */
   :root[data-theme="broadsheet"] .art .hand,
   :root[data-theme="broadsheet"] .ring[data-state="unknown"] .hand,
