@@ -6,6 +6,7 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { QuotaPoller } from './poller.js';
 import { getCost, stopCost } from './cost.js';
+import { follow, unparsable } from './update.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 // Resolved once, up front, because serveStatic anchors a fully resolved real path against
@@ -127,6 +128,7 @@ const NO_CACHE = new Set(['weather/manifest.json', 'weather/wx.js']);
 
 export function createQuotaServer({ poller = new QuotaPoller() } = {}) {
   const streams = new Set();
+  let page = null; // the page version HEAD holds, once known (setPage)
 
   const server = createServer(async (req, res) => {
     try {
@@ -151,7 +153,7 @@ export function createQuotaServer({ poller = new QuotaPoller() } = {}) {
       // a heartbeat timer and two poller listeners, waiting for a body it may not be sent.
       if (url.pathname === '/api/stream') {
         if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' });
-        return openStream(req, res, poller, streams);
+        return openStream(req, res, poller, streams, page);
       }
       return await serveStatic(url.pathname, res);
     } catch (err) {
@@ -177,8 +179,20 @@ export function createQuotaServer({ poller = new QuotaPoller() } = {}) {
     server.closeAllConnections(); // an SSE socket never goes idle by itself
   });
 
-  return { server, poller, streams, close };
+  /** A new page at HEAD (src/update.js): every open dashboard is told, and reloads into it. */
+  const setPage = (id) => {
+    if (id === page) return;
+    page = id;
+    if (id) for (const res of streams) res.write(versionFrame(id));
+  };
+
+  return { server, poller, streams, close, setPage };
 }
+
+// The version of the page HEAD holds, named on connect and again whenever it changes: a dashboard
+// keeps the first it is told and reloads when told another. A named event, so the readings' own
+// frames never carry it and `watch` never sees it.
+const versionFrame = (page) => `event: version\ndata: ${JSON.stringify({ page })}\n\n`;
 
 /** Same-origin, loopback-only. Deliberately no CORS headers: nothing else may read this. */
 function isLocalRequest(req) {
@@ -217,7 +231,7 @@ function history(poller, spanSeconds = null) {
   };
 }
 
-function openStream(req, res, poller, streams) {
+function openStream(req, res, poller, streams, page) {
   res.writeHead(200, {
     'content-type': 'text/event-stream',
     'cache-control': 'no-cache',
@@ -227,6 +241,7 @@ function openStream(req, res, poller, streams) {
 
   const push = () => res.write(`data: ${JSON.stringify(poller.snapshot())}\n\n`);
   push(); // clients get the current value immediately, not on the next poll
+  if (page) res.write(versionFrame(page));
 
   // A named event rather than an SSE comment: the page tells a live link from a dead one by
   // its frames, and a comment never reaches it. Long quiet stretches are normal — Claude Code's
@@ -347,10 +362,10 @@ function send(res, status, body) {
 }
 
 /** Bound to loopback only — this serves one person's account data. */
-export function serve({ port = Number(process.env.PORT) || 8787, host = '127.0.0.1' } = {}) {
-  const { server, poller, close } = createQuotaServer();
+export async function serve({ port = Number(process.env.PORT) || 8787, host = '127.0.0.1', log = note } = {}) {
+  const { server, poller, close, setPage } = createQuotaServer();
 
-  return new Promise((ok, fail) => {
+  await new Promise((ok, fail) => {
     // Without this, a second instance dies on an uncaught EADDRINUSE and prints a stack.
     const startupFailed = (err) => fail(err.code === 'EADDRINUSE'
       ? Object.assign(new Error(`port ${port} is already in use — another ccquota is probably running.`), { code: err.code })
@@ -359,18 +374,71 @@ export function serve({ port = Number(process.env.PORT) || 8787, host = '127.0.0
     server.once('error', startupFailed);
     server.listen(port, host, () => {
       server.off('error', startupFailed);
-      server.on('error', (err) => process.stderr.write(`ccquota: server error: ${err.message}\n`));
-      poller.start();
-
-      const shutdown = async () => {
-        setTimeout(() => process.exit(0), 2000).unref(); // a wedged socket must not block the exit
-        await close();
-        process.exit(0);
-      };
-      process.once('SIGINT', shutdown);
-      process.once('SIGTERM', shutdown);
-
-      ok({ server, poller, close, url: `http://${host}:${server.address().port}` });
+      ok();
     });
   });
+  server.on('error', (err) => process.stderr.write(`ccquota: server error: ${err.message}\n`));
+  poller.start();
+
+  // Run from a git checkout, the server keeps to its newest commit (src/update.js): a new page
+  // reloads the open dashboards, and new server code restarts this process in place.
+  let following = null;
+  const stop = async () => {
+    following?.stop();
+    await close();
+  };
+  let toldRestart = false;
+  /** False when it cannot, and the old code goes on serving; otherwise it does not return. */
+  const restart = async () => {
+    if (typeof process.execve !== 'function') { // before Node 22.15, and on Windows
+      if (!toldRestart) log('the server\'s code changed; restart ccquota to run it');
+      toldRestart = true;
+      return false;
+    }
+    const broken = await unparsable(ROOT);
+    if (broken) {
+      log(`the server's code changed, but ${broken} does not parse; the old code goes on serving`);
+      return false;
+    }
+    log('the server\'s code changed; restarting');
+    await stop();
+    try {
+      // the same pid, terminal and parent: under `npm start` the new code simply carries on
+      process.execve(process.execPath, [process.execPath, ...process.execArgv, ...process.argv.slice(1)], process.env);
+    } catch (err) {
+      process.stderr.write(`ccquota: could not restart: ${err.code ?? err.message}\n`);
+      process.exit(1);
+    }
+    return true;
+  };
+  if (process.env.CCQUOTA_UPDATE !== 'off') {
+    following = await follow(ROOT, {
+      log,
+      onVersion: async (next, previous) => {
+        // A restart leaves the pages to the new process, which names the page as each reconnects:
+        // told now, they would reload into a server that is going away.
+        if (next.server !== previous.server && await restart()) return;
+        if (next.page !== previous.page) {
+          log('the page changed; open dashboards reload');
+          setPage(next.page);
+        }
+      },
+    });
+    setPage(following?.version()?.page ?? null);
+  }
+
+  const shutdown = async () => {
+    setTimeout(() => process.exit(0), 2000).unref(); // a wedged socket must not block the exit
+    await stop();
+    process.exit(0);
+  };
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
+
+  return { server, poller, close: stop, url: `http://${host}:${server.address().port}`, following };
+}
+
+/** A line in the terminal `serve` runs in, timed like `watch`'s. */
+function note(text) {
+  process.stdout.write(`${new Date().toTimeString().slice(0, 8)}  ${text}\n`);
 }

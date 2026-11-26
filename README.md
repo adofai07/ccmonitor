@@ -92,11 +92,32 @@ credentials, and the `settings.json` the status line is set in), `CCQUOTA_CREDEN
 directory `serve` uses is written into the status line command, so the reports land where the
 server looks), `XDG_STATE_HOME` (where a status line you took out is remembered, default
 `~/.local/state`), `CCQUOTA_INTERVAL_MS` (poll interval, default 120000),
-`CCQUOTA_STATUSLINE=off` (never touch Claude Code's status line setting) and
-`CCQUOTA_RAW=1`, which adds the raw
+`CCQUOTA_STATUSLINE=off` (never touch Claude Code's status line setting),
+`CCQUOTA_UPDATE=off` (see below) and `CCQUOTA_RAW=1`, which adds the raw
 upstream body to `ccquota json`. `raw` is absent by default so the whole body is not in every
 response and SSE frame; `serve` inherits the variable like any process would, so it is meant
 for a one-shot `json`.
+
+### Staying on the newest commit
+
+Run from a git checkout (`npm start` in the project folder), `serve` keeps to the newest commit
+of its branch. Every 2 minutes it runs `git fetch`, and when the branch is behind its upstream
+and no tracked file has an uncommitted change, it fast-forwards onto it (`git merge --ff-only`).
+That is the one move that cannot lose anything, so it is the only one it makes. It never merges
+or rebases, and never pulls over local edits or local commits. It says once in its terminal why
+it did not pull (uncommitted changes, a branch that has diverged, a failed fetch), and again only
+when that changes. Git never prompts: it runs without a terminal, so a fetch that would need a
+password fails and says so.
+
+Whatever moves HEAD (a pull, a commit made here, a checkout) is a new version, read from the
+commit itself. When it changes anything under `public/`, every open dashboard reloads into it,
+keeping its settings, which live in the browser. When it changes the server's own code (`bin/`,
+`src/`, `package.json`, or the cove's `public/weather/manifest.json`, which the server reads once
+at start), the server first checks that the new code parses, then restarts in place: the same
+process, terminal and port, still under `npm start`. The dashboards reconnect to it, and reload
+if the page changed too. Restarting in place needs Node 22.15 or later; on an older Node it says
+to restart it by hand. Uncommitted edits are not a version: they are served as they are on disk,
+and a refresh shows them, as before. `CCQUOTA_UPDATE=off` turns all of this off.
 
 ### Weather on a hybrid-graphics laptop (Linux)
 
@@ -384,7 +405,10 @@ caching the first one seen.
 update or failure: a poll, a status line report, or a tick that stood aside for one. Every 15 s
 there is an `event: ping` with no reading in it — a named event rather than a comment, so a
 client can see it: long quiet stretches are normal while reports stand in for polls, and the
-page tells a live link from a dead one by its frames.
+page tells a live link from a dead one by its frames. When the server runs from a git checkout,
+an `event: version` with `{"page": "<id>"}` names the version of `public/` that HEAD holds, on
+connect and again whenever a new commit changes it. The page keeps the first one it is told and
+reloads when told another.
 
 `GET /api/history` — the sparkline series, plus the fit, so no client has to redo it.
 `GET /api/history?span=<seconds>` is the same with every kept reading of the last `span` seconds

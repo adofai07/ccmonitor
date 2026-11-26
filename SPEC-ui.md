@@ -813,6 +813,10 @@ mistaken for a dead link: "lost the live feed" means no frame of any kind for 15
 When the backend goes stale (expired token, network down) the ring holds its last known
 value, drops to a muted treatment, and the header states why. The dashboard never shows a
 confident number it cannot currently verify.
+A new version of the page reloads it by itself. When the server runs from a git checkout, it
+names the page's version on the feed, and a new commit there (pulled from upstream or made in
+place) that changes the page names a new one. The page then reloads into the new files with its
+settings as they were, so an open dashboard never stays on an old page.
 
 ## Backend work this spec implies
 

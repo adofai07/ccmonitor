@@ -3393,7 +3393,8 @@ const S = {
   announced: "",
   chartsAt: 0,         // when the row charts were last drawn
   chartsDirty: true,   // new history, a new snapshot or a new width since then
-  costAsked: 0         // when /api/cost was last asked
+  costAsked: 0,        // when /api/cost was last asked
+  page: null           // the page version the server first named; another one reloads
 };
 
 const $ = (id) => document.getElementById(id);
@@ -9346,6 +9347,16 @@ function connect() {
   /* the server's heartbeat: no reading in it, only proof the link is up, so a quiet
      stretch (Claude Code's reports standing in for polls, a backoff) is not a dead feed */
   es.addEventListener("ping", () => { S.link = "live"; S.lastFrame = Date.now(); });
+  /* the page HEAD holds, when the server runs from a git checkout: named on connect, and
+     again when a new commit (pulled or made there) changes it. Another one is new files on
+     disk, so this page reloads into them; the settings live in localStorage and come along. */
+  es.addEventListener("version", (e) => {
+    let page = null;
+    try { page = JSON.parse(e.data).page; } catch (_) { return; }
+    if (typeof page !== "string" || !page) return;
+    if (!S.page) S.page = page;
+    else if (page !== S.page) location.reload();
+  });
   es.onmessage = (e) => {
     if (!e.data) return;                       // pings arrive as their own event, never here
     let parsed = null;

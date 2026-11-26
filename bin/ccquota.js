@@ -7,7 +7,8 @@ const HELP = `ccquota — live Claude Code subscription quota
   ccquota json        print the current quota as JSON and exit
   ccquota watch       print a one-line status as each reading comes in
   ccquota serve       run the local HTTP + SSE server (default port 8787); sets Claude Code's
-                      status line to the command below if it is unset
+                      status line to the command below if it is unset; run from a git
+                      checkout, keeps to its newest commit (see CCQUOTA_UPDATE)
   ccquota statusline  Claude Code's status line: reads the session JSON on stdin, files the
                       usage it carries for the dashboard, prints a short line
   ccquota statusline install
@@ -31,6 +32,8 @@ Environment
                              sustained rates much above 0.83 req/min)
   CCQUOTA_RAW=1              add the raw upstream body to \`json\` output (debug)
   CCQUOTA_STATUSLINE=off     never touch Claude Code's status line setting
+  CCQUOTA_UPDATE=off         serve neither fetches and fast-forwards its git checkout nor
+                             reloads the dashboards or restarts itself on a new commit
 `;
 
 /* what serve says about Claude Code's status line, once, at start, and `statusline install` says */
@@ -125,9 +128,15 @@ async function streamFrom(url) {
 
 async function cmdServe() {
   const { serve } = await import('../src/server.js');
-  const { url } = await serve();
+  const { url, following } = await serve();
   console.log(`ccquota serving on ${url}`);
   console.log('  /api/quota  /api/stream  /api/history  /api/cost  /healthz');
+  if (following) {
+    const pulls = following.upstream
+      ? `fetches ${following.upstream} every 2 min and fast-forwards when nothing here is uncommitted`
+      : 'no upstream to pull from';
+    console.log(`  updates: ${pulls}; a new commit reloads open dashboards (CCQUOTA_UPDATE=off to stop)`);
+  }
   const { ensureStatusLine } = await import('../src/statusline.js');
   const result = ensureStatusLine();
   if (!QUIET.has(result.outcome)) console.log(`  status line: ${said(result)}`);
