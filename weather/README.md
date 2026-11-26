@@ -6,7 +6,7 @@ The Weather theme's view (the cove, the sky, the sea, the rain on the glass) is 
 | path | what it is |
 | --- | --- |
 | `core/` | the contract every pass keeps (`contract.js`), the WebGL2 helpers, the frame graph (`renderer.js`), the cove's loader, the sun and moon (`astro.js`), the weather, pacing and detail (`director.js`) and the page's API (`api.js`); `lab.js` drives the lab page and is never built |
-| `passes/` | the drawing passes, in the order a frame runs them: `atmo`, `clouds`, `night`, `sky`, `coast`, `ocean`, `bolt`, `post`, `rain`, `pane` |
+| `passes/` | the drawing passes, in the order a frame runs them: `atmo`, `clouds`, `night`, `sky`, `coast`, `beacon` (the lighthouse far out, built in code from primitives, and its lamp), `ocean`, `bolt`, `post`, `rain`, `pane` |
 | `stub/` | frozen stand-ins for the passes, for the lab page's `live=` subsets |
 | `index.html` | the lab page; its `CORE` and `PASSES` lists are the bundle's module order |
 | `serve.cjs` | the lab page's server, with the dashboard's security headers |

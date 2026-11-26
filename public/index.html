@@ -1106,11 +1106,12 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    cost strip at the foot, over the near sea, and the horizon, the low sun
    and the far sea are left clear between them.
 
-   Its palette is its own and fixed: white at every reading, the scale
-   printed on the ring's dark casing in fixed paints, and for the pace a
-   magenta no zone uses. Nothing follows the accent ramp. All of it keys on
-   data-weather, which is set only while the view can run, so a browser
-   that cannot draw it keeps the glass page.
+   The words and the rules are white. What reads the reading takes the
+   accent ramp, as on the glass: the ring's arc, the scale printed on its
+   dark casing, the chart's fitted run, and out in the view the lamp of a
+   lighthouse far out at sea; the pace is a magenta no zone uses. All of
+   it keys on data-weather, which is set only while the view can run, so a
+   browser that cannot draw it keeps the glass page.
    ══════════════════════════════════════════════════════════════════ */
 .wx { position: fixed; inset: 0; z-index: 0; display: none; pointer-events: none; overflow: hidden; }
 /* the view fades up once there is a reading to show, and out when it is lost; a fade is not
@@ -1141,13 +1142,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   --wx-top: .32; --wx-bot: .45;
   --wx-halo: 0 1px 1px rgb(var(--wx-shade) / .7), 0 0 4px rgb(var(--wx-shade) / .55), 0 0 14px rgb(var(--wx-shade) / .35);
   --wx-halo-big: 0 2px 2px rgb(var(--wx-shade) / .6), 0 0 8px rgb(var(--wx-shade) / .5), 0 0 28px rgb(var(--wx-shade) / .35);
-  /* the freshness lamp keeps its tones, green, yellow and red; the chart's warning line takes the
-     scale's yellow and its cap rule the scale's red; the pace is magenta */
-  --steady:    #bdf8b4;  --steady-rgb:    189 248 180;
-  --warning:   #ecc531;  --warning-rgb:   236 197  49;
-  --critical:  #dc5228;  --critical-rgb:  220  82  40;
-  --exhausted: #cf2b2c;  --exhausted-rgb: 207  43  44;
-  --unknown:   #98a2ad;  --unknown-rgb:   152 162 173;
+  /* the bands' own colours are the glass's (the accent ramp's anchors), which the freshness lamp and
+     the chart's floor and cap lines read too; the pace is magenta */
   --pace-hot:  #ee6cd4;  --pace-hot-rgb:  238 108 212;
 }
 
@@ -1230,6 +1226,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-weather] .mclock.word { font-size: 13px; }
 :root[data-weather] :is(.mpace, .meta-eta) { font-size: 12.5px; font-weight: 450; line-height: 18px; min-height: 18px; color: var(--ink-3); }
 :root[data-weather] .meta-eta[data-on="1"] { color: var(--ink-2); }
+/* the cap's time in the page's white, as every word over the view is: the accent is for lines */
+:root[data-weather] .meta-eta b { color: rgb(var(--ink-rgb)); }
 :root[data-weather] :is(.ro dd, .ctot .v) { font-size: 20px; font-weight: 600; letter-spacing: 0; }
 :root[data-weather] :is(.dtitle, .dfoot, .ro dd.est) { font-size: 12.5px; }
 :root[data-weather] .cwarn { color: var(--ink-2); }
@@ -1247,8 +1245,11 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-weather] .gear:hover { background: rgb(255 255 255 / .14); border-color: rgb(255 255 255 / .5); }
 :root[data-weather] .gear[aria-expanded="true"] { color: #05080c; background: #f4f7fa; border-color: #f4f7fa; }
 
-/* The ring stands on its casing: an opaque dark band under the track, against which the white arc
-   and the printed scale are judged, and a translucent well inside it, where the numeral sits. */
+/* The ring stands on its casing: an opaque dark band under the track, against which the arc and the
+   printed scale are judged, and a translucent well inside it, where the numeral sits. The arc reads
+   the accent ramp, as on the glass, and the scale is printed in the same ramp (paintScale), so the
+   arc wears the colour printed where it ends; the unlit track stays a faint white. No bloom: the
+   casing is the instrument's ground, and a blur would spill past it over the view and the print. */
 .case, .scale { display: none; }
 :root[data-weather] .case { display: inline; fill: none; stroke: #04070b; stroke-width: 13; }
 :root[data-weather] .scale { display: inline; }
@@ -1257,13 +1258,17 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-weather] .well { fill: rgb(var(--wx-shade) / .58); }
 /* the numeral over the well, which is dark here (Glass's is all but clear, and draws over it) */
 :root[data-weather] .readout { z-index: 2; }
-:root[data-weather] .rim { stroke: rgb(255 255 255 / .22); }
 :root[data-weather] .track { stroke: rgb(255 255 255 / .14); }
 :root[data-weather] .arc.bloom,
 :root[data-weather] .thmarks { display: none; }
-:root[data-weather] .ring[data-band="exhausted"] .well { fill: rgb(255 255 255 / .18); }
-:root[data-weather] .ring[data-band="exhausted"] .rim { stroke: rgb(255 255 255 / .55); }
-:root[data-weather] .ring[data-state="unknown"] .track { stroke: #98a2ad; }
+/* the rim lies under the casing, so where it has something to say it is drawn round the casing's
+   outer edge: at the cap in the band's crimson, round a well flooded with it, dark enough still for
+   the white numeral; and dashed while the reading is held */
+:root[data-weather] :is(body[data-hold="1"], .ring[data-band="exhausted"]) .rim { r: 57.2px; }
+:root[data-weather] .ring[data-band="exhausted"] .well { fill: color-mix(in srgb, rgb(var(--band-rgb) / .62) 40%, rgb(var(--wx-shade) / .62)); }
+:root[data-weather] .ring[data-band="exhausted"] .rim { stroke: rgb(var(--band-rgb) / .85); stroke-width: 1.4; }
+/* with no reading the whole track is the ramp's unknown grey-blue */
+:root[data-weather] .ring[data-state="unknown"] .track { stroke: var(--unknown); }
 :root[data-weather] body[data-hold="1"] .rim { stroke: rgb(255 255 255 / .4); }
 /* no hover fill: the well brightens; and while the detail is open, a line under the words */
 :root[data-weather] .ring:hover,
@@ -1271,29 +1276,31 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-weather] .ring:hover .well { fill-opacity: .6; }
 :root[data-weather] .ring[aria-expanded="true"] .meta { box-shadow: 0 2px 0 #fff, 0 4px 3px rgb(var(--wx-shade) / .6); }
 
-/* the chart: white lines, the warning floor dashed in the scale's yellow and the cap in its red,
-   and every line edged in the dark, once, since it is redrawn only when its data changes */
+/* the chart: the fitted run, its head, its projection and the shade under it in the accent ramp, as
+   on the glass, the rest in white; the warning floor dashed in the ramp's amber and the cap in its
+   crimson, as the scale prints them; every word white, and every line edged in the dark, once,
+   since it is redrawn only when its data changes */
 :root[data-weather] .chart { filter: drop-shadow(0 0 1px rgb(var(--wx-shade) / .9)) drop-shadow(0 1px 4px rgb(var(--wx-shade) / .5)); }
 :root[data-weather] .chart :is(.grid, .day) { stroke: rgb(255 255 255 / .16); }
 :root[data-weather] .chart .full { stroke: rgb(255 255 255 / .55); }
-:root[data-weather] .chart .area { fill: rgb(255 255 255 / .12); }
+:root[data-weather] .chart .area { fill: rgb(var(--band-rgb) / .12); }
 :root[data-weather] .chart .since { stroke: rgb(255 255 255 / .35); }
-:root[data-weather] .chart .proj { stroke: #fff; opacity: 1; }
-:root[data-weather] .chart .warnln { stroke: #ecc531; stroke-width: 1.2; stroke-dasharray: 4 4; }
-:root[data-weather] .chart .capln { stroke: #cf2b2c; stroke-width: 1.4; }
+:root[data-weather] .chart .proj { opacity: 1; }
+:root[data-weather] .chart .warnln { stroke: var(--warning); stroke-width: 1.2; stroke-dasharray: 4 4; }
+:root[data-weather] .chart .capln { stroke: var(--exhausted); stroke-width: 1.4; }
 :root[data-weather] .chart .ax { fill: var(--ink-3); font-size: 11px; }
 :root[data-weather] .chart .lbl { stroke: rgb(var(--wx-shade) / .85); }
 :root[data-weather] .chartempty { border: 0; border-radius: 0; background: none; color: var(--ink-3); }
 
-/* the detail: no sheet, a lit seam, the four figures divided by hairlines, the band in a tag
-   outlined in white, and its buttons a game's */
+/* the detail: no sheet, a lit seam, the four figures divided by hairlines, the band in white words
+   in a tag outlined in the accent, and its buttons a game's */
 :root[data-weather] .detailInner { background: none; border-top: 1px solid rgb(255 255 255 / .3); }
 :root[data-weather] .seam { height: 2px; top: -1.5px; background: linear-gradient(90deg, transparent, #fff 22%, #fff 78%, transparent); }
 :root[data-weather] .readouts { gap: 0; background: none; border: 0; border-radius: 0; }
 :root[data-weather] .ro { background: none; padding: 6px 14px 8px; }
 :root[data-weather] .ro + .ro { border-left: 1px solid rgb(255 255 255 / .2); }
 :root[data-weather] .ro dt { color: var(--ink-3); }
-:root[data-weather] .dband { opacity: 1; border-radius: 3px; color: var(--ink) !important; border-color: #fff; background: rgb(var(--wx-shade) / .35); }
+:root[data-weather] .dband { opacity: 1; border-radius: 3px; color: var(--ink) !important; border-color: var(--band); background: rgb(var(--wx-shade) / .35); }
 :root[data-weather] :is(.dclose, .dxspan) {
   border: 1px solid rgb(255 255 255 / .38); border-radius: 3px; color: var(--ink); background: rgb(var(--wx-shade) / .35);
   font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
@@ -1369,7 +1376,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   :root[data-weather] :is(.art svg, .chart) { forced-color-adjust: none; filter: none; }
   :root[data-weather] .case { stroke: Canvas; }
   :root[data-weather] .well { fill: Canvas; }
-  :root[data-weather] .rim { stroke: CanvasText; }
+  :root[data-weather] .rim,
+  :root[data-weather] :is(body[data-hold="1"], .ring[data-band="exhausted"]) .rim { stroke: CanvasText; }
   :root[data-weather] .track,
   :root[data-weather] .ring[data-state="unknown"] .track { stroke: CanvasText; stroke-opacity: .3; }
   :root[data-weather] .scale :is(.wx-q, .wx-red) { stroke: GrayText; }
@@ -3471,11 +3479,10 @@ const paperOn = () => document.documentElement.dataset.theme === "broadsheet";
 const gaugesOn = () => document.documentElement.dataset.theme === "gauges";
 /* whether Weather's view is what is on screen: not the same as Weather being chosen, if it cannot run */
 const weatherOn = () => document.documentElement.hasAttribute("data-weather");
-/* Weather's palette is its own and fixed (see the weather section): the arc white at every reading,
-   since the weather shows the band and the scale printed on the casing reads it; the grey for a ring
-   with no reading; and for the pace a magenta that no zone uses, the same at any severity, which the
-   overrun's weight carries instead */
-const WX_WHITE = [244, 247, 250], WX_GREY = [152, 162, 173], WX_MAGENTA = [238, 108, 212];
+/* Weather's ring reads this ramp on the dark ground, as Glass's does, and so does the lamp of the
+   lighthouse out in its view (weatherReading); its pace is the one colour of its own, a magenta that
+   no zone uses, the same at any severity, which the overrun's weight carries instead */
+const WX_MAGENTA = [238, 108, 212];
 /* Broadsheet's paper is a light ground too, so it prints the light clay's inks, unless forced colours
    have put a dark ground under it, where it reads Glass's ladder as the dark clay does */
 const FORCED_DARK = matchMedia("(forced-colors: active) and (prefers-color-scheme: dark)");
@@ -3484,7 +3491,6 @@ const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * 
 const rgbCss = (c) => "rgb(" + c[0] + " " + c[1] + " " + c[2] + ")";
 
 function rampOf(pct, th, band) {
-  if (weatherOn()) return { rgb: band === "unknown" || typeof pct !== "number" ? WX_GREY : WX_WHITE, bloom: 0 };
   const P = lightGround() ? STOP_LIGHT : STOP;
   if (band === "unknown" || typeof pct !== "number") return { rgb: P.unknown, bloom: BLOOM_STOP.unknown };
   const warn = num(th && th.warningFloorPercent, 70);
@@ -4551,13 +4557,18 @@ function paintThresholds(key, th, on, pct) {
   }).join("");
 }
 
-/* Weather prints its scale on the ring's casing, as an instrument's is, in fixed paints from the
-   served thresholds: the warning band in its four quarters, each a shade deeper (yellow, amber,
-   orange, red-orange), the cuts between them left as narrow gaps; red from critical, only where it
-   stands clear of the cap (colourMarks' rule, so never on Max 20× or 5×); and a red line at the cap.
-   It is the same at every reading, so it is drawn again only when the thresholds move; before any
-   reading it prints the default table, as Gauges does. Every paint holds 3:1 on the casing. */
-const WX_PAINT = { q: ["#ecc531", "#ec9f2a", "#e67624", "#dc5228"], red: "#cf2b2c" };
+/* Weather prints its scale on the ring's casing, as an instrument's is, from the served thresholds
+   and in the ramp its arc reads: the warning band in its four quarters, each in the colour the arc
+   takes halfway across it, so each is a shade deeper (amber, orange, red-orange, crimson), the cuts
+   between them left as narrow gaps; the cap's crimson from critical, only where it stands clear of
+   the cap (colourMarks' rule, so never on Max 20× or 5×); and a crimson line at the cap. So the arc
+   wears the colour printed where it ends. It is the same at every reading, so it is drawn again only
+   when the thresholds move; before any reading it prints the default table, as Gauges does. Every
+   paint holds 3:1 on the casing. */
+const WX_PAINT = {
+  q: Array.from({ length: WARN_STATIONS }, (_, k) => rgbCss(mix(STOP.warning, STOP.exhausted, (k + .5) / WARN_STATIONS))),
+  red: rgbCss(STOP.exhausted),
+};
 /* the print's radius and width (r 54 to 56.5 of the 120-unit ring, the casing's outer edge), and
    the cut between two paints, in the same units along the arc */
 const WX_PRINT = { r: 55.25, w: 2.5, cut: 0.8 };
@@ -5135,7 +5146,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   if (warnOn) {
     s += `<line class="warnln" x1="${PL}" y1="${Y(warn).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(warn).toFixed(1)}"></line>`;
   }
-  /* Weather's chart prints the cap in the scale's red, as its ring does, wherever the axis reaches it */
+  /* Weather's chart prints the cap in the scale's crimson, as its ring does, wherever the axis reaches it */
   const capPct = num(th && th.exhaustedPercent, 100);
   if (weatherOn() && capPct <= ymax) {
     s += `<line class="capln" x1="${PL}" y1="${Y(capPct).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(capPct).toFixed(1)}"></line>`;
@@ -8629,11 +8640,11 @@ function trainMotion() {
 /* ═════════════════════════ weather ═════════════════════════
    The Weather theme is the view through a window over a cove: the sea and the sky, drawn on the
    graphics card by makeWeather, whose code is its own file, public/weather/wx.js (built by
-   tools/build-weather.mjs), loaded the first time the view is wanted, so no other theme fetches or
-   parses it. The page's part is here: what the view is told (the hottest
-   reading, whether the feed is held, the place and whether to follow the real time, the quality,
-   whether it may move) and what it tells the page back, how bright it is behind each group of
-   words, which sets the pools under them.
+   tools/build-weather.mjs from weather/), loaded the first time the view is wanted, so no other
+   theme fetches or parses it. The page's part is here: what the view is told (the hottest
+   reading and the colour the ring shows for it, whether the feed is held, the place and whether to
+   follow the real time, the quality, whether it may move) and what it tells the page back, how
+   bright it is behind each group of words, which sets the pools under them.
 
    makeWeather(host, hooks) -> null | W, the one seam between the page and the view:
      host   the <div class="wx"> the view lives in. makeWeather puts its own <canvas> in it, and
@@ -8648,6 +8659,7 @@ function trainMotion() {
      hooks.quality        the stored Quality: how finely the view is drawn.
      hooks.gpu            the stored GPU setting, so the first context already asks for that graphics card.
      hooks.fps            the stored Frame rate.
+     hooks.accent         the ring's colour for the reading now, as W.accent takes it.
      It returns null at once when this browser cannot draw the view.
      W.start()                  the theme is on screen: build, or resume
      W.stop()                   off screen, hidden or forced colours: no frames and no timers; keeps everything
@@ -8658,6 +8670,9 @@ function trainMotion() {
      W.quality(q)               "auto" | "high" | "low"
      W.gpu(g)                   "auto" | "low" | "high": the powerPreference asked for; a change makes a new context
      W.fps(f)                   "auto" | "30" | "60" | "120" | "display": frames a second, or every refresh
+     W.accent(rgb)              the ring's colour for the reading, [r, g, b] 0..255, or null for none: the lamp
+                                of the lighthouse out at sea shows it, easing to a new one as the weather
+                                eases to a new reading (missing from a wx.js older than the page)
      W.resize()                 the window or the dpr changed (debounced inside)
      W.capture(w, h)            a canvas holding the view now, covering w × h, or null              */
 let weather = null, weatherBroken = false;
@@ -8673,17 +8688,28 @@ if (typeof ResizeObserver !== "undefined") {
    theme stands with its dark window and no view. */
 let wxPainted = false;
 
-/* The hottest reading drawn, for the view to walk to, as Train's; and whether the pane mists: a
-   held reading, or one lost after a reading was seen (the view ignores it before the first). */
-function weatherReading() {
-  if (!weather) return;
-  const f = freshness();
-  let p = null;
+/* What the view is told of the readings: the hottest drawn, which it eases to (Train's walks to it);
+   whether the pane mists: a held reading, or one lost after a reading was seen (the view ignores it
+   before the first); and the colour the ring shows for it, which the lamp of the lighthouse out at
+   sea shows too: rampOf's, the unknown grey-blue with no reading or for a ring dormant and empty. */
+function wxNow() {
+  const f = freshness(), th = S.snap ? S.snap.thresholds : null;
+  let p = null, shown = false;
   if (!f.blank) for (const key of ORDER) {
     const l = limitOf(key);
-    if (l && typeof l.percent === "number") p = Math.max(p === null ? 0 : p, l.percent);
+    if (l && typeof l.percent === "number") {
+      p = Math.max(p === null ? 0 : p, l.percent);
+      if (!l.dormant || l.percent > 0) shown = true;
+    }
   }
-  weather.reading(p, S.snap ? S.snap.thresholds : null, !!f.hold || !!f.blank);
+  return { p, th, misted: !!f.hold || !!f.blank, accent: rampOf(shown ? p : null, th).rgb };
+}
+function weatherReading() {
+  if (!weather) return;
+  const now = wxNow();
+  weather.reading(now.p, now.th, now.misted);
+  /* a wx.js older than the page has no lighthouse to tell */
+  if (weather.accent) weather.accent(now.accent);
 }
 
 /* What the view should be doing now: nothing outside the theme; under forced colours or in a hidden
@@ -8708,7 +8734,8 @@ function weatherMotion() {
     if (wxMake === null) { wxLoad(); return; }      // asked for; this runs again once it is in
     if (!wxMake) { weatherDead(); return; }         // missing, broken, or not a renderer
     try {
-      weather = wxMake($("wx"), { onDead: weatherDead, onScrim: wxScrim, quality: PREFS.wxQuality, gpu: PREFS.wxGpu, fps: PREFS.wxFps });
+      weather = wxMake($("wx"), { onDead: weatherDead, onScrim: wxScrim, quality: PREFS.wxQuality, gpu: PREFS.wxGpu, fps: PREFS.wxFps,
+                                  accent: wxNow().accent });
     } catch (_) { weather = null; }
     if (!weather) { weatherDead(); return; }
   }

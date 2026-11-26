@@ -58,11 +58,14 @@ Four tiling texture sets, laid over the headlands' terrain by slope and height, 
   subset its plan chooses (which models, which levels, which texture set), under the same names,
   and writes `manifest.json`: the models, the ground layers, and every file with its size and the
   start of its SHA-256, which the page adds to each request so a changed file is fetched anew.
-  Neither the pipeline nor the lab is part of this repository. Here: 114 files (29 GLB, 85
-  WebP), 15.7 MB.
+  The pipeline is not part of this repository (the lab page is, in `weather/`). Here: 114 files
+  (29 GLB, 85 WebP), 15.7 MB.
 
 `wx.js` beside them is not one of these assets: it is the theme's renderer, the project's own code
-under its MIT licence, built from its sources by `tools/build-weather.mjs`.
+under its MIT licence, built from its sources in `weather/` by `tools/build-weather.mjs`.
+
+The lighthouse far out at sea is not one of them either. Poly Haven has no lighthouse model, so the
+renderer builds it in code from primitives (a granite tower on a low reef) and it ships no files.
 
 The GLBs' own image references name `1k/` even where only `512/` ships. The theme takes each
 texture from `manifest.json` instead, so this does not matter to the page; to open a GLB in

@@ -20,7 +20,8 @@
      D.seen, D.F, D.walk       state, for the API and the lab
      D.view(hfovRad)           the view's width, for placing strikes in it
 
-   Walkers (DESIGN 2.3, contract v1.1): v at 0.6 points/s; wet 1/20 s; bolt 1/30 s; mist 1/20 s in,
+   Walkers (DESIGN 2.3, contract v1.1): [r7] v eases to each new reading, critically damped (WX.WALK.read: half of any
+   step in 15 s, 99 % in 60 s; round 6 walked 0.6 points/s); wet 1/20 s; bolt 1/30 s; mist 1/20 s in,
    1/30 s out; soak tau 15 s in, 40 s out; puddle tau 35 s in, 40 s out. Clocks are float64 and reach
    F wrapped (WX.PERIOD), drifts mod 420 km and 840 m. The real sky (WX.skyAt) runs at 1 Hz, two
    samples interpolated; a sun or moon jump over 0.5 deg dissolves over 2 s. The stars' matrix is
@@ -37,8 +38,27 @@
   const RAD = Math.PI / 180, U = WX.util;
   const wrap = (x, p) => ((x % p) + p) % p;
   const toward = (x, t, step) => (x < t ? Math.min(t, x + step) : Math.max(t, x - step));
-  WX.WALK = { read: 0.6, wet: 20, bolt: 30, mistIn: 20, mistOut: 30, soakIn: 15, soakOut: 40, puddleIn: 35, puddleOut: 40,
+  /* [r7] THE READING EASES, IT DOES NOT WALK (the user, 2026-11-26: "more continuous change"). The quota comes in whole
+     percents about every 2 minutes, and round 6 walked the scene's reading to each at 0.6 points/s: a 1-point step was
+     a 1.7 s surge of wind, waves and rain at full rate, then nothing. Now the reading is a critically damped second-order
+     system: v'' = w^2 (goal - v) - 2 w v', w = read (1/s; the key keeps its name so the harness's time-lapse, which
+     scales `read` up, still speeds it). From rest, v = goal - D (1 + w t) e^(-w t): S-shaped (its rate starts at 0,
+     peaks at t = 1 / w, then dies away), half of the step in 15 s, 90 % in 35 s, 99 % in 60 s, whatever the step's size
+     (a 1-point step peaks at .04 points/s, 5 points at .2, a 40 -> 96 jump at 2.3). A new reading keeps the rate the
+     reading has (no jump in it), and never overshoots: a reading that arrives closer than the rate can stop for at w
+     (the walk heads to it faster than w x the distance) is approached at w' = rate / distance, a pure exponential, so the
+     motion slows into it. Within .005 points and .001 points/s of its goal it stands on it (so the rain at the floor and
+     the bolt at the third quarter start on a reading that lands on them). It decays to the goal: rule 1 holds. A first
+     reading and a still still take the goal at once. */
+  WX.WALK = { read: 0.11, wet: 20, bolt: 30, mistIn: 20, mistOut: 30, soakIn: 15, soakOut: 40, puddleIn: 35, puddleOut: 40,
               jumpDeg: 0.5, jumpFade: 2, toggleFade: 2, stillFade: 4 };
+  /* [r7] the ease's step: the exact solution over dt, so any frame time is stable. e = v - goal, r = v'; returns the
+     new v into s[0] and r into s[1] */
+  WX.easeStep = function (v, r, goal, w, dt, s) {
+    const e = v - goal, B = r + w * e, x = Math.exp(-w * dt);
+    s[0] = goal + (e + B * dt) * x; s[1] = (r - w * B * dt) * x;
+    return s;
+  };
   /* the strike's sky light, up once and down once (robust.md 4.2): WX.FLASH, WX.flashLevel and WX.flashI
      are in the contract since 1.2 */
   /* a small seeded generator (mulberry32): every random thing is seeded (DESIGN 2.5 rule 5) */
@@ -214,7 +234,9 @@
     const K = WX.WALK;
     let scene = typeof o.t0 === "number" ? o.t0 : rnd() * 864000;     // float64 seconds
     let cuts = WX.cuts(null), goal = 0, misted = false;
-    const walk = { v: 0, wet: 0, bolt: 0, mist: 0, soak: 0, puddle: 0 };
+    const walk = { v: 0, rate: 0, wet: 0, bolt: 0, mist: 0, soak: 0, puddle: 0 };   // [r7] rate: v' points/s
+    let easeW = K.read;                                  // [r7] the ease's w for the present approach
+    const easeS = new Float64Array(2);
     let Wkey = NaN, Wsoak = -1, Wpuddle = -1, Wmist = -1, Wbolt = -1, Wwet = -1, Wcuts = null;
     const drift = { weather: [0, 0], shape: [0, 0], cirrus: [0, 0], curl: [0, 0], sea: [0, 0] };   // float64
     for (const k in drift) { drift[k][0] = rnd() * 420; drift[k][1] = rnd() * 420; }
@@ -234,7 +256,7 @@
       return tg;
     }
     function snap() {
-      walk.v = goal;
+      walk.v = goal; walk.rate = 0; easeW = K.read;
       const t = targets();
       walk.wet = t.wet; walk.bolt = t.bolt; walk.mist = t.mist;
       const W0 = WX.weatherAt(walk.v, cuts, { wet: walk.wet, bolt: walk.bolt, mist: walk.mist });
@@ -253,12 +275,24 @@
       goal = U.clamp(p, 0, c.cap);
       misted = !!mist;
       if (!D.seen) { D.seen = true; snap(); return true; }
+      /* [r7] a new goal keeps the rate; heading to it faster than w x the distance, the approach stiffens to rate /
+         distance (a pure exponential): no overshoot, no jump in the rate */
+      if (goal !== was) {
+        const e = goal - walk.v;
+        easeW = e * walk.rate > 0 && Math.abs(walk.rate) > K.read * Math.abs(e) ? Math.abs(walk.rate / e) : K.read;
+      }
       return goal !== was || misted !== wasMist || c.warn !== wasCuts.warn || c.cap !== wasCuts.cap || c.crit !== wasCuts.crit;
     };
     function stepWalkers(dt) {
       if (D.still) { snap(); return; }
       const t = targets();
-      walk.v = toward(walk.v, t.v, K.read * dt);
+      /* [r7] the reading eases (WX.WALK): critically damped, standing on its goal once within .005 points and .001
+         points/s of it */
+      if (walk.v !== t.v || walk.rate !== 0) {
+        WX.easeStep(walk.v, walk.rate, t.v, easeW, dt, easeS);
+        walk.v = easeS[0]; walk.rate = easeS[1];
+        if (Math.abs(walk.v - t.v) < 0.005 && Math.abs(walk.rate) < 0.001) { walk.v = t.v; walk.rate = 0; easeW = K.read; }
+      }
       walk.wet = toward(walk.wet, t.wet, dt / K.wet);
       walk.bolt = toward(walk.bolt, t.bolt, dt / K.bolt);
       walk.mist = toward(walk.mist, t.mist, dt / (t.mist > walk.mist ? K.mistIn : K.mistOut));

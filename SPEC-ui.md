@@ -486,19 +486,37 @@ wind. The low sun throws the cliffs' shadows across the water, the cove is mirro
 and broken up in a rough one, and at night the ship shows its anchor light and a lantern burns at
 the pier's end.
 
+**A lighthouse far out at sea shows the ring's colour.** Three kilometres out, on a low reef just
+right of the middle near the horizon, stands a granite lighthouse, a slender tower small in the
+view and clear of the page's words. Its lamp is lit at every hour and shows the colour the ring
+shows for the reading: teal below the warning floor, amber deepening to crimson across the band,
+the grey-blue with no reading. By day it is a small coloured light. At dusk, at night and in rain
+or haze its two beams turn once every 16 seconds, faint shafts in the far air that never sweep the
+whole view, and its light lies on the water as a broken path. A new colour comes in as the
+weather does, over about a minute, never at once, and the flash as a beam passes the window is
+soft and brief, inside the same limits as the lightning. Only the lamp wears the colour: the
+weather itself shows the band.
+
 **The weather turns on the served cut points**, so it lands on the marks the ring prints:
 
 | reading | weather |
 | --- | --- |
 | 0 | fair: a few small cumulus and strands of cirrus, a light air, a calm sea under a long low swell, the horizon sharp |
-| up to the warning floor (70%) | the cumulus build in from the sea and gather into a broken grey sky, and the breeze freshens with the reading to force 5 and breaks the first whitecaps; it stays dry |
+| up to the warning floor (70%) | the cumulus build in from the sea and gather into a broken grey sky, and the breeze freshens with the reading, slowly at first, to force 5 and breaks the first whitecaps; it stays dry |
 | at the warning floor | the cloud closes and the rain begins: the first drops strike the pane and bead on it |
 | from there to the band's first quarter point (77.5%) | light rain; the drops gather and grow, and the wind reaches force 6 |
 | from the first quarter point | rain under a lowering grey: the drops run down the glass in trails, the rain shows in streaks outside, and the sea runs in long white crests |
 | from the second (85%) | heavy rain: the glass streams, the horizon goes grey into the rain, a near gale blows the foam in streaks |
 | from the third (92.5%) | a squall: the cloud towers into thunderheads with rain hanging from them in curtains, a gale, and lightning flickering inside the cloud far out |
 | at critical, where it stands clear of the cap | a thunderstorm overhead: bolts strike the sea in a strong gale |
-| at the cap (100%) | the storm at its height: lightning every few seconds, a storm-force wind, the sea white and the horizon gone |
+| at the cap (100%) | the storm at its height: lightning every few seconds, a storm-force wind, the sea white and the horizon gone, big breakers bursting on the rocks |
+
+The wind and the swell follow one smooth curve over the whole scale, set from the served cut
+points, with no corner at the floor or anywhere else: they rise gently through the low readings,
+build visibly through the middle and fastest across the band, from a light air and a half-metre
+swell at 0, through force 5 and a swell of a metre and a half at the floor, to a storm and a
+four-metre swell at the cap, where the bay heaves and the breakers burst into spray on the rocks.
+The cloud, the rain and the lightning keep the onsets the table gives them.
 
 The hour never changes the weather. Night only darkens it: the moon and the stars show only
 through gaps in the cloud, a town's glow out of sight lights the undersides of a low deck, and
@@ -509,9 +527,12 @@ the weather: over pace the ring shakes as on the glass, and the sky says nothing
 fast burn at 9% is the ring's to say and not a storm.
 
 **No change happens at once.** Nothing in the view follows a reading directly. The scene keeps its
-own reading, which walks after the real one at 0.6 points a second, and the cloud, the wind and the
-sea follow it, so however far a reading jumps the weather passes through everything between, in
-order; from 0 to the cap takes under three minutes. The rain sets in over 20 s when the scene's
+own reading, which eases after the real one: it gathers way, then settles, half of any step in
+15 s and all but a hundredth of it in a minute, whatever the step's size, never overshooting and
+never changing its rate at once, however a new reading arrives. Readings come in whole points
+every few minutes, so the weather drifts from one to the next instead of surging and stopping;
+the cloud, the wind and the sea follow it, so however far a reading jumps the weather passes
+through everything between, in order. The rain sets in over 20 s when the scene's
 reading reaches the warning floor and eases off over 20 s when it falls below it, and the drops
 left on the pane run off and dry within a minute and a half; the lightning comes and goes over
 30 s at the third quarter point. A stronger wind raises the waves already running, and a weaker one
@@ -521,10 +542,10 @@ lays them; the sea is never swapped for another.
   it, and the window stays dark behind the page. The view fades up already in that reading's
   weather, the pane already as wet as that rain leaves it, so a page opened at 95% opens in the
   squall.
-- **A held reading** is walked to like any other, and the pane mists over from inside in 20 s,
+- **A held reading** is eased to like any other, and the pane mists over from inside in 20 s,
   the view softening behind it to light and shapes; it clears over 30 s when the feed comes back.
   A reading lost after one was seen leaves the weather as it was, misted.
-- **Going back.** A reading that falls, as one does when the week resets, walks back the same way:
+- **Going back.** A reading that falls, as one does when the week resets, eases back the same way:
   the lightning goes, the rain eases and stops, the pane drains, the cloud breaks and the sea goes
   down with the wind.
 - **It holds at any reading.** Every weather is a loop: the clouds drift in from the sea and pass,
@@ -532,14 +553,18 @@ lays them; the sea is never swapped for another.
   roll. Nothing fills, empties or travels; after three days at 60% it is the same broken sky and
   fresh breeze as after three minutes. Only the sun, the moon and the stars move, as the real ones
   do.
-- **Its palette is its own.** The words, the rules, the buttons, the arc and the chart's lines
-  are white at every reading, and the view does not follow the ring: the weather shows the band.
-  The scale is printed on the ring's dark casing as an instrument's is, from the served
-  thresholds: the warning band in quarters each painted a shade deeper, yellow, amber, orange and
-  red-orange, a red zone from critical where it stands clear of the cap, and a red line at the
-  cap. The chart prints the warning floor in the same yellow and the cap in the red. The pace
-  channel is the one colour that moves: a magenta no zone uses, dotted while it is headroom and
-  solid, heavier the further the reading has overrun the clock. None of it is the accent ramp.
+- **What reads the reading wears the accent; every word is white.** The words, the rules and the
+  buttons are white at every reading. The arc reads the ladder the glass reads, the accent ramp:
+  teal below the warning floor, amber deepening to crimson across the band, the grey-blue with no
+  reading; so do the chart's fitted run, its projection and the shade under it, the outline of
+  the detail's band tag, and out in the view the lighthouse's lamp. The scale is printed on the
+  ring's dark casing as an instrument's is, from the served thresholds and in the same ramp: the
+  warning band in quarters, each in the colour the arc takes halfway across it (amber, orange,
+  red-orange, crimson), the cap's crimson from critical where it stands clear of the cap, and a
+  crimson line at the cap, so the arc wears the colour printed where it ends. The chart prints the
+  warning floor in the ramp's amber and the cap in its crimson, and the freshness lamp keeps the
+  glass's tones. The pace channel keeps a colour of its own: a magenta no zone uses, dotted while
+  it is headroom and solid, heavier the further the reading has overrun the clock.
 - **The view never hides a reading.** Each group of words stands on a dark pool, deeper the
   brighter the view behind it, which the scene measures twice a second, leaving lightning out so a
   flash does not make the page pulse; from the band's third quarter, where the strikes begin, each
@@ -551,17 +576,21 @@ lays them; the sea is never swapped for another.
   rather than fading further. Nothing blurs the view behind the page, which would mean blurring it
   again every frame.
 - **The ring** is drawn as on the glass, on its casing: the white tick, the overshoot span, the
-  well flooding at the cap, the dashed rim while held. There is no fluid and no bloom. It shakes
-  while over pace as it does in Glass, by the same rule and on the same switch.
+  well flooding crimson at the cap inside a crimson rim, dark enough still for the white numeral,
+  and a dashed rim round the casing while held. The unlit track is a faint white, and with no
+  reading the whole track is the grey-blue. There is no fluid and no bloom: the casing is the
+  instrument's ground, and a glow would spill past it over the view. It shakes while over pace as
+  it does in Glass, by the same rule and on the same switch.
 - **Lightning never strobes.** A strike lights the sky once, rising and fading in under a second;
   only the thin channel of a bolt may flicker. Strikes are at least two and a half seconds apart,
   so no second holds more than one flash.
 - *Moving scene*, shared with Train, off stops the clouds, the sea and the rain where they stand,
-  and `prefers-reduced-motion` does the same. A still view cannot walk, so it dissolves into the
-  next over 4 s when a reading moves the weather or the mist comes or goes, and, while it follows
-  real time, as the sun moves; a still has no lightning. A hidden tab stops the view and the walk
-  picks up where it was; a tab coming back after a minute or more dissolves over two seconds to
-  the sky as it now is. A window that is visible but not focused is drawn at half the frame rate.
+  and `prefers-reduced-motion` does the same. A still view cannot ease, so it dissolves into the
+  next over 4 s when a reading moves the weather, the lamp's colour or the mist, and, while it
+  follows real time, as the sun moves; a still has no lightning, and the lighthouse's beams stand
+  turned away from the window. A hidden tab stops the view and the ease picks up where it was; a
+  tab coming back after a minute or more dissolves over two seconds to the sky as it now is. A
+  window that is visible but not focused is drawn at half the frame rate.
 - *Quality*: Auto, the default, draws the view finer or coarser to keep it smooth; High draws it
   in full whatever it costs; Low draws it coarser. None of them changes what is shown, and a step
   finer or coarser, or a new window size, is drawn in the frame that takes it: the view never shows
@@ -587,8 +616,8 @@ lays them; the sea is never swapped for another.
   context is lost and does not come back; so does a page whose view's code is missing or does not
   load. One too slow to draw it moving shows it still, as reduced motion does.
 - The saved graph is a frame of the view, darkened under the chart and the figures, which are drawn
-  over it in the page's white and the printed scale's paints; without a view to take, a night-blue
-  plate.
+  over it as the page draws them, the words in white and the fitted run in the accent; without a
+  view to take, a night-blue plate.
 
 ## Primary view — the weekly limit, a ring and its chart
 
@@ -667,8 +696,8 @@ Shape of the rule (values pending the probe):
 Colorblind safety: the bands must differ in **lightness** as well as hue, and the pace
 marker carries the same warning independent of color. Neumorphism's light clay reads the same
 ladder in darker inks whose lightness still falls with danger; its dark clay reads the ladder as it
-is (see *Neumorphism*). Weather prints the scale on the ring and keeps the arc white; see
-*Weather*.
+is (see *Neumorphism*). Weather reads the ladder as the glass does and prints it on the ring's
+casing too; see *Weather*.
 
 ## Dormant limits
 

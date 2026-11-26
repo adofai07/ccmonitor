@@ -49,7 +49,7 @@
    scope; every module only ever refers to WX, so nothing else changes.                      */
 var WX = (typeof window !== "undefined" && window.WX) || {};
 if (typeof window !== "undefined") window.WX = WX;
-WX.CONTRACT = "1.3.6";   // [1.3] additive: R.coast.lamps holds 4 lights; WX.TAA.hist is LINEAR-filtered; [1.3.1] the sea grid 8 px at T0-T2; [1.3.2] the storm's lightning nearer (CHANGES-3.md); [1.3.3] a day flash twice as bright, 3 a minute from 92.5 %; [1.3.4] T0 draws 1000 rain streaks, a strike after a long wait is seen; [1.3.5] T0-T1 split the world frame over two frames (worldSplit); [1.3.6] the Frame rate and Graphics card settings (hooks.fps, hooks.gpu, W.fps, W.gpu), Quality only sets the detail
+WX.CONTRACT = "1.4";     // [1.4] additive (stream L, round 7): the lighthouse: uBeacon, uBeaconC, uBeaconB appended to the UBO, wxBeacon, R.beacon, WX.BEACON (section 10); W.accent and hooks.accent (api.js) hand the page's accent to the passes as F.accent. [1.3] additive: R.coast.lamps holds 4 lights; WX.TAA.hist is LINEAR-filtered; [1.3.1] the sea grid 8 px at T0-T2; [1.3.2] the storm's lightning nearer (CHANGES-3.md); [1.3.3] a day flash twice as bright, 3 a minute from 92.5 %; [1.3.4] T0 draws 1000 rain streaks, a strike after a long wait is seen; [1.3.5] T0-T1 split the world frame over two frames (worldSplit); [1.3.6] the Frame rate and Graphics card settings (hooks.fps, hooks.gpu, W.fps, W.gpu), Quality only sets the detail
 WX.LAB_MARKERS = { open: "/" + "*@lab*" + "/", close: "/" + "*@end*" + "/" };   // concatenated: a literal here would be stripped
 
 WX.mods = WX.mods || [];          // registered passes, in load order
@@ -259,6 +259,10 @@ WX.UBO = [
   /* [1.2] appended: every offset above is unchanged */
   ["uTaa", "vec4", "xy the sub-pixel jitter the world slots draw with this frame, S px (-.5...5; 0 with TAA off, in a still, and in every slot after 'taa'), zw the previous world frame's (what the history was drawn with)"],
   ["uTaa1", "vec4", "x TAA on 0/1 (a pass implements the 'taa' slot), y jitter phase 0..15, z world frames of valid history (0: none; a build, resize, tier change, still or sky jump resets it), w unused"],
+  /* [1.4] appended (stream L, round 7: the lighthouse, section 10): every offset above is unchanged */
+  ["uBeacon", "vec4", "xyz the lighthouse's lamp, world m (lowered by the sea's curvature, as the cove is), w its steady intensity (the lantern's glow), rel m^2 before the exposure, as R.coast.lamps' w (0: no lighthouse)"],
+  ["uBeaconC", "vec4", "rgb the lamp's colour, linear Rec. 709 at unit luminance: the page's accent (W.accent), eased as the reading eases; w the two beams' peak intensity, rel m^2 before the exposure"],
+  ["uBeaconB", "vec4", "x beam 1's bearing rad, from +z toward +x (beam 2 is opposite; they turn one way, a turn every WX.BEACON.turn s of the sea's clock), y the beams' horizontal sigma rad, z their vertical sigma rad, w the lighthouse's presence 0..1 (0: none)"],
 ];
 WX.UBO_OFFSET = {};
 WX.UBO_FLOATS = (function () {
@@ -330,7 +334,8 @@ WX.SLOTS = [
 WX.LIBS = {
   common: "core   (this file): UBO, samplers, wxRay, wxUV, wxClip, wxClipFlat, wxPlanet, wxLuma, wxGuard, hashes;" +
           " [1.2] wxRay0, wxUV0 (unjittered), wxUVPrev (the previous world frame's jitter), WX_FLASH_RGB," +
-          " vec4 wxFlash(int k, vec3 pM), vec3 wxFlashE(vec3 pM, vec3 n): lightning as a light, one falloff for every receiver",
+          " vec4 wxFlash(int k, vec3 pM), vec3 wxFlashE(vec3 pM, vec3 n): lightning as a light, one falloff for every receiver;" +
+          " [1.4] vec4 wxBeacon(vec3 pM): the lighthouse's lamp as a light (section 10), coloured uBeaconC.rgb",
   atmo: "sky stream: vec3 wxTransmittance(float rKm, float mu); vec3 wxSunLight(vec3 pKm); vec3 wxMoonLight(vec3 pKm);" +
         " vec3 wxSky(vec3 dir); vec3 wxSunDisc(vec3 dir); vec4 wxAerial(vec3 dir, float dKm); vec3 wxAmbient(float up)",
   clouds: "sky stream: vec4 wxCloudAt(vec2 uv); float wxCloudDepthAt(vec2 uv); float wxCloudShadow(vec3 pM); float wxCloudShadowMean()." +
@@ -363,15 +368,35 @@ WX.cuts = function (th) {
 };
 /* columns of an anchor row */
 WX.COLS = ["cov", "type", "base", "top", "cirrus", "rain", "U10", "swellHs", "vis", "flashes", "strikeKm", "cgShare"];
+/* [r7] U10 and swellHs are no longer read from these rows: they follow WX.WIND's one smooth curve (below). Their
+   columns keep, for reference, the curve's values at Max 20x's cuts (and Pro's 95 % for crit). */
 WX.ANCHORS = {
-  //     cov   type  base  top   cirr  rain U10  swell vis  fl/min km  CG
-  zero: [0.10, 0.50, 1.40, 2.2, 0.15, 0.0, 3, 0.80, 50, 0.0, 22, 0.00],
-  warn: [0.70, 0.32, 1.00, 2.8, 0.55, 0.5, 9, 1.10, 20, 0.0, 22, 0.00],
-  s1:   [0.84, 0.22, 0.80, 3.5, 0.40, 2.0, 12, 1.20, 10, 0.0, 22, 0.00],
-  s2:   [0.93, 0.20, 0.65, 4.2, 0.20, 6.0, 15, 1.35, 5.5, 0.0, 22, 0.00],
-  s3:   [0.97, 0.55, 0.55, 7.0, 0.00, 15, 19, 1.50, 3.0, 3.0, 12, 0.20],
-  crit: [0.99, 0.85, 0.45, 10, 0.00, 28, 23, 1.65, 2.0, 5.0, 5, 0.40],
-  cap:  [1.00, 1.00, 0.40, 11, 0.00, 40, 26, 1.80, 1.5, 8.0, 3, 0.50],
+  //     cov   type  base  top   cirr  rain U10   swell vis  fl/min km  CG
+  zero: [0.10, 0.50, 1.40, 2.2, 0.15, 0.0, 3.0,  0.50, 50, 0.0, 22, 0.00],
+  warn: [0.70, 0.32, 1.00, 2.8, 0.55, 0.5, 9.5,  1.49, 20, 0.0, 22, 0.00],
+  s1:   [0.84, 0.22, 0.80, 3.5, 0.40, 2.0, 12.3, 1.92, 10, 0.0, 22, 0.00],
+  s2:   [0.93, 0.20, 0.65, 4.2, 0.20, 6.0, 15.9, 2.47, 5.5, 0.0, 22, 0.00],
+  s3:   [0.97, 0.55, 0.55, 7.0, 0.00, 15, 20.5, 3.16, 3.0, 3.0, 12, 0.20],
+  crit: [0.99, 0.85, 0.45, 10, 0.00, 28, 22.2, 3.42, 2.0, 5.0, 5, 0.40],
+  cap:  [1.00, 1.00, 0.40, 11, 0.00, 40, 26.0, 4.00, 1.5, 8.0, 3, 0.50],
+};
+/* [r7] THE WIND AND THE SWELL ON ONE SMOOTH CURVE (the user, 2026-11-26: "more continuous change"). Round 6 drew U10 and
+   the swell through the anchor rows above, linearly: 3 m/s at 0 %, 9 at the floor, then 12 / 15 / 19 / 26 at the quarter
+   points and the cap, so the wind rose 0.086 m/s a point to the floor and ~0.4 above it, and the waves showed the kink.
+   Now both are U = U0 + (U1 - U0) b and Hs = H0 + (H1 - H0) b with b = (v / cap)^p, one power law from 0 to the cap:
+   monotone, C-infinity on (0, cap], flat at 0 (b' = 0: calm at low readings), its rate growing smoothly with the reading
+   (no knee at the floor or at a quarter point). p is set by the served cuts so that the floor keeps its place: b(warn) =
+   atWarn (0.283: 9.5 m/s at Max 20x's 70 %), so p = ln(atWarn) / ln(warn / cap) (3.54 at 70 / 100; clamped 1.5..12 for
+   cuts nobody serves). At 70 / 100: U10 3.0 (0 %), 3.3 (30 %), 5.0 (50 %), 6.8 (60 %), 9.5 (70 %), 12.3 (77.5 %),
+   15.9 (85 %), 20.5 (92.5 %), 26 (100 %); its rate .13 m/s a point at 50 %, .34 at the floor, .55 at 85 %, .82 at the
+   cap. The swell that reaches the cove: 0.5 m at 0 % (round 6: 0.8), 1.5 at the floor, 2.5 at 85 %, 3.2 at 92.5 %,
+   4.0 at the cap (round 6: 1.8): big storm surf at the top, a calm bay low down. The other columns keep their rows and
+   their onsets (rain from the floor, lightning from the third quarter). */
+WX.WIND = { U0: 3, U1: 26, H0: 0.5, H1: 4.0, atWarn: 0.283 };
+WX.windShare = function (v, cuts) {
+  const C = cuts || WX.cuts(null), K = WX.WIND;
+  const p = wxClamp(Math.log(K.atWarn) / Math.log(C.warn / C.cap), 1.5, 12);
+  return Math.pow(wxClamp(v / C.cap, 0, 1), p);
 };
 /* [1.3.2] the storm's lightning, nearer, more often and more often to the ground (REVIEW-3 4: at 96 % by day the
    table gave strikes ~14 km away, a fifth of them to the sea, and none was seen in 100 s on the dashboard). From
@@ -409,13 +434,14 @@ WX.weatherAt = function (v, cuts, walk) {
   const precip = Math.log10(1 + rain) / Math.log10(41);
   const soak = walk && typeof walk.soak === "number" ? walk.soak : WX.soakTarget(precip);
   const puddle = walk && typeof walk.puddle === "number" ? walk.puddle : WX.puddleTarget(precip);
+  const b = WX.windShare(x, C), K = WX.WIND;                          // [r7] the wind and the swell: one smooth curve
   return {
     v: x, cov: row.cov, type: row.type, base: row.base, top: row.top, cirrus: row.cirrus,
     rain, precip,
     /* [critic] the swell's period is 1024/93 s (11.01 s), not 11: then 93 swells fill the sea's
        1024 s loop exactly, so any phase 2 pi t / uSwell.z (the swash, the spray bursts, a stub's
        swell) is continuous across the uTime.x wrap instead of jumping 0.57 rad every 17 min */
-    U10: row.U10, swellHs: row.swellHs, swellT: 1024 / 93, vis: row.vis,
+    U10: wxLerp(K.U0, K.U1, b), swellHs: wxLerp(K.H0, K.H1, b), swellT: 1024 / 93, vis: row.vis,
     fogH: 0.5 - 0.2 * wxSmooth(C.warn, C.cap, x),
     storm: wxSmooth(C.s2, C.cap, x),
     flashRate: flashes / 60, strikeKm: row.strikeKm, cgShare: row.cgShare,
@@ -601,6 +627,61 @@ WX.ASSETS = {
                      that passes SCENE to G.uniforms itself uses this, not R.tex.SCENE.
    R.coast.mem, R.coast.shoreStamp, R.coast.lamps: section 8.                                    */
 
+/* ── 10. [1.4] The lighthouse (stream L, round 7) ─────────────────────────────────────────────
+   The user's ask (2026-11-26): a lighthouse in the far ocean whose lamp is the accent colour, small, near the horizon,
+   never overwhelming the scene. Its pass (passes/beacon.js, after the coast in the pass order) draws the reef and the
+   tower in the coast slot (SCENE, SCENEZ and depth, as the cove), and the lamp, its glow and the beams' shafts in the
+   air in the bolt slot (added to SCENE before the TAA). Its ubo() hook, which runs before the ocean's, fills uBeacon*
+   and R.beacon.
+   THE ACCENT is the page's: W.accent(rgb) (api.js, hooks.accent for a first value) is the colour every other theme
+   gives the ring for the hottest reading (rampOf on the dark ground's STOP table in public/index.html), sRGB [r, g, b]
+   0..255, or null with no reading (then the lamp is the unknown grey-blue, WX.BEACON.unknown). The API hands it to the
+   passes as F.accent on every frame it draws (the lab's own driver never sets it; the pass's lab-only fallback derives
+   it from the reading). The lamp eases to it as the reading eases (WX.easeStep at WX.WALK.read, each channel in linear
+   light at unit luminance), so it never jumps; the first frame and a still take it at once.
+   THE LIGHT: automated, on at all hours. A photocell sets it between its day and its night intensity (WX.BEACON.cd;
+   an automated light burns brighter by day, as obstruction lights do), so by day it reads as a small coloured light
+   and at night as a modest point that does not glare over the cove. A lantern's steady glow, and two opposed beams
+   turning one way at a turn every WX.BEACON.turn s of the sea's clock (16 divides 1024: 64 turns a loop, no seam at
+   the wrap): any bearing, the window's too, sees a flash every turn / 2 s, as long as a beam takes to pass (~.3 s).
+   R.beacon = WX.beaconDefaults(), made and filled every frame by the beacon pass's ubo() hook (a reader takes a
+   missing R.beacon, or on 0, as no lighthouse):
+     on        0..1 the lighthouse's presence (uBeaconB.w)
+     pos       [x, y, z] the lamp, world m, lowered by the sea's curvature (uBeacon.xyz)
+     rgb       the lamp's colour, linear Rec. 709 at unit luminance (uBeaconC.rgb); srgb the eased accent, 0..255
+     I, Ib     the lantern's steady intensity and the beams' peak, rel m^2 before the exposure (uBeacon.w, uBeaconC.w)
+     angle     beam 1's bearing rad, from +z toward +x (uBeaconB.x); sigma [h, v] rad (uBeaconB.yz)
+     eye       0..1 the beams' pattern toward the window now (1: a beam points at it, the flash)
+     uv        [u, v] the lamp's place in the view, 0..1 with y up, unjittered; [-1, -1] off the view
+   wxBeacon(pM) (the common prelude) gives any receiver the lamp as a light, as wxFlash gives the strikes. */
+WX.BEACON = {
+  az: 12, km: 3.0,           // where it stands: deg right of the view's centre, km from the window (clear of the HUD, the cove and the fixed sun at +20)
+  lampM: 43,                 // the lamp's focal height above the sea, m (a rock lighthouse: a granite tower of 45 m on a low reef)
+  turn: 16,                  // s a turn of the optic (two opposed beams: a flash every 8 s at any bearing)
+  sigmaDeg: [2.8, 2.0],      // the beams' sigma, deg: in bearing (a ~.3 s flash) and in elevation
+  cd: { lanternDay: 6e5, lanternNight: 6e3, beamDay: 6e6, beamNight: 1e5 },   // luminous intensity, cd (1 rel m^2 = 128 000 cd)
+  dayEl: [-4, 1],            // deg of sun elevation over which the photocell goes from night to day
+  unknown: [125, 140, 163],  // the page's unknown grey-blue (no reading)
+};
+WX.beaconDefaults = function () {
+  return { on: 0, pos: [0, 0, 0], rgb: [1, 1, 1], srgb: WX.BEACON.unknown.slice(), I: 0, Ib: 0, angle: 0, sigma: [0, 0], eye: 0, uv: [-1, -1] };
+};
+/*@lab*/
+/* LAB ONLY: the page's accent for a reading (public/index.html rampOf on the dark ground's STOP table: steady below the
+   floor, warning to exhausted across the band, exhausted from the cap, unknown with no reading), for the lab's own
+   driver and for apiLab, which stand in for the page */
+WX.ACCENT_STOP = { steady: [114, 234, 208], warning: [224, 165, 46], exhausted: [224, 48, 79], unknown: [125, 140, 163] };
+WX.accentOf = function (p, th) {
+  const S = WX.ACCENT_STOP;
+  if (typeof p !== "number" || !isFinite(p)) return S.unknown.slice();
+  const warn = wxNum(th && th.warningFloorPercent, 70), exh = wxNum(th && th.exhaustedPercent, 100);
+  if (p >= exh) return S.exhausted.slice();
+  if (p < warn) return S.steady.slice();
+  const t = exh > warn ? wxClamp((p - warn) / (exh - warn), 0, 1) : 1;
+  return [0, 1, 2].map((i) => Math.round(S.warning[i] + (S.exhausted[i] - S.warning[i]) * t));
+};
+/*@end*/
+
 /* ── GLSL: the common prelude every program starts with ──────────────────────────────────── */
 WX.glsl = WX.glsl || {};
 WX.glsl.common = `#version 300 es
@@ -688,6 +769,22 @@ vec3 wxFlashE(vec3 pM, vec3 n) {
     e += f.w * (facing ? 1. : max(dot(n, f.xyz), 0.));
   }
   return e * WX_FLASH_RGB;
+}
+/* [1.4] The lighthouse's lamp as a light (section 10): xyz the unit direction from pM toward the lamp, w the
+   illuminance it gives at pM, pre-exposed (x uExpo.x): the lantern's steady glow and the two turning beams (a Gaussian
+   in bearing to the nearer beam and in elevation), through the air between (Koschmieder on the table's visibility,
+   uWx1.w; the medium in front of the receiver is the receiver's). Colour it with uBeaconC.rgb */
+vec4 wxBeacon(vec3 pM) {
+  if (uBeaconB.w <= 0.) return vec4(0., 1., 0., 0.);
+  vec3 l = uBeacon.xyz - pM;
+  float r2 = max(dot(l, l), 1.), r = sqrt(r2);
+  vec3 u = -l / r;                                              // from the lamp out toward pM
+  vec2 b = vec2(sin(uBeaconB.x), cos(uBeaconB.x));              // beam 1 (xz); beam 2 is -b
+  float c = dot(u.xz, b), s = u.x * b.y - u.z * b.x;            // along the beams' axis, and across it
+  float hz = max(length(u.xz), 1e-4), db = atan(abs(s), abs(c)) , de = u.y / hz;
+  float beam = exp(-.5 * (db * db / (uBeaconB.y * uBeaconB.y) + de * de / (uBeaconB.z * uBeaconB.z)));
+  float T = exp(-3.912e-3 * r / max(uWx1.w, .2));
+  return vec4(l / r, (uBeacon.w + uBeaconC.w * beam) * T * uExpo.x / r2);
 }
 /* ray / sphere around the planet centre: distance to the far (x) and near (y) hits, or -1 */
 vec2 wxSphere(float r, float mu, float R) {

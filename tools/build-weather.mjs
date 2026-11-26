@@ -31,7 +31,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 // after the director, the passes after the core), and every name here must exist.
 const FALLBACK = {
   core: ['contract', 'gl', 'renderer', 'assets', 'astro', 'director', 'api'],
-  passes: ['atmo', 'clouds', 'night', 'sky', 'coast', 'ocean', 'bolt', 'post', 'rain', 'pane'],
+  passes: ['atmo', 'clouds', 'night', 'sky', 'coast', 'beacon', 'ocean', 'bolt', 'post', 'rain', 'pane'],
 };
 
 /** The module list from the lab page's own loader (its CORE and PASSES arrays), so the two agree. */

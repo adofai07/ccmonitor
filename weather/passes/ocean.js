@@ -564,7 +564,7 @@ float ocnFresnel(float cv, float sv) {        // the Fresnel factor averaged ove
    strength b: the roller reaches down the front as the bore breaks harder (a broken bore is white to its foot),
    and behind the crest a sheet decays into the residue that covers a storm's surf zone; e (the waves' energy 0..1)
    thins the sheet and the residue of a small shore break to a lace. res 0: its mean */
-float ocnSurf(float age, float bB, float bN, float res, float e) {
+float ocnSurf(float age, float bB, float bN, float res, float e, float big) {
   float b = .5 * (bB + bN);
   if (max(bB, bN) <= .002) return 0.;
   /* [r2] the roller starts at the steep toe (phase -pi/2 on a broken bore, nearer the crest on a spilling one); the
@@ -572,7 +572,11 @@ float ocnSurf(float age, float bB, float bN, float res, float e) {
      behind it the passed one's (bB); the residue is every crest's */
   float wR = mix(.1, .32, wxSat(bN * bN));                            // [r3] a hard-breaking crest's roller reaches further down its face
   float roll = smoothstep(1. - wR, 1. - .7 * wR, age) * bN + (1. - smoothstep(0., .04, age)) * bB;
-  float trail = (.8 * exp(-age * mix(9., 5.5, e)) * bB + .28 * b * b * e) * mix(.45, 1., e);
+  /* [r7] big (the caller's: the swell 2 -> 3.6 m from the UBO's uWx2.y, faded out where a pixel spans 0.25-1 m; a new
+     uniform component here, even uSurfA.w, put Intel's SIMD8 compile of the sea over its registers, 47 spills). In big
+     storm surf every bore's sheet lasts longer and the surf zone between the bores is a churned
+     blanket, not a few patches (rocky-creek's and shore-acres' surf zones are white from rock to rock) */
+  float trail = (.8 * exp(-age * mix(mix(9., 5.5, e), 3.2, big)) * bB + mix(.28, .66, big) * b * b * e) * mix(.45, 1., e);
   return wxSat(mix(max(roll, trail), b * (.3 + .4 * b) * mix(.5, 1., e), 1. - res));
 }
 /* [r2] the wind's streaks (Beaufort 8 and up): old foam combed into lanes along the wind. Each lane (sp m across)
@@ -757,11 +761,15 @@ void main() {
     vec3 lv = lp.xyz - vP; float l2 = dot(lv, lv);
     lampG += vec3(1., .78, .52) * (lp.w * uExpo.x / l2) * ocnGlint(lv * inversesqrt(l2), V, n, var + .02 / l2);
   }
-  if (lampG.r > 1e-4) {
+  if (max(lampG.r, max(lampG.g, lampG.b)) > 1e-4) {
     float T = 512. * max(fwd.x, .02);
     float sp = textureLod(uFoamTex, xz / T + vec2(1., 2.) * uStreak.w, 0.).a;
     lampG *= mix(1., sp / .075, .9);
-    lampG = 1.4 * (1. - exp(-lampG / 1.4));                             // about white on the display: the dashes keep their gaps
+    /* about white on the display: the dashes keep their gaps. [r7] The ceiling on the luminance, not per channel: per
+       channel it bleached every streak toward white (C, round 5: an oil lantern's streak should carry its orange,
+       vrsar-night), and the lighthouse's path lost the accent it is there to show */
+    float lgL = wxLuma(lampG);
+    lampG *= lgL > 1e-9 ? 1.4 * (1. - exp(-lgL / 1.4)) / lgL : 0.;
   }
   /* sparkle: the sub-pixel facets that catch the light, two scrolling layers of sparse points (mean 1),
      which the mips smooth into the even glitter of the far path; looked up only where there is a glint */
@@ -888,7 +896,7 @@ void main() {
   float energy = wxSat((vSw.w + .5 * vMisc.w) / 3.), eC = wxSat((energy - .15) / .65);
   float farP = smoothstep(.04, .5, length(fwd) / ${FOAM_TILE[0].toFixed(1)});
   bool patB = farP < .999;                                              // [r3] the pattern branch below draws the surf itself
-  float film = 0., shoreF = patB ? 0. : ocnSurf(age, bB, bN, res, eC);
+  float film = 0., shoreF = patB ? 0. : ocnSurf(age, bB, bN, res, eC, 0.);
   if (cove || vRun.w > 0.) {
     /* [r2] the waterline per pixel (bilinear, not the grid's triangles), its edge broken by the lace's noise, so the
        swash and the wash at a ledge never follow the shore field's texels or the grid as polygons */
@@ -947,20 +955,33 @@ void main() {
     if (surf > .002) {
       /* [r3] and a bore's front wanders a few metres along the line */
       float wig = ((pat - .5) * .09 + (ocnN1(dot(xz, vec2(-uSw[0].y, uSw[0].x)) / 19., 9.) - .5) * .07) * res, pm = mix(.75, 1.15, pch);
-      shoreF = max(shoreF, ocnSurf(age + wig, bB * pm, bN * pm, res, eC) * uRefl4.w);
+      shoreF = max(shoreF, ocnSurf(age + wig, bB * pm, bN * pm, res, eC, smoothstep(2., 3.6, uWx2.y) * (1. - smoothstep(.25, 1., foot))) * uRefl4.w);
     }
     /* only the open water's foam gathers in patches; the wash at the rocks and the breakers stay whole */
     fsum = 1. - (1. - fOpen * mix(.45, 1.25, pch) * mix(1., .55 + .45 * crest, surf)) * (1. - shoreF);
     float thickF = smoothstep(.3, .9, fsum);
     /* [r2] the surf's blanket is blotches with dark holes (the clumps), the open sea's old foam a lace (the walls) */
     float pz = mix(pat, clump * 1.1 - .05, .85 * wxSat(fresh * 1.6 + frO * .7));   // [r3] only fresh white water (surf, a breaking whitecap) tumbles; the rest is lace
+    /* [r7] CHURNED, NOT CUT OUT (REVIEW-6 #3: near the window the whitecaps and the surf's sheet were white shapes with
+       clean outlines, like paper on the water). Where a pixel is under ~20 cm, a finer layer (the lace at a 2.1 x 4.2 m
+       tile, drawn out along the wind's axis; both divide the 840 m drift) breaks every edge into a bubbly fringe of
+       threads and holes and pits the body, as the photographs' foam is at that range (waves-rocks, rocky-creek) */
+    float nearW = (1. - smoothstep(.06, .25, foot)) * (1. - farP), fd = .5;
+    if (nearW > 0.) fd = textureGrad(uFoamTex, (xz - uDrift2.xy) / vec2(2.1, 4.2) + .71, dX / vec2(2.1, 4.2), dY / vec2(2.1, 4.2)).r;
+    pz += (fd - .4) * .32 * nearW;
     /* [r3] the pattern's edge as sharp as the pixel allows: near the window foam has crisp edges, not a soft ramp */
     float rw = clamp(length(fwd) * .9, .1, .2 + .2 * fsum);
     rw += .18 * uWx1.y;                                                // [r4] in rain foam has a soft, bubbly edge: no decals
-    float covNear = max(smoothstep(1. - fsum, 1. - fsum + rw, pz) * mix(.55, 1., thickF), smoothstep(.8, 1., fsum));   // fresh, thick foam closes its holes
+    /* fresh, thick foam closes its holes; [r7] near the window the fine layer frays its outline and opens a few bubbly
+       holes in it (a fresh whitecap there was a white pebble with a clean outline, REVIEW-6 #3) */
+    float covNear = max(smoothstep(1. - fsum, 1. - fsum + rw, pz) * mix(.55, 1., thickF), smoothstep(.8, 1., fsum + (fd - .52) * .45 * nearW));
     covNear *= mix(.78, 1., max(thickF, fresh));                       // [r3] a whitecap's thin edge shows the bubbly water through it
     /* [r4] foam has thickness: its thin margin is a grey film of bubbles over the water, its middle a heaped white */
     edgeS = mix(.62, 1.05, smoothstep(0., .3 + .2 * thickF, pz - (1. - fsum)));
+    /* [r7] in big surf the surf zone's foam is fresh white water: the thin lace's greying lifts; and the fine layer's pits
+       and ridges near the window. Both folded into edgeS here, so nothing new stays alive past this branch (the sea's
+       shader sits at the edge of Intel's SIMD8 registers: 0 spills in round 6) */
+    edgeS = mix(edgeS, max(edgeS, .92), smoothstep(2., 3.6, uWx2.y) * (1. - smoothstep(.25, 1., foot)) * wxSat(shoreF * 1.6)) * mix(1., .8 + .36 * fd, nearW);
     cov = mix(covNear, fsum * .8, farP);
     if (uFoamW.y > 0.) {
       float st = uFoamW.y;
@@ -976,6 +997,19 @@ void main() {
   float bub = wxSat(fsum * 1.6) * (1. - cov);
   /* its lace's ridges catch more light than its holes */
   vec3 foamL = foamLt * mix(.85, 1.15, smoothstep(.6, 1., fsum));    // [r3] fresh white water near the albedo of snow (.98), whiter than aged lace                 // [r2] fresh thick foam is whiter than a thin aged lace
+  /* [r7] UNDER AN OVERCAST, WHITE WATER IS AS BRIGHT AS THE LOW SKY (rocky-creek: its surf 1.1-1.2 x the sky round it; the
+     bursts here take the low sky behind them since round 5, F). Lit by the deck's irradiance alone, the sea's foam at
+     96-100 % was 0.35-0.4 x the horizon's radiance, as dark as the water a little off it: the surf zone the probes found
+     covered (dbg 17) read as dark water near the window. Thick white water is a scattering volume that the bright low sky
+     lights through its edges and tops: at least the low sky x .72 (thin) to 1.08 (thick, fresh), as rain closes the deck
+     (precip .1 -> .5, from the floor). The low sky is REFL's band 4 deg up over the open sea between the heads (the view's
+     middle, lod 5): REFL holds the clear sky behind the cliffs where the cloud buffer's taps are the cove's, so a lookup
+     in each pixel's own column lit the foam under the left head as if under a gap in the deck (a bright band) */
+  float ovc = smoothstep(.1, .5, uWx1.y);
+  if (ovc > 0. && cov > .004) {
+    vec3 Lh = textureLod(sRefl, clamp(wxUV0(vec3(0., .0698, .9976)), vec2(.02), vec2(.98)), 5.).rgb;
+    foamL = max(foamL, Lh * ovc * mix(.72, 1.08, smoothstep(.45, .95, fsum)));
+  }
   /* [r2] thick white water is a tumbling mass: its clumps' tops catch the sky and the gaps between them are grey;
      on a bore's front the roller faces away from the bright zenith, darker down toward its toe */
   float thk = smoothstep(.55, .95, fsum);
@@ -1036,7 +1070,11 @@ void main() {
   /* how high this burst goes: the crest that threw it (a big set throws more), the storm, the rock */
   Swl s0 = ocnSwell(sp.xz, 0., shs, mod(uTime.x - since + 1024., 1024.), 1.);
   float env = wxSat(s0.D.y / max(.5 * s0.H, .05));
-  float Hm = 32. * sp.w * uWx2.w * env * mix(.6, 1., rnd.y);
+  /* [r7] how big the sea is at the rock: the swell that reaches the cove (uSwell.w: 0.5 m low down, 4 m at the cap; the
+     user's "big storm surf"), not the storm alone (round 6: uWx2.w, from 85 %). Bursts start at about 75 % (2 m), are
+     round 6's at 96 %, and the highest at the cap */
+  float sea = pow(wxSat((uSwell.w - 1.1) / 2.9), 1.2);
+  float Hm = 32. * sp.w * sea * env * mix(.6, 1., rnd.y);
   float a = max(age, 0.);
   vec3 eye = vec3(0., wxEye, 0.), base = sp.xyz;
   vec3 tb = normalize(base - eye), rt = normalize(vec3(tb.z, 0., -tb.x));
@@ -1123,17 +1161,32 @@ void main() {
        spikes, as the photographs' bursts do; and the quad's own edge never shows (round 4's p5 had a straight side) */
     float sk = texture(uFoamTex, vec2(x * 1.3, t * .09) + vSeed.yx * 3.).g;
     rag *= 1. + .8 * sm;                                                // [r6] the coarse clumps carry the outline when the fine ones are gone
-    float edge = (1. - smoothstep(.45 - .3 * sm, .9, abs(x) + rag + (sk - .5) * .55 * smoothstep(.2, .8, t))) * (1. - smoothstep(.82, 1., abs(x)));
     float cap = (1. - smoothstep(.6 - .3 * sm, .96, t + rag * .8 - .15 * (1. - x * x) - (sk - .5) * .7)) * (1. - smoothstep(.9, 1., t));
     float foot = smoothstep(0., .1, t);
+    /* [r7] SPRAY, NOT A WHITE CUT-OUT (REVIEW-6 #3: the bursts on the RTX at 1080p were flat white cauliflowers with clean
+       outlines; rocky-creek's and shore-acres' are a dense white core inside a translucent, grainy spray that ends in
+       threads and single drops). Three layers by a ragged distance from the jet's axis: the core, opaque white water
+       near the axis and low in the jet, narrowing upward and as the jet ages; the envelope, a translucent spray round it,
+       grained along the jet (the lace's threads) and thinning outward; and drops past it. The core keeps round 6's clumpy
+       outline; nothing else of the jet is opaque, so the sea and the rock show through its edges */
+    float rr = abs(x) + rag + (sk - .5) * .55 * smoothstep(.2, .8, t);
+    /* the core: a third of the jet across at its foot, narrowing and thinning toward the head, where the column breaks up
+       (round 7's first form kept half the jet opaque to its head: far bursts still read as white puffs) */
+    float coreW = mix(.1, .34, d) * (1. - .5 * t) + .2 * sm;
     float thr = .95 - 1.2 * d;
-    float core = 1. - abs(x);
-    float body = smoothstep(thr - .1 - .2 * sm, thr + .1 + .2 * sm, n + .35 * core) * edge * cap * foot * mix(.8, 1., smoothstep(.1, .6, core + (n - .45)));
-    body *= 1. - .4 * sm * (1. - core * core);                          // [r6] thinner toward its rim where unresolved
-    float drops = texture(uFoamTex, vQ * vec2(.7, 1.3) + vSeed.yx * 3.).a * (1. - d) * 1.6 * (1. - smoothstep(.7, 1.15, abs(x))) * smoothstep(.15, .6, t);
-    a = wxSat(body * .97 + drops) * vA;
-    /* the light along the jet: the thick water at its foot darker and a little green, the clumps' tops whiter */
-    sh = mix(vec3(.66, .75, .73), vec3(1.06), smoothstep(.0, .5, t)) * (.86 + .26 * smoothstep(.3, .8, nf));
+    float core = (1. - smoothstep(coreW - .08, coreW + .12, rr)) * cap * foot * mix(1., .55, smoothstep(.45, .95, t));
+    core *= smoothstep(thr - .1 - .2 * sm, thr + .1 + .2 * sm, n + .35 * (1. - abs(x)) + .25);
+    float thr2 = texture(uFoamTex, vec2(x * .55, t * .21) + vSeed.xy * 9.).r;           // threads along the jet
+    /* the envelope ends in fingers at the head: the streak noise (drawn out along the jet) cuts it there */
+    float env = (1. - smoothstep(.3, .95, rr)) * (1. - smoothstep(.82, 1., abs(x))) * cap * foot
+              * mix(1., smoothstep(.32, .68, sk), smoothstep(.35, .85, t));
+    float spray = env * (.2 + .55 * smoothstep(.25, .75, thr2) + .2 * smoothstep(.4, .9, nf)) * mix(.5, .9, d);
+    spray *= 1. - .35 * sm;                                             // unresolved: the mean of a grain, not its peaks
+    float drops = texture(uFoamTex, vQ * vec2(.9, 1.7) + vSeed.yx * 3.).a * (1. - smoothstep(.6, 1.15, rr)) * smoothstep(.12, .55, t) * (2.4 - 1.2 * d);
+    a = wxSat(max(core * .97, spray) + drops) * vA;
+    /* the light along the jet: the thick water at its foot darker and a little green, the clumps' tops whiter; the thin
+       spray a little greyer than the core (its drops are fewer than the foam's bubbles) */
+    sh = mix(vec3(.66, .75, .73), vec3(1.06), smoothstep(.0, .5, t)) * (.86 + .26 * smoothstep(.3, .8, nf)) * mix(.84, 1., wxSat(core * 1.3));
   }
   if (a < .004) discard;
   o = vec4(wxGuard(((vL * sh + vAp) * vCl.a + vCl.rgb) * a), a);
@@ -1248,6 +1301,64 @@ void main() {
   o = c;
 }`;
 
+  /* [r7] THE LIGHTHOUSE'S LAMP ON THE WATER (stream L's ask, contract 1.4; the user: its lamp the page's accent). Its own
+     draw over a narrow strip of the frame under the lamp (+-4 deg of its bearing, from the horizon down), not the sea's
+     shader: there wxBeacon and the beacon's three UBO vectors put Intel's SIMD8 compile of the sea over its registers
+     (58 spills; 0 without, tests/ocean/r7/simd.sh). Per pixel: the curved sea's point on the unjittered ray, the lamp
+     glinted on a sea of the far field's slope variance (the cascades' spectral variance, the extra roughness, the
+     capillaries: what the sea's shader folds there), broken into dashes by the night lights' sparkle (world-anchored,
+     scrolling), in the lamp's colour (uBeaconC.rgb, the accent eased as the reading eases), through the air and the
+     rain in front, under the night lights' soft ceiling (on its luminance). wxBeacon's strength is the lantern's steady
+     glow plus the two beams' pattern toward that point of the sea, so the path brightens each time a beam sweeps the
+     water between the lamp and the window (a flash every 8 s). The cove and the ship in front hide it (SCENEZ). Added
+     (ONE, ONE) into SCENE after the sea */
+  const BPATH = `
+uniform sampler2D uFoamTex;
+uniform vec3 uMss;
+uniform vec4 uStreak;
+layout(location = 0) out vec4 o;
+float bpLambda(float c, float s2) {
+  float v = c / sqrt(max((1. - c * c) * 2. * s2, 1e-9));
+  return v >= 1.6 ? 0. : (1. - 1.259 * v + .396 * v * v) / (3.535 * v + 2.181 * v * v);
+}
+void main() {
+  vec2 uv = gl_FragCoord.xy * uRes.zw;
+  vec3 d = wxRay0(uv);
+  if (d.y > -1e-4) discard;
+  float Rm = R_G * 1000., h = wxEye, c = h * (2. * Rm + h), b = (Rm + h) * d.y, disc = b * b - c;
+  if (disc <= 0.) discard;
+  float t = c / (-b + sqrt(disc));
+  if (wxSceneDist(uv) < t) discard;                                  // the cove, the ship, the buoy in front
+  vec3 p = vec3(0., h, 0.) + d * t;
+  vec4 bl = wxBeacon(p);
+  if (bl.w <= 0.) discard;
+  /* the wind sea's own slopes here (its two long cascades, filtered to the pixel: LEAN's mean and variance), so the
+     streak's dashes follow the waves as the moon's path does; what they leave out, and the short cascade, as variance */
+  vec2 dx = dFdx(p.xz), dy = dFdy(p.xz), sl = vec2(0.), vr = vec2(0.);
+  for (int i = 0; i < 2; i++) {
+    vec4 tt = textureGrad(uSlope, vec3(ocnToLocal(p.xz, i) / uL[i], float(i)), ocnToLocal(dx, i) / uL[i], ocnToLocal(dy, i) / uL[i]);
+    sl += ocnToWorld(tt.xy, i); vr += max(tt.zw - tt.xy * tt.xy, 0.);
+  }
+  float s2 = max(.5 * (vr.x + vr.y) + uMss.z + uSea.y + .004 * smoothstep(2., 20., uWindO.z), 2e-5);
+  vec3 n = normalize(vec3(-sl.x, 1., -sl.y)), V = -d, L = bl.xyz, H = normalize(L + V);
+  float zH = dot(H, n);
+  if (zH < .15) discard;
+  vec3 Ht = H - n * zH;
+  float ex = .5 * dot(Ht, Ht) / (zH * zH * s2);
+  if (ex > 30.) discard;
+  float F = .02 + .98 * pow(1. - max(dot(V, H), 0.), 5.), zV = max(dot(V, n), .01), zL = max(dot(L, n), .01);
+  float g = F * exp(-ex) / (2. * PI * s2) / ((1. + bpLambda(zL, s2) + bpLambda(zV, s2)) * 4. * zV * zH * zH * zH * zH);
+  vec3 Lc = uBeaconC.rgb * bl.w * g;
+  vec2 fw = abs(dx) + abs(dy);
+  float sp = textureLod(uFoamTex, p.xz / (512. * max(fw.x, .02)) + vec2(1., 2.) * uStreak.w, 0.).a;
+  Lc *= mix(1., sp / .075, .9);
+  float lum = wxLuma(Lc);
+  Lc *= lum > 1e-9 ? 1.4 * (1. - exp(-lum / 1.4)) / lum : 0.;
+  Lc *= wxAerial(d, t * 1e-3).a;
+  if (uWx1.y > 1e-3) Lc *= wxCloudAt(uv).a;
+  o = vec4(wxGuard(Lc), 0.);
+}`;
+
   /* [r5] the sun's disc as A's sky draws it, at its centre (wxSunDisc, A's cap at a low sun included), unexposed: read
      back at 2 Hz while the sun is low, so the sea's glints never outshine it */
   const DISC = `
@@ -1316,12 +1427,22 @@ void main() { o = wxShore(uB4.xy + vUV * uB4.zw); }`;
     return GR * GR / Math.pow(w, 5) * Math.exp(-1.25 * r * r * r * r) * Math.pow(gamma, Math.exp(-0.5 * e * e));
   }
   /* the wind sea for a mean U10: JONSWAP shape (peak from a 300 km fetch, never past full development),
-     energy from the JONSWAP growth law (g Hs / U^2 = 1.6e-3 (g F / U^2)^0.5, at most 0.237) */
+     energy from the JONSWAP growth law (g Hs / U^2 = 1.6e-3 (g F / U^2)^0.5, at most 0.237).
+     [r7] Through full development smoothly: the two limits (fully developed below Uc = 11.57 m/s, fetch-limited above)
+     met at a corner, so the open sea's Hs and peak changed their rate with the wind at once there (Hs' halved: the kink
+     the user saw in the waves came from the table, this one sat at ~75 %). Now the growth's log-slope d ln Hs / d ln U
+     goes from 2 (fully developed) to 1 (fetch-limited) along a smootherstep in ln(U / Uc) over +-0.5 (7.0-19.1 m/s), and
+     Hs is its integral: Hs = Hs_full e^(-w S), S the smootherstep's running integral (0 below the window, ln(U / Uc) / w
+     above it, so both limits hold outside it; at Uc itself 7.5 % under the corner). Feff the same with twice the slope
+     (2 -> 0), so the peak follows. (Blending the two limits' logs instead puts a bump and a dip in the rate) */
+  const SEA_F = 3e5, SEA_UC = Math.sqrt(GR * SEA_F) * 1.6e-3 / 0.2373, SEA_W = 0.5;
   function seaState(U, N, NC) {
     U = Math.max(U, 0.7);
-    const F = 3e5, Feff = Math.min(F, 2.2e4 * U * U / GR);
+    const F = SEA_F, lam = Math.log(U / SEA_UC) / SEA_W, l = WX.util.clamp((lam + 1) / 2, 0, 1);
+    const S = lam >= 1 ? lam : 2 * l * l * l * l * (l * l - 3 * l + 2.5);
+    const Feff = 2.2e4 * U * U / GR * Math.exp(-2 * SEA_W * S);           // F from Uc e^w up
     const wp = 22 * Math.cbrt(GR * GR / (U * Feff));
-    const Hs = Math.min(1.6e-3 * Math.sqrt(GR * F / (U * U)), 0.2373) * U * U / GR;
+    const Hs = 0.2373 * U * U / GR * Math.exp(-SEA_W * S);                // 1.6e-3 sqrt(g F) U / g from Uc e^w up
     const integ = (k0, k1, pw) => {           // integral of omega^pw S(omega) d omega between two wavenumbers
       const w0 = Math.sqrt(GR * k0), w1 = Math.sqrt(GR * k1), n = 600, a = Math.log(w0), b = Math.log(w1);
       let s = 0;
@@ -1589,7 +1710,10 @@ void main() { o = wxShore(uB4.xy + vUV * uB4.zw); }`;
     /* whitecaps: each cascade's share of Monahan's fraction, as a threshold on the held compression in units of
        three standard deviations (a Gaussian Jacobian; oceanFoam calibrates what the hold and the pattern add) */
     /* measured (tests/ocean/whitecap.py, open sea, the RTX): what the Gaussian estimate misses, by wind */
-    const kc = R.p("oceanFoam") * Math.min(12, Math.max(1, 5.2 * Math.pow(Math.max(W.U10, 3) / 9, -1.19)));
+    /* [r7] its ceiling of 12 (reached under 4.5 m/s, 0-45 % on the new curve) as a smooth minimum (a 6-norm): the clamp's
+       corner put a kink in the whitecaps' threshold against the reading */
+    const kRaw = 5.2 * Math.pow(Math.max(W.U10, 3) / 9, -1.19);
+    const kc = R.p("oceanFoam") * kRaw * Math.pow(1 + Math.pow(kRaw / 12, 6), -1 / 6);
     [0.5, 0.4, 0.1].forEach((w, c) => { U.uGth[c] = Math.max(0.02, -probit(Math.max(S.Wm * w * kc, 1e-7)) / 3); });
     U.uGth[3] = S.Wm;
     for (let c = 0; c < 3; c++) U.uMss[c] = 0.5 * S.lam * S.sea.mss[c];
@@ -1732,6 +1856,10 @@ void main() { o = wxShore(uB4.xy + vUV * uB4.zw); }`;
       P.foamTex = R.program("ocean.foamtex", { fs: FOAMTEX });
       P.foamCopy = R.program("ocean.foamcopy", { fs: FOAMCOPY });   // [r4]
       P.sea = R.program("ocean.sea", { libs, vs: OCN + SURF + SEA_VS, fs: OCN + SEA_FS });
+      /* [r7] the lighthouse's path on the water needs contract 1.4's wxBeacon (stream L): made only when the common
+         prelude has it, so this pass still builds on a 1.3 core */
+      P.bpath = WX.glsl && typeof WX.glsl.common === "string" && WX.glsl.common.indexOf("vec4 wxBeacon(") >= 0
+        ? R.program("ocean.bpath", { libs: ["atmo", "clouds", "coast"], fs: OCN + BPATH }) : null;
       /*@lab*/ P.seaVS = R.program("ocean.seaVS", { libs, vs: OCN + SURF + SEA_VS, fs: `in vec3 vP; layout(location = 0) out vec4 o; void main() { o = vec4(vP * 1e-9, 1.); }` }); /*@end*/   // lab timing only
       P.spray = R.program("ocean.spray", { libs, vs: OCN + SURF + SPRAY_VS, fs: OCN + SPRAY_FS });
       P.spume = R.program("ocean.spume", { libs, vs: OCN + SURF + SPUME_VS, fs: OCN + SPUME_FS });
@@ -1739,7 +1867,7 @@ void main() { o = wxShore(uB4.xy + vUV * uB4.zw); }`;
       P.probe = R.program("ocean.probe", { libs: ["coast"], fs: OCN + SURF + PROBE });
       P.shoreRead = R.program("ocean.shoreread", { libs: ["coast"], fs: SHOREREAD });
       P.disc = R.program("ocean.disc", { libs: ["atmo"], fs: DISC });   // [r5]
-      const wait = [P.spec, P.evolve, P.fft, P.fin, P.foamTex, P.foamCopy, P.sea, P.spray, P.spume, P.spumeComp, P.probe, P.shoreRead, P.disc];
+      const wait = [P.spec, P.evolve, P.fft, P.fin, P.foamTex, P.foamCopy, P.sea, P.spray, P.spume, P.spumeComp, P.probe, P.shoreRead, P.disc].concat(P.bpath ? [P.bpath] : []);
       /*@lab*/ P.probeRef = R.program("ocean.proberef", { libs: ["coast"], fs: OCN + SURF + PROBEREF }); wait.push(P.seaVS, P.probeRef); /*@end*/
       yield* R.wait(...wait);
       const G = R.gpu, gl = R.gl;
@@ -1798,7 +1926,7 @@ void main() { o = wxShore(uB4.xy + vUV * uB4.zw); }`;
         }
         /* spray on the rocks, in storms */
         const ns = R.coast.nSpray | 0;
-        if (ns > 0 && F.W.storm > 0.02 && R.p("oceanSpray") > 0 && U.uRefl4[2] <= 0 && !(prof & 8)) {
+        if (ns > 0 && F.W.swellHs > 1.15 && R.p("oceanSpray") > 0 && U.uRefl4[2] <= 0 && !(prof & 8)) {   // [r7] the swell's bursts (VS: sea)
           gl.depthMask(false); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
           U.uSpray = R.coast.spray; U.uParts = R.tier >= 3 ? 8 : 6;   // [r3] 6 droplet clouds a burst below T3
           P.spray.use(); R.gpu.uniforms(P.spray, U);
@@ -1806,6 +1934,18 @@ void main() { o = wxShore(uB4.xy + vUV * uB4.zw); }`;
           gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, ns * U.uParts);
           gl.bindVertexArray(null);
           gl.depthMask(true);
+        }
+        /* [r7] the lighthouse's path on the water: a strip +-4 deg of the lamp's bearing, from the horizon down */
+        const BC = R.beacon;
+        if (P.bpath && BC && BC.on > 0 && BC.uv[0] >= 0 && BC.uv[0] <= 1 && U.uRefl4[2] <= 0) {
+          const sc = R.target("scene"), hw = 0.5 * Math.tan(4 * D2R) / R.cam.tanX;
+          const x0 = Math.max(0, Math.floor((BC.uv[0] - hw) * sc.w)), x1 = Math.min(sc.w, Math.ceil((BC.uv[0] + hw) * sc.w));
+          const y1 = Math.min(sc.h, Math.ceil((BC.uv[1] + 0.01) * sc.h));
+          if (x1 > x0 && y1 > 0) {
+            gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+            R.draw(P.bpath, "scene", U, { viewport: [x0, 0, x1 - x0, y1] });
+            gl.viewport(0, 0, sc.w, sc.h); gl.depthMask(true);
+          }
         }
         /* [r2] spume off the breaking crests, from Beaufort 7: into its low-resolution target, then over SCENE */
         if (U.uSpume2[1] > 0 && R.p("oceanSpray") > 0 && U.uRefl4[2] <= 0 && !(prof & 8)) {

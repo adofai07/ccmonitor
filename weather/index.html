@@ -30,7 +30,7 @@
 (async function () {
   const Q = new URLSearchParams(location.search);
   const CORE = ["contract", "gl", "renderer", "assets", "astro", "director", "api"];
-  const PASSES = ["atmo", "clouds", "night", "sky", "coast", "ocean", "bolt", "post", "rain", "pane"];
+  const PASSES = ["atmo", "clouds", "night", "sky", "coast", "beacon", "ocean", "bolt", "post", "rain", "pane"];
   const live = (Q.get("live") || "all").split(",");
   const files = CORE.map((n) => "core/" + n + ".js")
     .concat(PASSES.map((n) => (live.includes("all") || live.includes(n) ? "passes/" : "stub/") + n + ".js"))

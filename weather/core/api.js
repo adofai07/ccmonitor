@@ -13,12 +13,16 @@
                           ('default', 'low-power', 'high-performance'), so a stored choice makes one context, not two.
                           It is a request: the browser may keep the GPU it runs on (on Linux it usually does).
      hooks.fps            [r7] "auto" | 30 | 60 | 120 | "display", the stored Frame rate (the pacer's P.cap).
+     hooks.accent         [1.4] the accent's first value, as W.accent takes it (the lighthouse's lamp, contract section 10).
      Returns null at once when this browser cannot draw it (DESIGN 10.3): no WebGL2; a software
      renderer by name; no EXT_color_buffer_float; MAX_TEXTURE_SIZE < 4096 or MAX_3D_TEXTURE_SIZE < 128.
      The gate needs a context, so the context is made here (once, and kept); everything else (the
      renderer, programs, targets, noise) waits for the first idle task after the first paint.
    W.start() W.stop() W.play(moving) W.reading(p, th, misted) W.sky(follow, place) W.quality(q) W.gpu(g) W.fps(f)
-   W.resize() W.capture(w, h): DESIGN 9.1. W.lab: LAB ONLY (the lab's hooks; removed at the merge, with
+   W.resize() W.capture(w, h): DESIGN 9.1. [1.4] W.accent(rgb): the colour every other theme gives the ring for the
+   hottest reading (rampOf on the dark ground's STOP table), sRGB [r, g, b] 0..255; null or anything else is no reading
+   (the unknown grey-blue). It colours the lighthouse's lamp, which eases to it as the reading eases (contract section
+   10); handed to the passes as F.accent on every drawn frame; a still view draws a new still for it. W.lab: LAB ONLY (the lab's hooks; removed at the merge, with
    everything else between the contract's lab-only markers).
 
    Pacing (DESIGN 6.3): focused display/ceil(hz/75), unfocused display/ceil(hz/37.5), Low halves both; [r7] or the
@@ -58,6 +62,14 @@
   function powerOf(g) { return g === "high" ? "high-performance" : g === "low" ? "low-power" : "default"; }
   const gpuOf = (g) => (g === "high" || g === "low" ? g : "auto");
   const fpsOf = (f) => { const n = Number(f); return n === 30 || n === 60 || n === 120 ? n : f === "display" ? f : "auto"; };
+  /* [1.4] the accent as W.accent takes it: three finite numbers, clamped to 0..255 (a copy: the page may reuse its
+     array); anything else is no reading (null) */
+  const accentOf = (c) => {
+    if (!c || typeof c.length !== "number" || c.length < 3) return null;
+    const o = [+c[0], +c[1], +c[2]];
+    return o.every((x) => isFinite(x)) ? o.map((x) => Math.min(255, Math.max(0, x))) : null;
+  };
+  const sameAccent = (a, b) => a === b || !!a && !!b && a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
   function newCanvas() {
     const c = document.createElement("canvas");
     c.setAttribute("aria-hidden", "true");
@@ -91,6 +103,7 @@
       stillSun: [0, 0, 1], stillAt: 0, scrimAt: 0, scrimSeen: 0, lastFrame: 0,
     };
     let R = null, G = null, tier = 2, next = null;   // next: a canvas being built for a swap
+    let accent = accentOf(hooks.accent);                // [1.4] the page's accent (F.accent): the lighthouse's lamp
     const scrim = new Float32Array(32), scrimPeak = new Float32Array(32);
     let clock = () => Date.now();                       // the sky's clock: the wall clock (the lab may replace it)
     /*@lab*/
@@ -244,6 +257,7 @@
     }
     function draw1(F) {
       F.tier = R.tier;
+      F.accent = accent;                                 // [1.4] the lighthouse's lamp eases to it (passes/beacon.js)
       /*@lab*/ if (lab.burn) R.burn.passes = lab.burn(); const a = now(); /*@end*/
       R.frame(F);
       /*@lab*/ lab.rMs = now() - a; /*@end*/
@@ -479,6 +493,16 @@
         P.cap = f;
         if (G) G.notice(now());
       },
+      /* [1.4] the page's accent for the reading (contract section 10): the lighthouse's lamp. Moving, the lamp eases to
+         it on the next frames; a still view draws a new still (unless one is still being metered, which takes it) */
+      accent(rgb) {
+        const c = accentOf(rgb);
+        if (sameAccent(c, accent)) return;
+        accent = c;
+        if (!R || !R.ready || !D.seen || !S.up) return;
+        if (!S.active || document.hidden) { S.missed = true; return; }
+        if ((!S.moving || S.tooSlow) && (!S.still || S.still.phase === "fade")) requestStill(true);
+      },
       resize() {
         if (S.resizeTimer) clearTimeout(S.resizeTimer);
         S.resizeTimer = setTimeout(() => {
@@ -585,6 +609,11 @@
     const reduce = matchMedia("(prefers-reduced-motion: reduce)");
     let upAt = 0;
     const misted = Q.get("held") === "1";
+    /* [1.4] the page's accent with each reading (WX.accentOf: rampOf on the dark ground's STOP table); accent=unknown or
+       accent=r,g,b forces one */
+    const qa = Q.get("accent");
+    const labAccent = (p) => qa === "unknown" ? null : qa && /^\d+,\d+,\d+$/.test(qa) ? qa.split(",").map(Number) : WX.accentOf(p, th);
+    let labP = Q.has("p") ? num("p", 60) : 60;          // the reading the page holds now (steps= and blank= change it)
     function motion() {
       if (document.hidden) { W.stop(); return; }
       W.sky(Q.get("follow") !== "0", place);
@@ -593,6 +622,7 @@
       W.fps(Q.get("fps") || "auto");
       W.start();
       W.reading(Q.has("p") ? num("p", 60) : 60, th, misted);
+      if (W.accent) W.accent(labAccent(labP));
       W.play(Q.get("still") !== "1" && !reduce.matches);
     }
     reduce.addEventListener("change", motion);
@@ -621,8 +651,8 @@
       upNow();
       if (!upAt) return;
       const s = (performance.now() - upAt) / 1000;
-      steps.forEach(([p, t], i) => { if (!stepsDone.has(i) && s >= t) { stepsDone.add(i); W.reading(p, th, misted); LAB.log.push([performance.now(), "reading " + p]); } });
-      if (Q.has("blank") && !stepsDone.has("blank") && s >= num("blank", 1)) { stepsDone.add("blank"); W.reading(null, th, true); }
+      steps.forEach(([p, t], i) => { if (!stepsDone.has(i) && s >= t) { stepsDone.add(i); labP = p; W.reading(p, th, misted); if (W.accent) W.accent(labAccent(p)); LAB.log.push([performance.now(), "reading " + p]); } });
+      if (Q.has("blank") && !stepsDone.has("blank") && s >= num("blank", 1)) { stepsDone.add("blank"); labP = null; W.reading(null, th, true); if (W.accent) W.accent(labAccent(null)); }
       /* [1.2] strikeAz= strikeKm= strikeP= strikeKind=0|1 place the forced strike, as in the lab */
       if (Q.has("strike") && !stepsDone.has("strike") && s >= num("strike", 1)) {
         stepsDone.add("strike");
