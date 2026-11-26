@@ -1107,11 +1107,11 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
    and the far sea are left clear between them.
 
    The words and the rules are white. What reads the reading takes the
-   accent ramp, as on the glass: the ring's arc, the scale printed on its
-   dark casing, the chart's fitted run, and out in the view the lamp of a
-   lighthouse far out at sea; the pace is a magenta no zone uses. All of
-   it keys on data-weather, which is set only while the view can run, so a
-   browser that cannot draw it keeps the glass page.
+   accent ramp, as on the glass: the ring's arc and the colour marks on
+   its track, the chart's fitted run, and out in the view the lamp of the
+   lighthouse; the pace is a magenta no zone uses. All of it keys on
+   data-weather, which is set only while the view can run, so a browser
+   that cannot draw it keeps the glass page.
    ══════════════════════════════════════════════════════════════════ */
 .wx { position: fixed; inset: 0; z-index: 0; display: none; pointer-events: none; overflow: hidden; }
 /* the view fades up once there is a reading to show, and out when it is lost; a fade is not
@@ -1246,21 +1246,22 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 :root[data-weather] .gear[aria-expanded="true"] { color: #05080c; background: #f4f7fa; border-color: #f4f7fa; }
 
 /* The ring stands on its casing: an opaque dark band under the track, against which the arc and the
-   printed scale are judged, and a translucent well inside it, where the numeral sits. The arc reads
-   the accent ramp, as on the glass, and the scale is printed in the same ramp (paintScale), so the
-   arc wears the colour printed where it ends; the unlit track stays a faint white. No bloom: the
-   casing is the instrument's ground, and a blur would spill past it over the view and the print. */
-.case, .scale { display: none; }
+   marks are judged, and a translucent well inside it, where the numeral sits. The arc reads the
+   accent ramp, as on the glass, and the colour marks ahead of it sit on the track as Glass's and
+   Neumorphism's do, each in the colour the arc takes there; the unlit track stays a faint white. No
+   bloom: the casing is the instrument's ground, and a blur would spill past it over the view. */
+.case { display: none; }
 :root[data-weather] .case { display: inline; fill: none; stroke: #04070b; stroke-width: 13; }
-:root[data-weather] .scale { display: inline; }
-:root[data-weather] .scale path { fill: none; stroke-width: 2.5; stroke-linecap: butt; }
-:root[data-weather] .scale line { stroke-width: 1.8; stroke-linecap: butt; }
 :root[data-weather] .well { fill: rgb(var(--wx-shade) / .58); }
 /* the numeral over the well, which is dark here (Glass's is all but clear, and draws over it) */
 :root[data-weather] .readout { z-index: 2; }
 :root[data-weather] .track { stroke: rgb(255 255 255 / .14); }
-:root[data-weather] .arc.bloom,
-:root[data-weather] .thmarks { display: none; }
+:root[data-weather] .arc.bloom { display: none; }
+/* the track's white makes a lighter ground than Glass's, and the band's reds are dark: at Glass's
+   strengths a served mark falls under 3:1 there, so a served mark is drawn in full (the cap's
+   crimson 3.2:1 on the track) and a quarter mark at .7, still the lighter of the two */
+:root[data-weather] .thmark:not(.station) { opacity: 1; }
+:root[data-weather] .thmark.station { opacity: .7; }
 /* the rim lies under the casing, so where it has something to say it is drawn round the casing's
    outer edge: at the cap in the band's crimson, round a well flooded with it, dark enough still for
    the white numeral; and dashed while the reading is held */
@@ -1278,8 +1279,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 
 /* the chart: the fitted run, its head, its projection and the shade under it in the accent ramp, as
    on the glass, the rest in white; the warning floor dashed in the ramp's amber and the cap in its
-   crimson, as the scale prints them; every word white, and every line edged in the dark, once,
-   since it is redrawn only when its data changes */
+   crimson, the colours of the ring's marks there; every word white, and every line edged in the
+   dark, once, since it is redrawn only when its data changes */
 :root[data-weather] .chart { filter: drop-shadow(0 0 1px rgb(var(--wx-shade) / .9)) drop-shadow(0 1px 4px rgb(var(--wx-shade) / .5)); }
 :root[data-weather] .chart :is(.grid, .day) { stroke: rgb(255 255 255 / .16); }
 :root[data-weather] .chart .full { stroke: rgb(255 255 255 / .55); }
@@ -1368,8 +1369,9 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
 }
 
 /* Forced colours take the view away, and the context is kept: the window is the system's ground.
-   The pools and halos go, the casing is the ground, the printed scale is grey with its cuts, and
-   what reads the data, the arc, the fitted run and the tick, is highlighted. */
+   The pools and halos go, the casing is the ground, the marks on the track are the text's colour
+   (the quarter marks grey), and what reads the data, the arc, the fitted run and the tick, is
+   highlighted. */
 @media (forced-colors: active) {
   .wx { display: none !important; }
   :root[data-weather] :is(.top, .glass, .cost)::before { display: none; }
@@ -1380,8 +1382,8 @@ body[data-hold="1"] .notch .nl { stroke-dasharray: 2.6 2.2; }
   :root[data-weather] :is(body[data-hold="1"], .ring[data-band="exhausted"]) .rim { stroke: CanvasText; }
   :root[data-weather] .track,
   :root[data-weather] .ring[data-state="unknown"] .track { stroke: CanvasText; stroke-opacity: .3; }
-  :root[data-weather] .scale :is(.wx-q, .wx-red) { stroke: GrayText; }
-  :root[data-weather] .scale .wx-cap { stroke: CanvasText; }
+  :root[data-weather] .thmark { stroke: CanvasText; }
+  :root[data-weather] .thmark.station { stroke: GrayText; }
   :root[data-weather] .arc.main { stroke: Highlight; }
   :root[data-weather] .nb { stroke: Canvas; }
   :root[data-weather] .nl { stroke: Highlight; }
@@ -4278,10 +4280,9 @@ function buildRings() {
           </defs>
           <circle class="well" cx="60" cy="60" r="44.5"></circle>
           <circle class="rim" cx="60" cy="60" r="55.2"></circle>
-          <!-- Weather's casing, and the scale printed on it; the others do not draw them -->
+          <!-- Weather's casing; the others do not draw it -->
           <circle class="case" cx="60" cy="60" r="${R}"></circle>
           <circle class="track" cx="60" cy="60" r="${R}"></circle>
-          <g class="scale" data-r="scale"></g>
           <g class="thmarks" data-r="thmarks"></g>
           <g transform="rotate(-90 60 60)">
             <circle class="arc bloom" data-r="bloom" cx="60" cy="60" r="${R}"
@@ -4542,8 +4543,6 @@ function marksAhead(th, pct) {
 }
 
 function paintThresholds(key, th, on, pct) {
-  /* Weather draws no marks ahead: the scale printed on its casing is the marks */
-  if (weatherOn()) paintScale(key, th);
   const host = q(key, "thmarks");
   const marks = on && th && typeof pct === "number" ? marksAhead(th, pct) : [];
   const stamp = marks.map((m) => `${m.v.toFixed(2)}${m.served ? "s" : ""}`).join(",") + (lightGround() ? " light" : "");
@@ -4555,49 +4554,6 @@ function paintThresholds(key, th, on, pct) {
     const col = rgbCss(rampOf(v, th, bandOf(v, th)).rgb);
     return `<line class="thmark${served ? "" : " station"}" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${col}"></line>`;
   }).join("");
-}
-
-/* Weather prints its scale on the ring's casing, as an instrument's is, from the served thresholds
-   and in the ramp its arc reads: the warning band in its four quarters, each in the colour the arc
-   takes halfway across it, so each is a shade deeper (amber, orange, red-orange, crimson), the cuts
-   between them left as narrow gaps; the cap's crimson from critical, only where it stands clear of
-   the cap (colourMarks' rule, so never on Max 20× or 5×); and a crimson line at the cap. So the arc
-   wears the colour printed where it ends. It is the same at every reading, so it is drawn again only
-   when the thresholds move; before any reading it prints the default table, as Gauges does. Every
-   paint holds 3:1 on the casing. */
-const WX_PAINT = {
-  q: Array.from({ length: WARN_STATIONS }, (_, k) => rgbCss(mix(STOP.warning, STOP.exhausted, (k + .5) / WARN_STATIONS))),
-  red: rgbCss(STOP.exhausted),
-};
-/* the print's radius and width (r 54 to 56.5 of the 120-unit ring, the casing's outer edge), and
-   the cut between two paints, in the same units along the arc */
-const WX_PRINT = { r: 55.25, w: 2.5, cut: 0.8 };
-function paintScale(key, th) {
-  const host = q(key, "scale");
-  let warn = num(th && th.warningFloorPercent, 70), cap = num(th && th.exhaustedPercent, 100);
-  if (!(warn > 0 && cap > warn && cap <= 100)) { warn = 70; cap = 100; }     // only a malformed table does this
-  const c = num(th && th.criticalPercent, NaN);
-  const crit = isFinite(c) && c > warn && cap - c > 1.5 ? c : null;
-  const stamp = warn + "|" + cap + "|" + crit;
-  if (host.dataset.k === stamp) return;
-  host.dataset.k = stamp;
-  const half = WX_PRINT.cut / 2 / (2 * Math.PI * WX_PRINT.r) * 100;   // half a cut, in percent of the turn
-  const band = (a, b, cls, ink) => {
-    const d = arcPath(WX_PRINT.r, a / 100, b / 100);
-    return d ? `<path class="${cls}" d="${d}" stroke="${ink}"></path>` : "";
-  };
-  const end = crit === null ? cap : crit, quarter = (cap - warn) / WARN_STATIONS;
-  let out = "";
-  for (let k = 0; k < WARN_STATIONS; k++) {
-    const a = warn + quarter * k, b = Math.min(warn + quarter * (k + 1), end);
-    if (b <= a) break;
-    out += band(a + (k ? half : 0), b - (b < cap ? half : 0), "wx-q", WX_PAINT.q[k]);
-  }
-  if (crit !== null) out += band(crit + half, cap, "wx-red", WX_PAINT.red);
-  /* the cap: a line across the print and a little into the groove, so it reads past the arc's end */
-  const a = ptAt(52.4, cap / 100), b = ptAt(56.5, cap / 100);
-  out += `<line class="wx-cap" x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${WX_PAINT.red}"></line>`;
-  host.innerHTML = out;
 }
 
 /* How much this limit should warm the room: the worse of raw consumption
@@ -5146,7 +5102,7 @@ function chartHTML(key, fit, band, proj, th, W, presentUnknown, H, src = null) {
   if (warnOn) {
     s += `<line class="warnln" x1="${PL}" y1="${Y(warn).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(warn).toFixed(1)}"></line>`;
   }
-  /* Weather's chart prints the cap in the scale's crimson, as its ring does, wherever the axis reaches it */
+  /* Weather's chart prints the cap in the ramp's crimson, as its ring marks it, wherever the axis reaches it */
   const capPct = num(th && th.exhaustedPercent, 100);
   if (weatherOn() && capPct <= ymax) {
     s += `<line class="capln" x1="${PL}" y1="${Y(capPct).toFixed(1)}" x2="${(W - PR).toFixed(1)}" y2="${Y(capPct).toFixed(1)}"></line>`;

@@ -667,7 +667,10 @@ WX.pass((function () {
         }
         if (ws > 0. && dmin < 3600.) {
           hold /= ws; now /= ws;
-          float Hs = uSwell.w, reach = .35 * Hs * (.5 + .5 * uWx2.w);
+          /* [r8] the run-up follows the sets: by how high the crest that just struck stood at the rock's foot (the hold)
+             against the swell, from a lull's short wash (x .3) to a set's (x 1.6); round 7 ran every crest up alike. At 96 %
+             the crests at the eight rock probes run .35-.75 m (p10) to .6-2.4 m (p90) as the sets pass (probes.cjs) */
+          float Hs = uSwell.w, reach = .35 * Hs * (.5 + .5 * uWx2.w) * clamp(hold / max(.25 * Hs, .2), .3, 1.6);
           float top = hold + reach, sheet = smoothstep(top, top - .35, y) * smoothstep(now - .1, now + .2, y);
           vec2 sq = vec2(dot(p.xz, vec2(.71, -.71)) * 1.9 + n.x * 2., y * 1.1 + uTime.y * (16. * 16. / 240.));
           float st = smoothstep(.3, .75, cstVNy(sq, 16)), fresh = smoothstep(0., .8, hold - now);
@@ -1224,12 +1227,17 @@ WX.pass((function () {
            swell, bores and wind sea) and its decaying maximum, hold = max(now, last hold - drain). The white water
            a crest leaves on the rock runs off as the hold falls. It decays to a steady state that follows the
            sea's 1024 s loop: no accumulation */
+        if (i >= 24) { o = vec4(0.); return; }                          // [r8] texels 24..31: past uWashP[8] (read out of bounds before)
         vec4 q = uWashP[i - 16];
         if (q.w < .5) { o = vec4(0.); return; }
         vec4 sp = wxSeaProbe(8 + i - 16);
         float now = sp.w > .5 ? sp.x : 0., last = texelFetch(uProbe, ivec2(i, 0), 0).r;
         float hold = uWashK.y > .5 ? now : max(now, last - uWashK.x);
-        o = vec4(wxGuard(vec3(hold, now, q.x)), q.y);
+        /* [r8] not through wxGuard: it clamps to 0..6e4 (a colour's guard), so a probe left of the view's centre (x < 0:
+           every near rock) was read back at x = 0, and the sea under its mean at 0; the wash weighed each rock by the
+           distance to x = 0, and the rocks 60 m or more left of it got none (round 3-7). Only NaN and inf are caught */
+        vec3 hn = vec3(hold, now, q.x);
+        o = any(isnan(hn)) || any(isinf(hn)) ? vec4(0.) : vec4(hn, q.y);
         return;
       }
       vec3 pk = wxPlanet(vec3(0., 30., 900.)), c = vec3(0.);

@@ -49,7 +49,7 @@
    scope; every module only ever refers to WX, so nothing else changes.                      */
 var WX = (typeof window !== "undefined" && window.WX) || {};
 if (typeof window !== "undefined") window.WX = WX;
-WX.CONTRACT = "1.4";     // [1.4] additive (stream L, round 7): the lighthouse: uBeacon, uBeaconC, uBeaconB appended to the UBO, wxBeacon, R.beacon, WX.BEACON (section 10); W.accent and hooks.accent (api.js) hand the page's accent to the passes as F.accent. [1.3] additive: R.coast.lamps holds 4 lights; WX.TAA.hist is LINEAR-filtered; [1.3.1] the sea grid 8 px at T0-T2; [1.3.2] the storm's lightning nearer (CHANGES-3.md); [1.3.3] a day flash twice as bright, 3 a minute from 92.5 %; [1.3.4] T0 draws 1000 rain streaks, a strike after a long wait is seen; [1.3.5] T0-T1 split the world frame over two frames (worldSplit); [1.3.6] the Frame rate and Graphics card settings (hooks.fps, hooks.gpu, W.fps, W.gpu), Quality only sets the detail
+WX.CONTRACT = "1.4.1";   // [1.4.1] additive (stream L, round 8): the lighthouse at the right head's tip (WX.BEACON az/km/lampM), R.beacon.base, WX.BEACON.dayLum (a photocell on the scene's light), SCENE's alpha < 0 marks the lamp's light (-Y) for post (every other writer keeps 0..1). [1.4] additive (stream L, round 7): the lighthouse: uBeacon, uBeaconC, uBeaconB appended to the UBO, wxBeacon, R.beacon, WX.BEACON (section 10); W.accent and hooks.accent (api.js) hand the page's accent to the passes as F.accent. [1.3] additive: R.coast.lamps holds 4 lights; WX.TAA.hist is LINEAR-filtered; [1.3.1] the sea grid 8 px at T0-T2; [1.3.2] the storm's lightning nearer (CHANGES-3.md); [1.3.3] a day flash twice as bright, 3 a minute from 92.5 %; [1.3.4] T0 draws 1000 rain streaks, a strike after a long wait is seen; [1.3.5] T0-T1 split the world frame over two frames (worldSplit); [1.3.6] the Frame rate and Graphics card settings (hooks.fps, hooks.gpu, W.fps, W.gpu), Quality only sets the detail
 WX.LAB_MARKERS = { open: "/" + "*@lab*" + "/", close: "/" + "*@end*" + "/" };   // concatenated: a literal here would be stripped
 
 WX.mods = WX.mods || [];          // registered passes, in load order
@@ -627,12 +627,20 @@ WX.ASSETS = {
                      that passes SCENE to G.uniforms itself uses this, not R.tex.SCENE.
    R.coast.mem, R.coast.shoreStamp, R.coast.lamps: section 8.                                    */
 
-/* ── 10. [1.4] The lighthouse (stream L, round 7) ─────────────────────────────────────────────
-   The user's ask (2026-11-26): a lighthouse in the far ocean whose lamp is the accent colour, small, near the horizon,
-   never overwhelming the scene. Its pass (passes/beacon.js, after the coast in the pass order) draws the reef and the
-   tower in the coast slot (SCENE, SCENEZ and depth, as the cove), and the lamp, its glow and the beams' shafts in the
-   air in the bolt slot (added to SCENE before the TAA). Its ubo() hook, which runs before the ocean's, fills uBeacon*
-   and R.beacon.
+/* ── 10. [1.4] The lighthouse (stream L, rounds 7-8) ──────────────────────────────────────────
+   The user's asks (2026-11-26): a lighthouse whose lamp is the accent colour, never overwhelming the scene; [r8] "next
+   to the end of the right side rock ... too small to notice": a granite rock lighthouse on a stack just off the right
+   head's seaward tip, 1.53 km out, its lamp 70 m over the sea (~53 px over the waterline at 1080p). Its pass
+   (passes/beacon.js, after the coast in the pass order) draws the stack, its rocks and the tower in the coast slot
+   (SCENE, SCENEZ and depth, as the cove; [r8] and into the cove's mirror COASTREFL on the world frames the cove redraws
+   it, under the cove, then the mips again), and the lamp, its glow, the flash's glare and the beams' shafts in the air
+   in the bolt slot (added to SCENE before the TAA). Its ubo() hook, which runs before the ocean's, fills uBeacon* and
+   R.beacon.
+   [r8] THE LAMP'S LIGHT IS MARKED for the grade: where the bolt slot's draw adds light, SCENE's alpha holds -Y, the
+   pre-exposed luminance it added (MIN-blended; every other writer keeps SCENE's alpha in 0..1, and the TAA resolve
+   passes the frame's alpha on). Post grades that much of uBeaconC's colour past the rods: the cones see a lamp, so its
+   glow keeps its hue at night (the rods' shift had turned a dim crimson glow mauve). A pass that draws the lamp's light
+   elsewhere (the sea's path) may mark it the same way.
    THE ACCENT is the page's: W.accent(rgb) (api.js, hooks.accent for a first value) is the colour every other theme
    gives the ring for the hottest reading (rampOf on the dark ground's STOP table in public/index.html), sRGB [r, g, b]
    0..255, or null with no reading (then the lamp is the unknown grey-blue, WX.BEACON.unknown). The API hands it to the
@@ -641,13 +649,19 @@ WX.ASSETS = {
    light at unit luminance), so it never jumps; the first frame and a still take it at once.
    THE LIGHT: automated, on at all hours. A photocell sets it between its day and its night intensity (WX.BEACON.cd;
    an automated light burns brighter by day, as obstruction lights do), so by day it reads as a small coloured light
-   and at night as a modest point that does not glare over the cove. A lantern's steady glow, and two opposed beams
+   and at night as a modest point that does not glare over the cove. [r8] The photocell reads the scene's light (post's
+   eased mean luminance, R.exposure.lavS, cd/m^2), log-linear from WX.BEACON.dayLum[0] (night) to [1] (day), both
+   intensities blended log-linearly; where no meter runs, from the sun's elevation (dayEl). So at dusk the light runs
+   between its settings, and its flash and shafts show as the sky darkens against them. A lantern's steady glow, and two opposed beams
    turning one way at a turn every WX.BEACON.turn s of the sea's clock (16 divides 1024: 64 turns a loop, no seam at
    the wrap): any bearing, the window's too, sees a flash every turn / 2 s, as long as a beam takes to pass (~.3 s).
    R.beacon = WX.beaconDefaults(), made and filled every frame by the beacon pass's ubo() hook (a reader takes a
    missing R.beacon, or on 0, as no lighthouse):
      on        0..1 the lighthouse's presence (uBeaconB.w)
      pos       [x, y, z] the lamp, world m, lowered by the sea's curvature (uBeacon.xyz)
+     base      [x, 0, z, 0] [r8] the stack's centre at the still sea's level, world m (the tower stands on it)
+     box       [x0, y0, x1, y1] [r8] the lamp's draw in the bolt slot, S px with y up (the only pixels it marks), last
+               world frame
      rgb       the lamp's colour, linear Rec. 709 at unit luminance (uBeaconC.rgb); srgb the eased accent, 0..255
      I, Ib     the lantern's steady intensity and the beams' peak, rel m^2 before the exposure (uBeacon.w, uBeaconC.w)
      angle     beam 1's bearing rad, from +z toward +x (uBeaconB.x); sigma [h, v] rad (uBeaconB.yz)
@@ -655,16 +669,18 @@ WX.ASSETS = {
      uv        [u, v] the lamp's place in the view, 0..1 with y up, unjittered; [-1, -1] off the view
    wxBeacon(pM) (the common prelude) gives any receiver the lamp as a light, as wxFlash gives the strikes. */
 WX.BEACON = {
-  az: 12, km: 3.0,           // where it stands: deg right of the view's centre, km from the window (clear of the HUD, the cove and the fixed sun at +20)
-  lampM: 43,                 // the lamp's focal height above the sea, m (a rock lighthouse: a granite tower of 45 m on a low reef)
+  az: 24.0, km: 1.53,        // [r8] where it stands: deg right of the view's centre, km from the window: a stack just off the right head's seaward tip
+  lampM: 70,                 // [r8] the lamp's focal height above the sea, m (a granite tower of 65 m on a stack 14 m high)
   turn: 16,                  // s a turn of the optic (two opposed beams: a flash every 8 s at any bearing)
   sigmaDeg: [2.8, 2.0],      // the beams' sigma, deg: in bearing (a ~.3 s flash) and in elevation
   cd: { lanternDay: 6e5, lanternNight: 6e3, beamDay: 6e6, beamNight: 1e5 },   // luminous intensity, cd (1 rel m^2 = 128 000 cd)
-  dayEl: [-4, 1],            // deg of sun elevation over which the photocell goes from night to day
+  dayEl: [-4, 1],            // deg of sun elevation over which the photocell goes from night to day (where no meter runs)
+  dayLum: [0.01, 300],       // [r8] the scene's mean luminance, cd/m^2, over which the photocell goes from night to day (log): night by
+                             // nautical dusk (sun ~ -10 deg), near its day setting at sunset; a dark storm's day stays day
   unknown: [125, 140, 163],  // the page's unknown grey-blue (no reading)
 };
 WX.beaconDefaults = function () {
-  return { on: 0, pos: [0, 0, 0], rgb: [1, 1, 1], srgb: WX.BEACON.unknown.slice(), I: 0, Ib: 0, angle: 0, sigma: [0, 0], eye: 0, uv: [-1, -1] };
+  return { on: 0, pos: [0, 0, 0], base: [0, 0, 0, 0], rgb: [1, 1, 1], srgb: WX.BEACON.unknown.slice(), I: 0, Ib: 0, angle: 0, sigma: [0, 0], eye: 0, uv: [-1, -1] };
 };
 /*@lab*/
 /* LAB ONLY: the page's accent for a reading (public/index.html rampOf on the dark ground's STOP table: steady below the

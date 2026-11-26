@@ -2,25 +2,25 @@
    and "paneview" GLSL: the view through the glass, which post's fused view program draws ([1.2] pane + post
    fused, contract section 4: no HDR target; the pane slot is empty).
 
-   SIMULATION (render.md 11.1), in CSS px (1 px = 0.26 mm of glass), y down, at fixed 120 Hz substeps
-   (at most 6 a frame), seeded, no allocation per frame:
+   SIMULATION (render.md 11.1), in CSS px ([r8] 1 px = 0.41 mm of glass at the user's view: makeSim's header), y down, at
+   fixed 120 Hz substeps (at most 6 a frame), seeded, no allocation per frame:
      arrivals   Poisson, rate(precip) x the onshore wind x the pane's area; log-normal radii
      beads      pinned; an arrival that touches beads merges with them (r^3 adds, centre by volume)
-     sliders    a bead over the local critical radius rc x pin(x, y) slides at k (r - rc_local): the
-                static pinning field (0.62-1.48 x rc, two rotated lattices of 23 and 8 px, which no longer
-                park the drops in rows) makes it stop, wait for more water and lurch on; it meanders with a smooth noise of its own,
-                leans with the wind in a storm, takes in every bead in front of it (a 16 px spatial hash),
-                sheds beads behind, stamps its wet track (under a quarter of its width) into the film, and leaves
-                at the bottom. A slider at rest for 0.25 s is a bead again
-     shrink     every drop loses (e0 + r / tau): tau 90 s while it rains, 15 s once dry, so the pane
-                reaches a steady state within about 60 s at any rain and is dry within 90 s of the end
-     caps       knobs.beads, knobs.sliders: past the bead cap the smallest of 6 random beads goes
-   A still (and the first frame) runs it 60 s ahead in one go; the last 30 s of tracks seed the film.
+     sliders    a bead over the local critical radius rc x pin(x, y) runs ([r8] always: a slot is made for it): the
+                static pinning field (.68-1.30 x rc, two rotated lattices of 23 and 8 px, which no longer park the drops
+                in rows) makes it start, run and stop again; it meanders with a smooth noise of its own, leans with the
+                wind in a storm, takes in every bead its head touches (a 16 px spatial hash), sheds beads behind, stamps
+                its wet track (under a quarter of its width) into the film, and leaves at the bottom. A slider at rest
+                for 0.25 s is its bead again ([r8] always)
+     shrink     in rain the slow loss the steady state needs; once dry a drop flattens, then shrinks ([r8]: shrink())
+     caps       knobs.beads, knobs.sliders: past the bead cap an arrival that touches nothing is not simulated ([r3]);
+                [r8] a runner's trail may pass the cap by TRAIL, a runner at rest always becomes its bead
+   A still (and the first frame) runs it ([r8] 90 s) ahead in one go; the last 30 s of tracks seed the film.
    HEIGHT MAP  R16F at max(CSS, S) px (<= 2048 wide) holding exp(h), h in CSS px: MAX blending keeps the
      order, and fp16 then keeps h to 1e-3 px everywhere (stored plainly, a 5 px dome kept 4e-3 px, and
      its forward-difference slopes banded the image inside a big drop). Procedural micro-drops (two cell
      layers whose lives divide the 240 s rain clock, wiped where the film is fresh), then every bead as a
-     spherical cap of contact angle 49 deg and every running drop as a head and a tail: the head a cap a
+     spherical cap of contact angle 60 deg ([r3]; [r8] flatter as it dries) and every running drop as a head and a tail: the head a cap a
      little wider than long, its dome leaning forward; behind it a narrow rounded rivulet that thins and
      flattens over 0.8-3.4 r.
    FILM  R16F at C/2: each frame times exp(-dt / 12 s), then the running drops' tracks, a rounded ridge
@@ -105,8 +105,10 @@ vec3 paneView(vec2 uv, float fixLod, out float cover, out float mistF) {
       g += gf * uFilmPx.z * .5;                                    // the film's texel is 2 CSS px
       h += film * uFilmPx.z;
       /* a rivulet's sides are steeper than the film's texels can hold: there Fresnel and total internal
-         reflection turn the view dark, the thin outline every wet track shows */
-      edge = smoothstep(.12, .45, length(gf)) * smoothstep(.1, .6, film);         // an older track: fainter
+         reflection turn the view dark, the thin outline every wet track shows. [r8] Only a channel still carrying water
+         (film over ~.4): with every drop over its size now running, a storm's glass was ruled with pairs of dark lines
+         (each track's two flanks: out/P/a2/u96-f600-x3.jpg); a single run's thin film, or an old track, only bends the view */
+      edge = smoothstep(.2, .6, length(gf)) * smoothstep(.35, .9, film) * .6;   // an older track: fainter
     }
   }
   /* a lens: tilt a, the ray bends by asin(1.33 sin a) - a toward the drop's centre (up the slope); computed
@@ -196,8 +198,11 @@ vec3 paneView(vec2 uv, float fixLod, out float cover, out float mistF) {
 `);
 WX.pass((function () {
   const D = Math.PI / 180;
-  WX.param("pane.rate", 640, 0, 1500, 5, "pane");       // arrivals per s per Mpx at precip 1, wind factor 1
-  WX.param("pane.rc", 8, 3, 20, 0.5, "pane");           // critical radius px ([r3] 1 px ~ 0.4 mm: 3.2 mm)
+  WX.param("pane.rate", 420, 0, 1500, 5, "pane");       // arrivals per s per Mpx at precip 1, wind factor 1 ([r8] 640: with the
+                                                        // critical size real (a third of round 7's volume) twice the drops ran;
+                                                        // 420 with the smaller arrivals of envOf)
+  WX.param("pane.rc", 5.6, 3, 20, 0.1, "pane");         // [r8] critical radius px (1 px = 0.41 mm: 2.3 mm, makeSim's header)
+  WX.param("pane.rmax", 7.3, 3, 20, 0.1, "pane");       // [r8] no pinned bead is wider (3.0 mm: ~6 mm across)
   WX.param("pane.refr", 1, 0, 2, 0.05, "pane");         // refraction strength (1 = physical)
   WX.param("pane.micro", 1, 0, 2, 0.05, "pane");        // micro-drop density
   WX.param("pane.lodBias", -2, -4, 4, 0.25, "pane");
@@ -210,11 +215,30 @@ WX.pass((function () {
   /*@lab*/ WX.param("pane.debug", 0, 0, 3, 1, "pane"); /*@end*/   // lab: 1 the refracted uv, 2 the slope, 3 the lod
 
   /* ════════════════ the simulation (no GL; Node can run it: the pass's .makeSim) ════════════════ */
+  /* [r8] REAL SIZES. The glass is 0.5 m from the eye, and the view's 50 deg spans the user's 1150 CSS px tall view, so 1 CSS px
+     is 2 x 0.5 m x tan 25 deg / 1150 = 0.41 mm of glass (DESIGN's 0.26 mm put the eye 0.32 m from it; round 3's "0.4-0.45 mm"
+     is this at 1150-1080 px tall; the glass keeps CSS px on views from 1280 x 820 up, so a taller view reads a little farther).
+     Water starts to run down vertical glass when its weight passes what contact-angle hysteresis holds (Furmidge):
+     rho g V = k gamma 2a (cos thR - cos thA), with V = 0.79 a^3 for a ~50 deg cap of contact radius a, so
+     a_c^2 = 2 k gamma dcos / (0.79 rho g). Ordinary window glass: gamma .072 N/m, k .8-1, dcos .25-.40 (advancing 55-60 deg,
+     receding 20-30 deg): a_c = 1.9-2.7 mm, about 2.3 mm = 5.6 px (pane.rc). Its dirt and scratches spread that .68-1.30x, and
+     nothing pinned is ever over 3.0 mm (pane.rmax 7.3 px): a bead is at most ~6 mm across. A drop over its critical size
+     always runs: the runners' cap is the tier's (40-300), and a slot goes to it before anything else (round 7's 4 + 14 x precip
+     per Mpx left hundreds of over-critical beads pinned in a storm, growing to 10.5 px). Raindrops of 0.5-2.5 mm land as
+     beads of contact radius 0.4-2.0 mm (log-normal round 1.9 px, 1.5 in a storm's spray, sigma .45, at most 5 px: envOf).
+     NOTHING BLINKS OUT ([r8], the user: "the drops suddenly disappear instead of dropping down"). A drop leaves the glass only
+     by running (the same drop, as big, starting slowly, speeding up as it takes in what lies in its path, shedding a trail of
+     small ones), by being swept up by a runner, by merging, off the bottom edge, or by drying: after the rain it flattens in
+     place (its lens and rim fade) and then its contact line recedes, over 12 + 7a s (a in px). Round 7 had a runner that came
+     to rest vanish whenever the bead store was full (in rain it always was): 1.3-5 of the pane's biggest drops a second. */
   function makeSim(seed) {
     const NB = 6600, NS = 330, NT = 4096;
     const bx = new Float32Array(NB), by = new Float32Array(NB), br = new Float32Array(NB);
     /* [r3] a bead's contact line stays where a merge left it: elongation (0 round .. .4, [r3c]) along an angle */
     const be = new Float32Array(NB), bth = new Float32Array(NB);
+    /* [r8] bf: the bead's height, 1 for the 60 deg cap, down to FR as it dries (its volume is br^3 bf); bm: over its critical
+       size but no runner slot was free (it starts as soon as one is) */
+    const bf = new Float32Array(NB), bm = new Uint8Array(NB);
     const sx = new Float32Array(NS), sy = new Float32Array(NS), sr = new Float32Array(NS), sv = new Float32Array(NS);
     const svx = new Float32Array(NS), sdir = new Float32Array(NS * 2), sshed = new Float32Array(NS), sgap = new Float32Array(NS);
     const srest = new Float32Array(NS), sph = new Float32Array(NS), spx = new Float32Array(NS), spy = new Float32Array(NS);
@@ -222,6 +246,18 @@ WX.pass((function () {
     const next = new Int32Array(NB);
     let head = new Int32Array(1), gw = 1, gh = 1, nb = 0, ns = 0, W = 1280, H = 820, t = 0, nextArr = 0, acc = 0;
     const CELL = 16;
+    /* [r8] FR: the receding angle's share of the cap's height (~22 of 60 deg); KV: a runner's speed per its weight over what the
+       receding line holds, v = KV (r^3 - rm^3) / rm^2 px/s; VMAX 200 px/s (8 cm/s); RW: a runner's head is never wider than
+       this (px), more water makes it longer, not wider */
+    const FR = 0.35, KV = 3, VMAX = 200, RW = 6.6;
+    /* [r8] how far a runner's trail may take the beads past their cap (a full pane still gets its trails; 200, not more: the spare
+       fills while the pane first wets and then drains slowly, and with 400 a heavy rain took ~3 min to settle) */
+    const TRAIL = 200;
+    /*@lab*/
+    /* how every drop left the glass, for tests/pane/r8 (no allocation once the keys exist) */
+    const EX = {};
+    const ex = (k, r) => { const e = EX[k] || (EX[k] = { n: 0, big: 0, rmax: 0 }); e.n++; if (r >= 1.5) e.big++; if (r > e.rmax) e.rmax = r; };
+    /*@end*/
     /* [r3] the wet channels: when a running drop last crossed each 4 px cell. Water runs where water ran (a wet
        path pins less and draws the next drops in), so the runs gather into a few long rivulets that merge and
        branch. Read as exp(-age / 30 s), so nothing has to decay per step */
@@ -262,8 +298,9 @@ WX.pass((function () {
       const v00 = hash2(ix, iy), v10 = hash2(ix + 1, iy), v01 = hash2(ix, iy + 1), v11 = hash2(ix + 1, iy + 1);
       return v00 + (v10 - v00) * ux + (v01 - v00) * uy + (v00 - v10 - v01 + v11) * ux * uy;
     }
-    /* rotated lattices of incommensurate sizes: a single 20 px lattice parked the sliders in rows */
-    const pin = (x, y) => 0.62 + 0.86 * (0.6 * vnoise((x * 0.80 + y * 0.60) / 23, (y * 0.80 - x * 0.60) / 23)
+    /* rotated lattices of incommensurate sizes: a single 20 px lattice parked the sliders in rows. [r8] .68-1.30 of pane.rc
+       (round 7 .62-1.48 of 8 px: pinned beads up to 11.8 px, 4.8 mm) */
+    const pin = (x, y) => 0.68 + 0.62 * (0.6 * vnoise((x * 0.80 + y * 0.60) / 23, (y * 0.80 - x * 0.60) / 23)
       + 0.4 * vnoise((x * 0.34 - y * 0.94) / 8.3 + 31.7, (y * 0.34 + x * 0.94) / 8.3 + 11.3));
     function resize(w, h) {
       w = Math.max(16, w); h = Math.max(16, h);
@@ -283,10 +320,16 @@ WX.pass((function () {
       return cy * gw + cx;
     }
     function link(i) { const k = cellOf(bx[i], by[i]); next[i] = head[k]; head[k] = i; }
-    /* drop the dead (r = 0), then hash the living */
+    /* drop the dead (r = 0), then hash the living. [r8] A bead waiting for a runner slot (bm) starts when one is free */
     function rebuild() {
       let j = 0;
-      for (let i = 0; i < nb; i++) if (br[i] > 0) { bx[j] = bx[i]; by[j] = by[i]; br[j] = br[i]; be[j] = be[i]; bth[j] = bth[i]; j++; }
+      for (let i = 0; i < nb; i++) if (br[i] > 0) {
+        if (bm[i] && ns < Math.min(env.capS, NS)) {
+          if (br[i] > rcl(bx[i], by[i])) { /*@lab*/ ex("toRunner", br[i]); /*@end*/ addSlider(bx[i], by[i], Math.cbrt(br[i] * br[i] * br[i] * bf[i])); continue; }
+          bm[i] = 0;
+        }
+        bx[j] = bx[i]; by[j] = by[i]; br[j] = br[i]; be[j] = be[i]; bth[j] = bth[i]; bf[j] = bf[i]; bm[j] = bm[i]; j++;
+      }
       nb = j; live = j;
       head.fill(-1, 0, gw * gh);
       for (let i = 0; i < nb; i++) link(i);
@@ -294,13 +337,18 @@ WX.pass((function () {
     let live = 0;
     /* [r3] a full pane culls nothing: a bead stays until it dries, merges or is swept (a clip showed round 2's cull
        turning the whole population over every few seconds: beads popping everywhere). Past the cap an arrival
-       that touches nothing is left to the micro-beads' layer, and a runner keeps what it would have shed */
-    function addBead(x, y, r, e, th) {
-      if (live >= env.capB || nb >= NB) return -1;
+       that touches nothing is left to the micro-beads' layer (it is never drawn: nothing pops).
+       [r8] lim: how many beads this addition may fill the store to: arrivals stop at the cap, a runner's trail may pass it by
+       TRAIL, and a runner coming to rest always becomes its bead (up to the store's size) */
+    function addBead(x, y, r, e, th, lim) {
+      if (live >= lim || nb >= NB) return -1;
       live++;
-      bx[nb] = x; by[nb] = y; br[nb] = r; be[nb] = e || 0; bth[nb] = th === undefined ? rnd() * 3.1416 : th; link(nb);
+      bx[nb] = x; by[nb] = y; br[nb] = r; be[nb] = e || 0; bth[nb] = th === undefined ? rnd() * 3.1416 : th; bf[nb] = 1; bm[nb] = 0; link(nb);
       return nb++;
     }
+    /* [r8] the critical radius where (x, y) is: the glass's pinning there, less on a wet path and on streaming glass, never over
+       rmax (3 mm) */
+    function rcl(x, y) { return Math.min(env.rmax, env.rc * env.rcK * pin(x, y) * (1 - 0.35 * wetAt(x, y))); }
     function addSlider(x, y, r) {
       if (ns >= NS) return false;
       sx[ns] = x; sy[ns] = y; sr[ns] = r; sv[ns] = 0; svx[ns] = 0; sdir[ns * 2] = 0; sdir[ns * 2 + 1] = 1;
@@ -316,11 +364,33 @@ WX.pass((function () {
         srest[i] = srest[ns]; sph[i] = sph[ns]; spx[i] = spx[ns]; spy[i] = spy[ns];
       }
     }
+    /* [r8] a runner at rest is a bead again, the same drop where it stopped (it moves < 2 px/s, so where fill() drew it last),
+       elongated along its way. Only a full store (NB) can refuse it: then it stays a runner at rest and asks again */
+    function toBead(i) {
+      if (addBead(sx[i], sy[i], Math.min(sr[i], env.rmax), 0.25, Math.atan2(sdir[i * 2 + 1], sdir[i * 2]), NB) < 0) return false;
+      /*@lab*/ ex("toBead", sr[i]); /*@end*/
+      killSlider(i);
+      return true;
+    }
+    /* [r8] a drop over its critical size runs. If every runner slot is taken, the runner at rest the longest gives its slot
+       back (it is a bead again); with none at rest the drop waits pinned (bm) and starts at the next substep a slot is free */
+    function startRunner(x, y, r) {
+      if (ns >= Math.min(env.capS, NS)) {
+        let j = -1, best = 0.04;
+        for (let i = 0; i < ns; i++) if (srest[i] > best) { best = srest[i]; j = i; }
+        if (j < 0 || !toBead(j)) return false;
+      }
+      /*@lab*/ ex("toRunner", r); /*@end*/
+      return addSlider(x, y, r);
+    }
     /* merge everything that touches the drop at (x, y, r); returns the new radius in m3 and the centre, and
-       [r3] the elongation the merge leaves: the contact line stays pinned where both drops were */
-    const M = { x: 0, y: 0, r: 0, e: 0, th: 0 };
+       [r3] the elongation the merge leaves: the contact line stays pinned where both drops were. [r8] Volumes are br^3 bf
+       (a drying bead is flatter). The merged drop keeps at least the widest contact line it took in (a flattened bead that
+       is hit grows taller in place, it does not shrink onto its volume): r = max(cbrt V, that), f = V / r^3; v the volume
+       radius cbrt V */
+    const M = { x: 0, y: 0, r: 0, e: 0, th: 0, f: 1, v: 0 };
     function mergeAt(x, y, r, skip) {
-      let V = r * r * r, mx = x * V, my = y * V, vb = 0, ex = 0, ey = 0;
+      let V = r * r * r, mx = x * V, my = y * V, vb = 0, ex0 = 0, ey0 = 0, aw = r;
       for (let pass = 0; pass < 3; pass++) {
         const R0 = Math.cbrt(V), cx = mx / V, cy = my / V, reach = R0 + 12;
         const x0 = Math.floor((cx - reach) / CELL) + 1, x1 = Math.floor((cx + reach) / CELL) + 1;
@@ -331,23 +401,25 @@ WX.pass((function () {
             if (i === skip || br[i] <= 0) continue;
             const dx = bx[i] - cx, dy = by[i] - cy, rr = br[i] + R0;
             if (dx * dx + dy * dy < rr * rr * 0.81) {
-              const v = br[i] * br[i] * br[i];
-              if (v > vb) { vb = v; ex = bx[i] - x; ey = by[i] - y; }
+              const v = br[i] * br[i] * br[i] * bf[i];
+              if (v > vb) { vb = v; ex0 = bx[i] - x; ey0 = by[i] - y; }
+              if (br[i] > aw) aw = br[i];
+              /*@lab*/ ex("merged", br[i]); /*@end*/
               V += v; mx += bx[i] * v; my += by[i] * v; br[i] = 0; live--; any = true;
             }
           }
         }
         if (!any) break;
       }
-      M.x = mx / V; M.y = my / V; M.r = Math.cbrt(V);
-      const d = Math.hypot(ex, ey);
+      M.x = mx / V; M.y = my / V; M.v = Math.cbrt(V); M.r = Math.max(M.v, aw); M.f = V / (M.r * M.r * M.r);
+      const d = Math.hypot(ex0, ey0);
       /* [r3c] at most 0.4 (aspect 1.4; 0.7 left the storm pane a field of slugs next to win-gondola's round beads) */
-      M.e = vb > 0 ? Math.min(0.4, 0.35 * d / M.r) : 0.08 * rnd(); M.th = vb > 0 ? Math.atan2(ey, ex) : rnd() * 3.1416;
+      M.e = vb > 0 ? Math.min(0.4, 0.35 * d / M.r) : 0.08 * rnd(); M.th = vb > 0 ? Math.atan2(ey0, ex0) : rnd() * 3.1416;
       return M;
     }
-    /* [r3] smaller drops (1 CSS px is now read as ~0.45 mm of glass): log-normal arrivals round 1.5 px, so the
-       pane holds many small beads and few big ones; lean: the wind's push along the glass, spread: the outflow
-       from the wind's stagnation point (at stag of the width), which sends the runs diagonally in a storm */
+    /* [r3] smaller drops: log-normal arrivals, so the pane holds many small beads and few big ones ([r8] the scale and the
+       sizes: makeSim's header); lean: the wind's push along the glass, spread: the outflow from the wind's stagnation
+       point (at stag of the width), which sends the runs diagonally in a storm */
     /* does a drop at (x, y, r) touch a bead (the merge test) */
     function touches(x, y, r) {
       const reach = r + 12, x0 = Math.max(0, Math.floor((x - reach) / CELL) + 1), x1 = Math.min(gw - 1, Math.floor((x + reach) / CELL) + 1);
@@ -359,11 +431,11 @@ WX.pass((function () {
       }
       return false;
     }
-    const env = { precip: 0, wind: 1, lean: 0, spread: 0, stag: 0.35, dry: 0, capB: 3000, capS: 150, rate: 400, rc: 8, rcK: 1, rmed: 2.2, sig: 0.6, tau: 90 };
+    const env = { precip: 0, wind: 1, lean: 0, spread: 0, stag: 0.35, dry: 0, capB: 3000, capS: 150, rate: 400, rc: 5.6, rmax: 7.3, rcK: 1, rmed: 2.0, sig: 0.55, amax: 5, slick: 1 };
     function arrive() {
       let r = Math.exp(Math.log(env.rmed) + env.sig * gauss());
       if (r < 0.9) return;                           // [r3] the finest spray is the micro-drops' (GPU) layer
-      r = Math.min(8, r);
+      r = Math.min(env.amax, r);
       const x = rnd() * (W + 8) - 4, y = rnd() * (H + 8) - 4;
       for (let i = 0; i < ns; i++) {                 // a drop that lands on a running drop feeds it
         const dx = x - sx[i], dy = y - sy[i], rr = sr[i] + r * 0.5;
@@ -371,89 +443,134 @@ WX.pass((function () {
       }
       if (live >= env.capB && !touches(x, y, r)) return;
       const m = mergeAt(x, y, r, -1);
-      if (m.r > env.rc * env.rcK * pin(m.x, m.y) * (1 - 0.4 * wetAt(m.x, m.y)) && ns < env.capS) { addSlider(m.x, m.y, m.r); return; }
-      addBead(m.x, m.y, m.r, m.e, m.th);
+      /* [r8] over its critical size it runs, always (a slot is made for it; at worst it waits pinned for the next substep a
+         slot is free, and then no wider than rmax: what would make it wider runs off with the streaming water unseen) */
+      if (m.r > rcl(m.x, m.y)) {
+        if (startRunner(m.x, m.y, m.v)) return;
+        const k = addBead(m.x, m.y, Math.min(m.r, env.rmax), m.e, m.th, NB);
+        if (k >= 0) { bm[k] = 1; bf[k] = Math.min(1, m.f); }
+        return;
+      }
+      const k = addBead(m.x, m.y, m.r, m.e, m.th, NB);       // the merged drop (its parts left the store: it always fits)
+      if (k >= 0) bf[k] = m.f;
       /* a hard landing throws a few satellite droplets */
       if (r > 1.6 && rnd() < 0.5 && live < env.capB) {
         const n = 1 + Math.floor(rnd() * 3);
         for (let k = 0; k < n; k++) {
           const ang = rnd() * 6.2832, dist = r * (1.6 + 1.6 * rnd());
           const sr0 = r * (0.18 + 0.17 * rnd());
-          if (sr0 > 0.45) addBead(m.x + Math.cos(ang) * dist, m.y + Math.sin(ang) * dist, sr0, 0);
+          if (sr0 > 0.45) addBead(m.x + Math.cos(ang) * dist, m.y + Math.sin(ang) * dist, sr0, 0, undefined, env.capB);
         }
       }
     }
     function sliders(h) {
-      const K = 10, rc = env.rc * env.rcK;
+      const rc = env.rc * env.rcK;
       for (let i = ns - 1; i >= 0; i--) {
         const x = sx[i], y = sy[i], r = sr[i];
-        /* k (r - rc_local), <= 5 cm/s: rivulets creep, stop where the glass pins them and lurch on when they
-           take in a bead (a hysteresis that let moving drops run on below rc made them run away: they took in
-           every bead in their path and reached the 5 cm/s cap) */
-        /* [r3] a wet path ahead pins less: the drop runs on along it */
+        /* [r3] a wet path ahead pins less: the drop runs on along it.
+           [r8] Once its contact line moves the glass holds it less: it runs on while its weight beats the RECEDING line's
+           pinning (0.7 of the static), at v = KV (r^3 - rm^3) / rm^2 (the weight over that, against the line's drag): a drop
+           that just started creeps at ~20 px/s (0.8 cm/s), speeds up as it takes in the beads in its path (a heavy one
+           reaches 4-8 cm/s), and stops where the glass pins it again. Eased with tau 0.2 s: it visibly starts, it lurches */
         const wa = wetAt(x, y + r * 0.8);
         swet[i] += (wa - swet[i]) * Math.min(1, h / 0.1);
-        const rcl = rc * pin(x, y) * (1 - 0.45 * wa);
-        const target = Math.min(200, Math.max(0, K * (r - rcl)));
-        sv[i] += (target - sv[i]) * Math.min(1, h / 0.07);
+        const rm = 0.7 * Math.min(env.rmax, rc * pin(x, y) * (1 - 0.35 * wa));
+        /* on a wet path, and on a storm's streaming glass, it rides the water already there: up to ~4x faster (so a storm's
+           runners cross the pane in seconds, as the glass streams, instead of crowding it) */
+        const kv = KV * (1 + 1.5 * swet[i]) * env.slick;
+        const target = Math.min(VMAX, Math.max(0, kv * (r * r * r - rm * rm * rm) / (rm * rm)));
+        sv[i] += (target - sv[i]) * Math.min(1, h / 0.2);
         const sp = sv[i];
         /* the path: a smooth meander of the slider's own, the pinning field's slope, a lean with the wind */
         const g = (pin(x + 3, y) - pin(x - 3, y)) / 6;
         const mea = 0.28 * (vnoise(y / 45 + sph[i], sph[i] * 3.1) - 0.5) * 2 + 0.3 * (vnoise(y / 11 + sph[i] * 1.7, sph[i]) - 0.5) * 2;
         /* [r3] drawn toward the wet path just ahead (the next drops follow the first), and pushed along the glass
-           by the wind: its cross part and the outflow from the stagnation point */
+           by the wind: its cross part and the outflow from the stagnation point.
+           [r8] The glass's pull (meander, pinning slope, a wet path beside it) bends it at most 0.8 sideways a px down, and less
+           as it speeds up (a fast rivulet runs straight); eased over 0.12 s: round 7's 3.6 x the wet path's pull snapped the
+           runners sideways at up to 75 deg, and with many of them the tracks zigzagged like wire */
         const ay = y + r + 3, dw = 3 + 0.25 * r;
-        const steer = 3.6 * (wetAt(x + dw, ay) - wetAt(x - dw, ay));
-        const vxT = sp * (mea - 14 * g + steer + env.lean + env.spread * 2 * (x / W - env.stag));
-        svx[i] += (vxT - svx[i]) * Math.min(1, h / 0.06);
+        const steer = 1.5 * (wetAt(x + dw, ay) - wetAt(x - dw, ay));
+        const bend = Math.max(-0.8, Math.min(0.8, mea - 14 * g + steer)) / (1 + sp / 80);
+        const vxT = sp * (bend + env.lean + env.spread * 2 * (x / W - env.stag));
+        svx[i] += (vxT - svx[i]) * Math.min(1, h / 0.12);
         const dx = svx[i] * h, dy = sp * h, dl = Math.sqrt(dx * dx + dy * dy);
         sx[i] = x + dx; sy[i] = y + dy;
         if (dl > 0.05) wetMark(sx[i], sy[i] - r * 0.3, Math.max(1.5, r * 0.3));
         if (dl > 1e-4) { sdir[i * 2] += (dx / dl - sdir[i * 2]) * 0.3; sdir[i * 2 + 1] += (dy / dl - sdir[i * 2 + 1]) * 0.3; }
         const dn = Math.hypot(sdir[i * 2], sdir[i * 2 + 1]) || 1; sdir[i * 2] /= dn; sdir[i * 2 + 1] /= dn;
-        /* take in the beads in front */
+        /* take in the beads in front. [r8] The beads its drawn head touches (fill(): half-width w <= RW, length k w), not a
+           circle of its volume radius: a heavy runner's head is longer, not wider, and it took beads 2-3 px clear of its sides,
+           which then went in a blink (tests/pane/r8 track8) */
         if (dl > 0) {
           let V = r * r * r;
-          const reach = r + 13, cx = sx[i], cy = sy[i];
+          const w = Math.min(r, RW), q3 = r / w, kh = Math.min(2.5, q3 * q3 * q3), hx = sdir[i * 2], hy = sdir[i * 2 + 1];
+          const reach = kh * w + 13, cx = sx[i], cy = sy[i];
           const x0 = Math.max(0, Math.floor((cx - reach) / CELL) + 1), x1 = Math.min(gw - 1, Math.floor((cx + reach) / CELL) + 1);
           const y0 = Math.max(0, Math.floor((cy - reach) / CELL) + 1), y1 = Math.min(gh - 1, Math.floor((cy + reach) / CELL) + 1);
           for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) {
             for (let j = head[gy * gw + gx]; j >= 0; j = next[j]) {
               if (br[j] <= 0) continue;
-              const ex = bx[j] - cx, ey = by[j] - cy, rr = br[j] + r * 1.05;
-              if (ex * ex + ey * ey < rr * rr && ex * sdir[i * 2] + ey * sdir[i * 2 + 1] > -0.35 * r) { V += br[j] * br[j] * br[j]; br[j] = 0; live--; }
+              const qx = bx[j] - cx, qy = by[j] - cy, al = qx * hx + qy * hy, ac = qx * hy - qy * hx;
+              if (al <= -0.35 * w) continue;                  // behind it: the trail's, not its
+              const La = (al > 0 ? 0.9 : 1.06) * kh * w * 1.05 + br[j], Lc = w * 1.05 + br[j];
+              if (al * al / (La * La) + ac * ac / (Lc * Lc) < 1) {
+                /*@lab*/ ex("swept", br[j]); /*@end*/
+                V += br[j] * br[j] * br[j] * bf[j]; br[j] = 0; live--;
+              }
             }
           }
           sr[i] = Math.cbrt(V);
-          /* shed beads behind */
+          /* shed beads behind. [r8] Also on a full pane (up to TRAIL past the bead cap): round 7 kept what it would have shed
+             there, and in rain the pane is always full, so no runner left a trail. A drop every 4-24 px, none under 0.8 px
+             (what it would shed it keeps): with every runner shedding round 7's way (every 3-17 px, down to .45 px) half the
+             bead budget went to sub-pixel dust and the visible beads thinned */
           sshed[i] += dl;
           if (sshed[i] > sgap[i]) {
-            sshed[i] = 0; sgap[i] = 3 + 7 * rnd() * rnd() * 2;
+            sshed[i] = 0; sgap[i] = 4 + 10 * rnd() * rnd() * 2;
             const big = Math.max(0, sr[i] / (rc * pin(sx[i], sy[i])) - 1.2);     // a drop well over its critical size
-            if (rnd() < 0.5 + big && sr[i] > 2.2) {                              // leaves more of itself behind
+            if (rnd() < 0.4 + big && sr[i] > 2.2) {                              // leaves more of itself behind
               const rb = sr[i] * Math.min(0.45, 0.09 + 0.16 * rnd() * rnd() + 0.5 * big) + 0.25;
               const V2 = sr[i] * sr[i] * sr[i] - rb * rb * rb;
-              if (rb > 0.45 && V2 > 0 && live < env.capB) {
+              if (rb > 0.8 && V2 > 0 && live < env.capB + TRAIL) {
                 sr[i] = Math.cbrt(V2);
-                addBead(sx[i] - sdir[i * 2] * sr[i] * 1.2 + (rnd() - 0.5) * sr[i] * 0.9, sy[i] - sdir[i * 2 + 1] * sr[i] * 1.2, rb, 0.15 * rnd());
+                addBead(sx[i] - sdir[i * 2] * sr[i] * 1.2 + (rnd() - 0.5) * sr[i] * 0.9, sy[i] - sdir[i * 2 + 1] * sr[i] * 1.2, rb, 0.15 * rnd(), undefined, env.capB + TRAIL);
               }
             }
           }
         }
         if (sp < 2) srest[i] += h; else srest[i] = 0;
-        if (sy[i] - sr[i] > H + 2 || sx[i] < -30 || sx[i] > W + 30) { killSlider(i); continue; }
-        if (srest[i] > 0.25) { addBead(sx[i], sy[i], sr[i], 0.25, Math.atan2(sdir[i * 2 + 1], sdir[i * 2])); killSlider(i); }
+        if (sy[i] - sr[i] > H + 2 || sx[i] < -30 || sx[i] > W + 30) { /*@lab*/ ex("ranOff", sr[i]); /*@end*/ killSlider(i); continue; }
+        if (srest[i] > 0.25) toBead(i);                // [r8] the same drop, a bead again (never dropped: round 7's blink)
       }
     }
-    /* each drop loses (e0 + r / tau) per s */
+    /* [r8] Evaporation. In rain the air is near saturation and a drop loses volume as diffusion lets it, in proportion to its
+       contact radius: dr/dt = -KW / r, so the spray's tiny drops (1 px) go in about a minute (flattening under 0.8 px), and the
+       beads' budget holds drops you can see (round 7's r / 90 s alone took every radius down 1 % a second: half the store was
+       sub-pixel dust). A slower r / TW (120 s) stands for what a rained-on window loses that is not simulated (the streaming
+       film taking beads in, splashes): without it the beads' sizes took ~5 min to settle at 85 % (growing by arrivals to
+       their critical size takes ~2.5 min there); with it ~30-60 s. Once the rain has stopped (env.dry) a drop dries as one on glass does:
+       its contact line stays pinned while it flattens toward the receding angle (FR of its height, 60 % of the time: its lens
+       and its dark rim fade), then the line recedes (40 %), in about 12 + 7a s (a in px: 1 mm ~ 30 s, 3 mm ~ 63 s), so the
+       pane is dry within 90 s of the rain's end and no drop blinks out: fill() draws a bead under 0.8 px ever flatter, and it
+       is gone at 0.4 px with nothing left to see. Round 7 shrank the radius alone (tau 15 s) and dropped a bead at .4 px; a
+       runner under .6 px vanished */
+    const KW = 0.007, TW = 120;
     function shrink(dt) {
-      const wet = 1 - env.dry, tau = 15 + (env.tau - 15) * wet, e0 = 0.06 - 0.055 * wet;
-      const kk = Math.exp(-dt / tau), ee = e0 * dt, ke = Math.exp(-dt / 12);
+      const dry = env.dry, wet = 1 - dry, ke = Math.exp(-dt / 12);
       for (let i = 0; i < nb; i++) if (br[i] > 0) {
-        const r = br[i] * kk - ee;
-        if (r < 0.4) { br[i] = 0; live--; } else { br[i] = r; be[i] = 0.08 + (be[i] - 0.08) * ke; }   // a merged bead slowly rounds
+        let r = br[i], f = bf[i];
+        if (wet > 0) r -= wet * dt * (KW / r + r / TW);
+        if (dry > 0) {
+          const T = 12 + 7 * r;
+          if (f > FR) f = Math.max(FR, f - dry * dt * (1 - FR) / (0.6 * T));
+          else r -= dry * dt * (r + 0.6) / (0.4 * T);
+        }
+        if (r < 0.4) { /*@lab*/ ex("dried", 0.577 * br[i] * bf[i] * WX.util.smooth(0.4, 0.8, br[i])); /*@end*/ br[i] = 0; live--; }   // its last drawn height (px)
+        else { br[i] = r; bf[i] = f; be[i] = 0.08 + (be[i] - 0.08) * ke; }   // a merged bead slowly rounds
       }
-      for (let i = ns - 1; i >= 0; i--) { sr[i] = sr[i] * kk - ee; if (sr[i] < 0.6) killSlider(i); }
+      /* a runner loses water the same way; one that has lost its run comes to rest and is a bead (sliders()) */
+      for (let i = ns - 1; i >= 0; i--) sr[i] = Math.max(0.5, sr[i] - wet * dt * (KW / sr[i] + sr[i] / TW) - dry * dt * (sr[i] + 0.6) / (12 + 7 * sr[i]));
     }
     function record(force) {
       for (let i = 0; i < ns; i++) {
@@ -462,8 +579,10 @@ WX.pass((function () {
         if (nt < NT) {
           const o = nt * 6;
           tracks[o] = spx[i]; tracks[o + 1] = spy[i]; tracks[o + 2] = sx[i]; tracks[o + 3] = sy[i];
-          /* [r3] a first run leaves a faint wet line; a channel that keeps carrying water reads as a rivulet */
-          tracks[o + 4] = Math.max(1.3, sr[i] * 0.5); tw[nt] = 0.4 + 0.6 * swet[i]; tracks[o + 5] = recording ? t : tw[nt];
+          /* [r3] a first run leaves a faint wet line; a channel that keeps carrying water reads as a rivulet. [r8] .25 for a
+             first run (.4): now that drops over their size all run, a storm's glass held ~10 fresh tracks in a 640 x 400 crop,
+             each a pair of dark lines; a single run's film is thin and dries, the channels stay */
+          tracks[o + 4] = Math.max(1.3, sr[i] * 0.5); tw[nt] = 0.25 + 0.75 * swet[i]; tracks[o + 5] = recording ? t : tw[nt];
           nt++;
         }
         spx[i] = sx[i]; spy[i] = sy[i];
@@ -497,9 +616,11 @@ WX.pass((function () {
         return n;
       },
       /* run sec seconds ahead (a still, the first frame): 1/40 s steps; the last 30 s of tracks are kept
-         with their age so the film starts in its steady state too */
+         with their age so the film starts in its steady state too. [r8] 1/30 s steps over 90 s (the beads now grow to their
+         critical size by arrivals, ~2.5 min at 85 %: 60 s left minute 1's cover 10-17 % over minute 10's), for about the cost
+         of round 7's 60 s at 1/40 */
       runAhead(sec) {
-        const h = 1 / 40, n = Math.round(sec / h);
+        const h = 1 / 30, n = Math.round(sec / h);
         nt = 0; recording = false;
         for (let k = 0; k < n; k++) {
           substep(h);
@@ -511,30 +632,35 @@ WX.pass((function () {
         for (let i = 0; i < ns; i++) { spx[i] = sx[i]; spy[i] = sy[i]; }
         rebuild();
       },
-      /* instance rows for the height map: x, y, r, shape, dir x, dir y. A bead: shape 1 - sag / 2 (sag 0..1, how
-         near its critical size it hangs), dir its long axis x (1 + elongation). A running drop: shape 1.02 + its
-         short taper's length in r, dir its heading. [r3] No long tail: the trail is the film's wet track */
+      /* instance rows for the height map ([r8] 8 floats): x, y, r, shape, dir x, dir y, height, head length. A bead: shape
+         1 - sag / 2 (sag 0..1, how near its critical size it hangs), dir its long axis x (1 + elongation), height its bf
+         (drying: flatter), and under 0.8 px flatter still, so it is nothing to see when it goes at 0.4. A running drop: shape
+         1.02 + its short taper's length in r, dir its heading, r its head's half-width (at most RW: more water makes the
+         head longer, head length = (volume radius / RW)^3, up to 2.5). [r3] No long tail: the trail is the film's wet track */
       fill(out, cap) {
         let n = 0;
         const rc = env.rc * env.rcK;
         for (let i = 0; i < nb && n < cap; i++) {
           if (br[i] <= 0) continue;
-          const o = n * 6, k = 1 + be[i];
-          out[o] = bx[i]; out[o + 1] = by[i]; out[o + 2] = br[i];
-          out[o + 3] = 1 - 0.5 * Math.min(1, Math.max(0, (br[i] / rc - 0.35) / 0.6));
-          out[o + 4] = Math.cos(bth[i]) * k; out[o + 5] = Math.sin(bth[i]) * k; n++;
+          const o = n * 8, k = 1 + be[i], r = br[i], u = Math.min(1, Math.max(0, (r - 0.4) / 0.4));
+          out[o] = bx[i]; out[o + 1] = by[i]; out[o + 2] = r;
+          out[o + 3] = 1 - 0.5 * Math.min(1, Math.max(0, (r / rc - 0.35) / 0.6));
+          out[o + 4] = Math.cos(bth[i]) * k; out[o + 5] = Math.sin(bth[i]) * k;
+          out[o + 6] = bf[i] * u * u * (3 - 2 * u); out[o + 7] = 1; n++;
         }
         /* [r6] a running drop is drawn where it is at the frame's time, not at its last 120 Hz substep: at 75 Hz (the user's
            external monitor) a frame took one substep or two (2, 1, 2, 2, 1 ...), and the running drops lurched at 15 Hz */
         for (let i = 0; i < ns && n < cap; i++) {
-          const o = n * 6; out[o] = sx[i] + svx[i] * carry; out[o + 1] = sy[i] + sv[i] * carry; out[o + 2] = sr[i];
-          out[o + 3] = 1.02 + 0.2 + 0.7 * Math.min(1, sv[i] / 60); out[o + 4] = sdir[i * 2]; out[o + 5] = sdir[i * 2 + 1]; n++;
+          const o = n * 8, w = Math.min(sr[i], RW), q = sr[i] / w;
+          out[o] = sx[i] + svx[i] * carry; out[o + 1] = sy[i] + sv[i] * carry; out[o + 2] = w;
+          out[o + 3] = 1.02 + 0.2 + 0.7 * Math.min(1, sv[i] / 60); out[o + 4] = sdir[i * 2]; out[o + 5] = sdir[i * 2 + 1];
+          out[o + 6] = 1; out[o + 7] = Math.min(2.5, q * q * q); n++;
         }
         return n;
       },
       /* [r3] light rain fills the pane slowly (beads leave only by drying, tau 90 s): run further ahead there, so
-         minute 1 already holds the steady state (round 2's v=72 differed by 18 % from minute 10) */
-      aheadSec: () => (env.precip < 0.5 ? 60 + 120 * (1 - env.precip / 0.5) : 60),
+         minute 1 already holds the steady state (round 2's v=72 differed by 18 % from minute 10). [r8] 90 s, up to 180 */
+      aheadSec: () => (env.precip < 0.5 ? 90 + 90 * (1 - env.precip / 0.5) : 90),
       tracks, nTracks: () => nt,
       speeds: () => sv.subarray(0, ns),                       // the running drops' speeds px/s (tests)
       counts: () => ({ beads: nb, sliders: ns, t }),
@@ -546,25 +672,32 @@ WX.pass((function () {
         return { beads: live, sliders: ns, cover: area / (W * H), t };
       },
       pinAt: pin, rnd,
+      /*@lab*/
+      /* [r8] tests/pane/r8: how drops left (EX), and the drops themselves (sizes, over-critical beads) */
+      exits: () => EX,
+      drops: () => ({ bx, by, br, bf, bm, nb, sx, sy, sr, sv, ns, rcl, FR, RW }),
+      /*@end*/
     };
   }
 
 
   /* ════════════════ GL ════════════════ */
-  const MAXI = 6800;
+  /* [r8] every bead the store can hold (6600), every runner (330) and the inside runs (4): all drawn, always (round 7's 6800
+     could leave the last runners out once a trail took the store past the bead cap). 8 floats a row (fill()) */
+  const MAXI = 6940, IROW = 8;
   let P = {}, hmap = null, hfb = null, film = null, ffb = null, mist = [null, null], mfb = [null, null], mcur = 0;
   let ibuf = null, ivao = null, tbuf = null, tvao = null, quad = null;
   let sim = null, seeded = false, wasStill = false, stillPrecip = -1, mapScale = 1, fresh = true;
-  const inst = new Float32Array(MAXI * 6), trk = new Float32Array(4096 * 6);
+  const inst = new Float32Array(MAXI * IROW), trk = new Float32Array(4096 * 6);
   /* the inside runs' own seeded generator (mulberry32), apart from the drops' */
   let runSeed = 0x2f6b1d3;
   const rr = () => { runSeed = (runSeed + 0x6d2b79f5) >>> 0; let t = runSeed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const runs = { over: false, x: new Float32Array(4), y: new Float32Array(4), r: new Float32Array(4), v: new Float32Array(4), px: new Float32Array(4), py: new Float32Array(4), ph: new Float32Array(4), n: 0, next: 30, mistE: 0, t: 0 };
-  let microN = 0, mvao = null, microE = 0, lastN = 0, filmT = 1e9;
+  let microN = 0, mvao = null, microE = 0, lastN = 0, filmT = 1e9, fineE = 0;
   /*@lab*/ const heapLog = new Float64Array(256), simMs = new Float32Array(240); let simN = 0; /*@end*/
   const U = {
     cap: { uMap: new Float32Array(4) },
-    micro: { uFilm: null, uGrid: new Float32Array(4), uFirst: 0, uGlass: null },
+    micro: { uFilm: null, uGrid: new Float32Array(4), uFirst: new Float32Array(2), uGlass: null },
     decay: { uK: 1 },
     seg: { uMap: new Float32Array(4) },
     mseg: { uMap: new Float32Array(4) },
@@ -579,15 +712,16 @@ WX.pass((function () {
        window in its bottom */
     const float RS = 1.1547, RSC = 0.57735;
     float capH(float rho) { return rho < 1. ? sqrt(RS * RS - rho * rho) - RSC : 0.; }`;
-  /* cap and segment programs share one vertex layout: a unit quad (attr 0) and 6 floats per instance */
-  function vaoFor(gl, buf, stride) {
+  /* cap and segment programs share one vertex layout: a unit quad (attr 0) and 6 floats per instance ([r8] the caps 8: attr 2
+     is a vec4 there) */
+  function vaoFor(gl, buf, stride, n2) {
     const v = gl.createVertexArray();
     gl.bindVertexArray(v);
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, stride, 0); gl.vertexAttribDivisor(1, 1);
-    gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, 16); gl.vertexAttribDivisor(2, 1);
+    gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, n2 || 2, gl.FLOAT, false, stride, 16); gl.vertexAttribDivisor(2, 1);
     gl.bindVertexArray(null);
     return v;
   }
@@ -606,14 +740,20 @@ WX.pass((function () {
     e.lean = Math.max(-0.9, Math.min(0.9, wn.wind.dir[0] * 1.3 * u * u));
     e.spread = onshore * 0.8 * u * u * WX.util.smooth(0.3, 0.9, W.storm + 0.3 * W.precip);
     e.dry = 1 - WX.util.smooth(0.03, 0.12, W.precip);
-    e.capB = Math.min(knobs.beads, MAXI - 400);
-    /* [r3] a few long rivulets, not a pane of runners: about 14 per Mpx at the cap (a storm), fewer in rain */
-    e.capS = Math.min(knobs.sliders, Math.round((4 + 14 * W.precip) * Math.max(0.3, (area || 1e6) / 1e6)));
-    e.rate = p("pane.rate"); e.rc = p("pane.rc");
-    e.rcK = 1 - 0.25 * W.storm * WX.util.smooth(0.5, 1, W.precip);     // streaming glass pins drops less
+    e.capB = Math.min(knobs.beads, 6000);
+    /* [r3] a few long rivulets, not a pane of runners: about 14 per Mpx at the cap (a storm), fewer in rain.
+       [r8] The tier's cap (40-300): how many run is the physics' (a drop over its critical size runs, always); with the sizes
+       real, a storm keeps ~60-120 running on the user's 2.2 Mpx (tests/pane/r8) */
+    e.capS = knobs.sliders;
+    e.rate = p("pane.rate"); e.rc = p("pane.rc"); e.rmax = p("pane.rmax");
+    e.rcK = 1 - 0.2 * W.storm * WX.util.smooth(0.5, 1, W.precip);      // streaming glass pins drops less
+    e.slick = 1 + 0.8 * W.storm * WX.util.smooth(0.5, 1, W.precip);   // [r8] and runs them faster (sliders())
     /* [r4] a storm's spray is finer (wind-shattered drops): arrivals median 2.2 px in rain, 1.7 at the cap (x12 against
-       win-gondola at 1:1: the storm's beads read a little large) */
-    e.rmed = 2.2 - 0.5 * W.storm;
+       win-gondola at 1:1: the storm's beads read a little large). [r8] 1.9 and 1.5 px (0.8 and 0.6 mm contact radius:
+       raindrops of ~1 mm), sigma .45, at most 5 px (a 2.5 mm raindrop): of the drops the simulation takes (over 0.9 px,
+       raindrops over ~0.5 mm) ~5 % are 2 mm raindrops or more (3.9 px), where Marshall-Palmer at 25 mm/h has ~4 %; round 7's
+       2.2 / .6 made it 12 %, a big drop landing every few seconds in a 640 x 400 crop (out/P/a2/u85-start-f263.jpg) */
+    e.rmed = 1.9 - 0.4 * W.storm; e.sig = 0.45; e.amax = 5;
   }
   function envFrom(F, R) {
     const W = F.W, wn = F.wind || WX.windAt(W, F.t), C = Cg;
@@ -655,25 +795,28 @@ WX.pass((function () {
       hmap = hfb = film = ffb = null; mist = [null, null]; mfb = [null, null]; fresh = true;
       const gl = R.gl;
       P.cap = R.program("pane.cap", { vs: `
-        layout(location = 0) in vec2 aPos; layout(location = 1) in vec4 aI0; layout(location = 2) in vec2 aDir;
+        layout(location = 0) in vec2 aPos; layout(location = 1) in vec4 aI0; layout(location = 2) in vec4 aDir;
         uniform vec4 uMap;   // xy map px per CSS px, zw 1 / map size
-        out vec2 vQ; flat out float vR, vS, vSeed; flat out vec2 vDown;
+        out vec2 vQ; flat out float vR, vS, vSeed, vF, vK; flat out vec2 vDown;
         void main() {
-          float s = aI0.w, Lt = max(s - 1.02, 0.);
+          float s = aI0.w, Lt = max(s - 1.02, 0.), kh = max(aDir.w, 1.);
           /* [r3] a bead: its long axis dir stretched by |aDir| (a merge's pinned contact line), its outline warped to
-             ~1.3 r; a running drop: a head a little longer than wide, a short taper behind (the trail is the film's) */
-          float k = s < 1.01 ? max(length(aDir), 1.) : 1.;
-          vec2 q = s < 1.01 ? aPos * 1.32 : vec2(mix(-1.2 - Lt, .95, aPos.x * .5 + .5), aPos.y * 1.04);
-          vec2 dir = normalize(aDir), nrm = vec2(-dir.y, dir.x);
+             ~1.3 r; a running drop: a head a little longer than wide, a short taper behind (the trail is the film's).
+             [r8] aDir.z the drop's height (a drying bead flattens), aDir.w a runner's head length (more water: longer) */
+          float k = s < 1.01 ? max(length(aDir.xy), 1.) : 1.;
+          vec2 q = s < 1.01 ? aPos * 1.32 : vec2(mix((-1.2 - Lt) * kh, .95 * kh, aPos.x * .5 + .5), aPos.y * 1.04);
+          vec2 dir = normalize(aDir.xy), nrm = vec2(-dir.y, dir.x);
           vec2 st = s < 1.01 ? vec2(sqrt(k), 1. / sqrt(k)) : vec2(1.);
           vec2 p = aI0.xy + (dir * q.x * st.x + nrm * q.y * st.y) * aI0.z;
           vQ = q; vR = aI0.z; vS = s; vSeed = fract(sin(dot(floor(aI0.xy * 4.), vec2(12.9898, 78.233))) * 43758.5453);
+          vF = aDir.z; vK = kh;
           vDown = vec2(dir.y, nrm.y);                // the glass's down (CSS +y) in the drop's own frame
           vec2 m = p * uMap.xy * uMap.zw;
           gl_Position = vec4(m.x * 2. - 1., 1. - m.y * 2., 0., 1.);
         }`, fs: CAP + `
-        in vec2 vQ; flat in float vR, vS, vSeed; flat in vec2 vDown; out vec4 o;
+        in vec2 vQ; flat in float vR, vS, vSeed, vF, vK; flat in vec2 vDown; out vec4 o;
         void main() {
+          if (vF < .001) discard;                    // [r8] a bead that has dried flat: nothing left to see
           vec2 q = vQ;
           float s1 = vSeed * 6.283, h;
           if (vS < 1.01) {
@@ -688,49 +831,62 @@ WX.pass((function () {
             h = capH(length(q)) * (1. + .12 * sag * clamp(dn, -1., 1.));
           } else {
             /* a running drop: the head a cap a little longer than wide (front .9 r, back 1.06 r), its dome leaning
-               forward (the advancing angle is the steeper); behind it a short taper over Lt r */
-            float Lt = vS - 1.02, a = q.x;
+               forward (the advancing angle is the steeper); behind it a short taper over Lt r. [r8] A heavy runner's head is
+               vK times longer, never wider (its half-width r is at most RW) */
+            float Lt = vS - 1.02, a = q.x / vK;
             h = capH(length(vec2(a / (a > 0. ? .9 : 1.06), q.y))) * (1. + .12 * clamp(a, -1., 1.));
             float u = -a - .55, t = clamp(u / max(Lt, .05), 0., 1.);
             float wt = mix(.48, .14, t), yt = (q.y - .05 * t * sin(u * 3. + s1)) / wt;
             if (u > 0.) h = max(h, capH(abs(yt)) * wt * .8 * (1. - t * t));
           }
           if (h <= 0.) discard;
-          o = vec4(exp(min(h * vR, 11.)), 0., 0., 1.);
+          o = vec4(exp(min(h * vR * vF, 11.)), 0., 0., 1.);
         }` });
       /* micro-drops: one per cell of two grids (5 and 9 CSS px), made in the vertex shader from the cell's hash;
          a cell with no drop now is culled before rasterisation, so the cost follows the drops, not the screen.
          A drop never crosses its cell; it lands at a hashed time of a life that divides the 240 s rain clock,
-         dries before it goes, and is wiped where the film is fresh (a slider just ran there). */
+         dries before it goes, and is wiped where the film is fresh (a slider just ran there).
+         [r8] Nothing blinks out (round 7: a drop went at 40 % of its radius at the end of its life, and whenever the density
+         fell, so at the end of a rain every one of them blinked out, at full size, within half a minute). Every drop now lives
+         .8 of its cycle; the density sets how many cells hold one (h.y under occ0 / .8), and a drop near that line is flatter
+         (a band a fifth of it wide): a falling density dries drops flat over seconds, a runner's fresh track flattens the ones
+         it sweeps, and every drop flattens to nothing over the last fifth of its life. uFirst.y: the fine layer's height, eased
+         over a tier change (it was there or not in one frame) */
       P.micro = R.program("pane.micro", { vs: `
         layout(location = 0) in vec2 aPos;
         uniform sampler2D uFilm; uniform vec4 uGrid;    // x layer-1 cells, y layer-1 columns, z layer-2 columns, w density
         uniform vec4 uGlass;
-        uniform float uFirst;                           // [r3] the first instance drawn (uGrid.x: the second layer only)
-        out vec2 vQ; flat out float vR;
+        uniform vec2 uFirst;                            // [r3] x the first instance drawn (uGrid.x: the second layer only)
+        out vec2 vQ; flat out float vR, vF;
         void main() {
-          float id = float(gl_InstanceID) + uFirst;
+          float id = float(gl_InstanceID) + uFirst.x;
           bool l2 = id >= uGrid.x;
           float cell = l2 ? 8. : 5., rmax = l2 ? 3.4 : 1.6, salt = l2 ? 7. : 3., k = l2 ? id - uGrid.x : id, cols = l2 ? uGrid.z : uGrid.y;
           vec2 c = vec2(mod(k, cols), floor(k / cols));
           vec3 h = wxHash33(vec3(c, salt)), g = fract(h.yzx * 7.919 + h.zxy * 3.137);
-          float occ0 = uGrid.w * (l2 ? .6 : 1.);
-          float duty = clamp(occ0 * 1.6, .05, .9);                       // the share of its cycle a drop lives
-          float r = l2 ? .9 * pow(rmax / .9, g.x) : mix(.45, rmax, g.x * g.x);   // [r3] the second layer log-uniform .9-3.4 px
-          vec2 ctr = c * cell - (l2 ? 2.5 : 0.) + vec2(r) + g.yz * (cell - 2. * r);   // CSS px, y up
+          const float DUTY = .8;                                         // the share of its cycle a drop lives
+          float a = uGrid.w * (l2 ? .6 : 1.) / DUTY;                     // the share of cells that hold one
           float per = 240. / (1. + floor(h.z * 3.));                     // [r3] 240, 120 or 80 s: a bead persists
           float ph = fract(h.x * 7.31 + uTime.y / per);
           /* [r3] the cheap tests first: most cells are empty, and they skip the film's fetch */
-          if (h.y * duty > occ0 || ph > duty) { gl_Position = vec4(2., 2., 2., 1.); return; }
-          float wipe = smoothstep(.15, .5, textureLod(uFilm, ctr / uGlass.xy, 0.).r);
-          if (h.y * duty > occ0 * (1. - wipe)) { gl_Position = vec4(2., 2., 2., 1.); return; }
-          r *= 1. - .6 * smoothstep(.75, 1., ph / duty);                   // it dries before it goes
+          if (h.y >= a || ph >= DUTY) { gl_Position = vec4(2., 2., 2., 1.); return; }
+          float r = l2 ? .9 * pow(rmax / .9, g.x) : mix(.45, rmax, g.x * g.x);   // [r3] the second layer log-uniform .9-3.4 px
+          vec2 ctr = c * cell - (l2 ? 2.5 : 0.) + vec2(r) + g.yz * (cell - 2. * r);   // CSS px, y up
+          /* [r8] down to the film's faint edge (its bilinear texels reach ~2 px past the track's ridge): a runner took them up
+             across most of its head (.15-.5 left all but those under the ridge to show through after it); they come back
+             as the track dries (30-45 s) */
+          float wipe = smoothstep(.02, .06, textureLod(uFilm, ctr / uGlass.xy, 0.).r);
+          /* the band where a drop is flatter: a fifth of the density's line, at least .02 (a fixed .2 left every drop of a light
+             rain's sparse layer, a under .2, at a third of its height: round 8's a3 at 75 % read as faint ghosts); the last
+             fifth of its life (13-38 s) to flatten away */
+          float f = clamp((a * (1. - wipe) - h.y) / max(.2 * a, .02), 0., 1.) * (1. - smoothstep(.8 * DUTY, DUTY, ph)) * (l2 ? 1. : uFirst.y);
+          if (f < .002) { gl_Position = vec4(2., 2., 2., 1.); return; }
           vec2 p = ctr + aPos * (r + .75);
-          vQ = aPos * (r + .75) / r; vR = r;
+          vQ = aPos * (r + .75) / r; vR = r; vF = f;
           gl_Position = vec4(p / uGlass.xy * 2. - 1., 0., 1.);
         }`, fs: CAP + `
-        in vec2 vQ; flat in float vR; out vec4 o;
-        void main() { float rho = length(vQ); if (rho >= 1.) discard; o = vec4(exp(capH(rho) * vR), 0., 0., 1.); }` });
+        in vec2 vQ; flat in float vR, vF; out vec4 o;
+        void main() { float rho = length(vQ); if (rho >= 1.) discard; o = vec4(exp(capH(rho) * vR * vF), 0., 0., 1.); }` });
       P.decay = R.program("pane.decay", { fs: `uniform float uK; out vec4 o; void main() { o = vec4(0., 0., 0., uK); }` });
       /* a wet track: a rounded ridge across the segment (height 1 at its middle), MAX into the film */
       P.seg = R.program("pane.seg", { vs: `
@@ -798,7 +954,7 @@ WX.pass((function () {
       tbuf = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, tbuf);
       gl.bufferData(gl.ARRAY_BUFFER, trk.byteLength, gl.DYNAMIC_DRAW);
-      ivao = vaoFor(gl, ibuf, 24);
+      ivao = vaoFor(gl, ibuf, IROW * 4, 4);
       mvao = gl.createVertexArray();
       gl.bindVertexArray(mvao); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
       gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
@@ -874,10 +1030,15 @@ WX.pass((function () {
         R.priv.paneHeap = heapLog;
         /*@end*/
         /* micro-drop density eases toward the rain (tau 8 s); the film decays (tau 12 s) */
-        /* [r3] the static beads carry the density: denser as the rain closes to a storm */
+        /* [r3] the static beads carry the density: denser as the rain closes to a storm.
+           [r8] It falls more slowly (by (E - target) / 20 a second, at least .012: from a storm's .8 to nothing in ~45 s), so
+           as the rain eases or ends each micro-drop flattens over 4-13 s; the fine layer's height eases over a tier change */
         const microT = Math.pow(WX.util.smooth(0.05, 0.9, F.W.precip), 0.8) * R.p("pane.micro") * (0.5 + 0.3 * WX.util.smooth(0.55, 1, F.W.precip));
-        microE += (microT - microE) * (1 - Math.exp(-dt / 8));
-        if (ahead) microE = microT;
+        if (microT >= microE) microE += (microT - microE) * (1 - Math.exp(-dt / 8));
+        else microE = Math.max(microT, microE - dt * Math.max(0.012, (microE - microT) / 20));
+        const fineT = R.tier >= R.p("pane.microFine") ? 1 : 0;
+        fineE += (fineT - fineE) * (1 - Math.exp(-dt / 1.5));
+        if (ahead) { microE = microT; fineE = fineT; }
         /* the film */
         if (fresh) { R.bind(ffb); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); }
         filmT += dt;
@@ -897,21 +1058,21 @@ WX.pass((function () {
           /* [r3] below pane.microFine's tier the 5 px layer (radii .45-1.6 px, mostly under a pixel's worth of
              image) is skipped: its 40k instances a megapixel cost the iGPU more than they show */
           U.micro.uFilm = film; U.micro.uGrid[3] = microE; U.micro.uGlass = glassU;
-          U.micro.uFirst = R.tier >= R.p("pane.microFine") ? 0 : U.micro.uGrid[0];
+          U.micro.uFirst[0] = fineE > 0.002 ? 0 : U.micro.uGrid[0]; U.micro.uFirst[1] = fineE;
           P.micro.use(); R.gpu.uniforms(P.micro, U.micro);
-          gl.bindVertexArray(mvao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, microN - U.micro.uFirst); gl.bindVertexArray(null);
+          gl.bindVertexArray(mvao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, microN - U.micro.uFirst[0]); gl.bindVertexArray(null);
         }
         const n = sim.fill(inst, MAXI);
         const nr = runs.n;
         for (let k = 0; k < nr && n + k < MAXI; k++) {
-          const o = (n + k) * 6; inst[o] = runs.x[k]; inst[o + 1] = runs.y[k]; inst[o + 2] = runs.r[k];
-          inst[o + 3] = 1.02 + 0.8 + 2.6 * Math.min(1, runs.v[k] / 90); inst[o + 4] = 0; inst[o + 5] = 1;
+          const o = (n + k) * IROW; inst[o] = runs.x[k]; inst[o + 1] = runs.y[k]; inst[o + 2] = runs.r[k];
+          inst[o + 3] = 1.02 + 0.8 + 2.6 * Math.min(1, runs.v[k] / 90); inst[o + 4] = 0; inst[o + 5] = 1; inst[o + 6] = 1; inst[o + 7] = 1;
         }
         const ni = Math.min(MAXI, n + nr);
         lastN = ni;
         if (ni) {
           gl.bindBuffer(gl.ARRAY_BUFFER, ibuf);
-          gl.bufferSubData(gl.ARRAY_BUFFER, 0, inst, 0, ni * 6);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, inst, 0, ni * IROW);
           P.cap.use(); R.gpu.uniforms(P.cap, U.cap);
           gl.bindVertexArray(ivao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, ni); gl.bindVertexArray(null);
         }

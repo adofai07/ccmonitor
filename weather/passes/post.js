@@ -130,6 +130,14 @@ vec3 gradeGA(vec3 c, vec3 a, float scot, float ground) {
   vec3 s = scotopic(toneWB(wxGuard(c), ground), scot) + (uTone.x > 0. ? a * uWB2.xyz : a);
   return clamp(agxHP(toneCurve(s)), 0., 1.);
 }
+/* [L r8] and with a lamp's own light (lamp, pre-exposed) taken out of the rods' shift and added back with the glare: the
+   cones see a lamp, its glow and its beams (a crimson light read as a mauve dot at the night cap, REVIEW-7 2.4: its dim
+   glow went through the rods with the night around it); the Purkinje shift stays with the dim surroundings. With lamp 0
+   it is gradeGA to the bit */
+vec3 gradeGL(vec3 c, vec3 lamp, vec3 a, float scot, float ground) {
+  vec3 s = scotopic(toneWB(wxGuard(c), ground), scot) + (uTone.x > 0. ? (a + lamp) * uWB2.xyz : a + lamp);
+  return clamp(agxHP(toneCurve(s)), 0., 1.);
+}
 vec3 grade(vec3 c, float scot) { return gradeG(c, scot, -1.); }
 /* [r4] how much of the pixel at uv is ground: the sea (from uWB3.z under the horizon down) and the near land */
 float gradeGround(vec2 uv) {
@@ -372,6 +380,22 @@ WX.pass((function () {
   /* [r6] the rods' weight from the eased Lavg, over 300-500 cd/m2 (a switch at 400 stepped the darkest pixels when a reading
      crossed it) */
   const scotOf = (R) => (!(R.exposure.lavS > 0) ? (R.exposure.Lavg === undefined || R.exposure.Lavg < 400 ? 1 : 0) : 1 - WX.util.smooth(300, 500, R.exposure.lavS));
+  /* [L r8] the box (uv, y up) round the lighthouse's lamp where the view grades its light past the rods: its draw
+     (R.beacon.box, S px) grown by its bloom's reach (.09 of the view's height); empty with no lighthouse or while the rods
+     are off (by day), so no other pixel pays for it */
+  const lampBoxV = new Float32Array(4);
+  /*@lab*/ WX.param("post.lamp", 1, 0, 1, 1, "post"); /*@end*/   // [L r8] lab: 0 the lamp's light graded with the rest (round 7)
+  function lampBox(R, scot) {
+    const B = R.beacon, o = lampBoxV;
+    o[0] = o[1] = 2; o[2] = o[3] = -1;
+    let on = 1;
+    /*@lab*/ on = R.p("post.lamp"); /*@end*/
+    if (!on || !B || !B.on || !B.box || !(scot > 0) || !(B.uv[0] > -0.5)) return o;
+    const S = R.size.S, a = S[0] / S[1], r = 0.09;
+    o[0] = Math.min(B.box[0] / S[0], B.uv[0] - r / a); o[1] = Math.min(B.box[1] / S[1], B.uv[1] - r);
+    o[2] = Math.max(B.box[2] / S[0], B.uv[0] + r / a); o[3] = Math.max(B.box[3] / S[1], B.uv[1] + r);
+    return o;
+  }
   function toneFill(u) { u.uTone = toneV; u.uWB = wbU; u.uWB2 = wbU2; u.uWB3 = wbU3; u.uHP = hpV; }
   /* the "boltlit" library's uniforms (the bolt pass's; off when it is not live) */
   const BOLT_OFF = new Float32Array(4);
@@ -621,13 +645,34 @@ WX.pass((function () {
       P.view = R.program("post.view", { libs: ["atmo", "grade", "rainfar", "pane"].concat(BL), fs: BS + WX.libs.paneview + VIEW + `
         in vec2 vUV; out vec4 o;
         /*@lab*/ uniform float uDbg; /*@end*/
+        uniform vec4 uLampBox;      // [L r8] uv (y up) of the box round the lighthouse's lamp where its light can be: its draw and its bloom (empty: none, or the rods off)
         void main() {
           float cov, mf;
           vec3 c = mix(paneView(vUV, -1., cov, mf), textureLod(uBloom, vUV, 0.).rgb, uBloomK);
           /* [r5] the glare of the brightest sources: in the eye and the lens, so over the glass and the drops */
           vec3 a = uGlareK > 0. ? uGlareK * glareAt(vUV) : vec3(0.);
           /*@lab*/ if (uDbg > .5) { o = vec4(clamp((log2(max(c + a, vec3(1e-7))) + 12.) / 24., 0., 1.), 1.); return; } /*@end*/
-          vec3 d = gradeGA(c, a, uScot, gradeGround(vUV));
+          /* [L r8] the lighthouse's light: its pass marks SCENE's alpha with -Y, the pre-exposed luminance it added there
+             (everything else writes 0..1); that much of the lamp's colour (uBeaconC, unit luminance), at most what the
+             pixel holds out of the bloom, is graded past the rods. Not where a drop or the mist shows something else */
+          /* only inside the lamp's box (uLampBox: its draw and its bloom's reach), and only while the rods are on (the box
+             is empty by day): every other pixel pays nothing */
+          vec3 lamp = vec3(0.);
+          if (all(greaterThan(vUV, uLampBox.xy)) && all(lessThan(vUV, uLampBox.zw))) {
+            float lm = texelFetch(sScene, ivec2(vUV * vec2(textureSize(sScene, 0))), 0).a;
+            vec3 bl = uBloomK * textureLod(uBloom, vUV, 0.).rgb, c0 = c - bl;
+            if (lm < 0.) {
+              vec3 l0 = -lm * uBeaconC.rgb, q = c0 / max(l0, vec3(1e-9));
+              lamp = l0 * clamp(min(q.r, min(q.g, q.b)), 0., 1.) * (1. - cov) * (1. - mf);
+            }
+            /* and the lamp's bloom: round the lamp the bloom is mostly its light (the lens' and the eye's scatter of it), so
+               its part in the lamp's colour is seen by the cones too (at night it read as a grey ring round a coloured
+               core); within ~.09 of the view's height of the lamp */
+            vec2 dv = (vUV - wxUV0(normalize(uBeacon.xyz - vec3(0., wxEye, 0.)))) * vec2(uRes.x * uRes.w, 1.);
+            float wnd = 1. - smoothstep(.04, .09, length(dv));
+            if (wnd > 0.) { vec3 qb = bl / max(uBeaconC.rgb, vec3(1e-9)); lamp += wnd * min(qb.r, min(qb.g, qb.b)) * uBeaconC.rgb; }
+          }
+          vec3 d = gradeGL(c - lamp, lamp, a, uScot, gradeGround(vUV));
           /* TPDF dither per channel, independent, +-1.75 LSB (at +-1 a flat row of sky keeps runs of 60 codes) */
           vec3 p3 = vec3(gl_FragCoord.xy, uFrame.x);
           vec3 n = wxHash33(p3) + wxHash33(p3 + vec3(71., 113., 37.)) - 1.;
@@ -894,6 +939,7 @@ WX.pass((function () {
         pane.fill(v, F, R);
         boltFill(v, F, R); toneFill(v);
         v.uBloom = up; v.uBloomK = k; v.uScot = scot;
+        v.uLampBox = lampBox(R, scot);                                   // [L r8]
         const Hh = R.priv.boltHalo;
         v.uGlare = hUp; v.uGlareK = Hh && Hh.glare ? glareV[2] : 0; v.uGlareTop = Math.max(nH - 1, 0);
         /*@lab*/ v.uDbg = R.p("post.dbg"); /*@end*/

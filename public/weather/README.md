@@ -64,8 +64,9 @@ Four tiling texture sets, laid over the headlands' terrain by slope and height, 
 `wx.js` beside them is not one of these assets: it is the theme's renderer, the project's own code
 under its MIT licence, built from its sources in `weather/` by `tools/build-weather.mjs`.
 
-The lighthouse far out at sea is not one of them either. Poly Haven has no lighthouse model, so the
-renderer builds it in code from primitives (a granite tower on a low reef) and it ships no files.
+The lighthouse at the end of the right-hand headland is not one of them either. Poly Haven has no
+lighthouse model, so the renderer builds it in code from primitives (a granite tower on a stack of
+rock) and it ships no files.
 
 The GLBs' own image references name `1k/` even where only `512/` ships. The theme takes each
 texture from `manifest.json` instead, so this does not matter to the page; to open a GLB in

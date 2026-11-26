@@ -486,16 +486,20 @@ wind. The low sun throws the cliffs' shadows across the water, the cove is mirro
 and broken up in a rough one, and at night the ship shows its anchor light and a lantern burns at
 the pier's end.
 
-**A lighthouse far out at sea shows the ring's colour.** Three kilometres out, on a low reef just
-right of the middle near the horizon, stands a granite lighthouse, a slender tower small in the
-view and clear of the page's words. Its lamp is lit at every hour and shows the colour the ring
-shows for the reading: teal below the warning floor, amber deepening to crimson across the band,
-the grey-blue with no reading. By day it is a small coloured light. At dusk, at night and in rain
-or haze its two beams turn once every 16 seconds, faint shafts in the far air that never sweep the
-whole view, and its light lies on the water as a broken path. A new colour comes in as the
-weather does, over about a minute, never at once, and the flash as a beam passes the window is
-soft and brief, inside the same limits as the lightning. Only the lamp wears the colour: the
-weather itself shows the band.
+**A lighthouse at the end of the right-hand headland shows the ring's colour.** On a stack of
+rock just off the headland's seaward tip, a kilometre and a half out near the horizon, stands a
+granite rock lighthouse with its gallery, lantern and door, its lamp 70 m above the sea: seen at
+a glance, smaller than the headland beside it, and clear of the page's words. Its lamp is lit at
+every hour and shows the colour the ring shows for the reading: teal below the warning floor,
+amber deepening to crimson across the band, the grey-blue with no reading. The glow round it keeps
+that colour at every hour, by day, at dusk and through the night; only the lamp's bright core
+burns toward white, as in a photograph. By day it is a small coloured light. Its two beams turn
+once every 16 seconds: from dusk, as the sky grows dark against them, a flash comes every 8
+seconds as a beam passes the window, and faint shafts show in the air round the tower, stronger as
+night comes and in rain or haze, never sweeping the whole view; after sunset its light lies on the
+water as a broken path. A new colour comes in as the weather does, over about a minute, never at
+once, and the flash is soft and brief, inside the same limits as the lightning. Only the lamp
+wears the colour: the weather itself shows the band.
 
 **The weather turns on the served cut points**, so it lands on the marks the ring prints:
 
@@ -516,7 +520,11 @@ points, with no corner at the floor or anywhere else: they rise gently through t
 build visibly through the middle and fastest across the band, from a light air and a half-metre
 swell at 0, through force 5 and a swell of a metre and a half at the floor, to a storm and a
 four-metre swell at the cap, where the bay heaves and the breakers burst into spray on the rocks.
-The cloud, the rain and the lightning keep the onsets the table gives them.
+The swell comes in sets, as a real one does: about every hundred seconds a few bigger waves roll
+in, breaking further out and harder, bursting higher on the rocks and running further up them, and
+a lull follows; the ship and the buoy ride them. The sets keep the sea's height on average, so the
+cap is as rough as before and a low reading as calm. The cloud, the rain and the lightning keep
+the onsets the table gives them.
 
 The hour never changes the weather. Night only darkens it: the moon and the stars show only
 through gaps in the cloud, a town's glow out of sight lights the undersides of a low deck, and
@@ -553,18 +561,24 @@ lays them; the sea is never swapped for another.
   roll. Nothing fills, empties or travels; after three days at 60% it is the same broken sky and
   fresh breeze as after three minutes. Only the sun, the moon and the stars move, as the real ones
   do.
+- **The drops on the glass are the size real ones are, and none vanishes.** A drop beads only
+  until it is heavy enough to run, a few millimetres across, as water does on an upright pane; then
+  it runs down, taking up the drops in its path and leaving a trail of small ones. Every drop leaves
+  in a way the eye can follow: it runs down, a runner sweeps it up, it slides off the bottom edge,
+  or, once the rain stops, it dries where it is, a bead over fifteen seconds or more and the finest
+  droplets over a second or two, so the pane is dry in about a minute.
 - **What reads the reading wears the accent; every word is white.** The words, the rules and the
   buttons are white at every reading. The arc reads the ladder the glass reads, the accent ramp:
   teal below the warning floor, amber deepening to crimson across the band, the grey-blue with no
   reading; so do the chart's fitted run, its projection and the shade under it, the outline of
-  the detail's band tag, and out in the view the lighthouse's lamp. The scale is printed on the
-  ring's dark casing as an instrument's is, from the served thresholds and in the same ramp: the
-  warning band in quarters, each in the colour the arc takes halfway across it (amber, orange,
-  red-orange, crimson), the cap's crimson from critical where it stands clear of the cap, and a
-  crimson line at the cap, so the arc wears the colour printed where it ends. The chart prints the
-  warning floor in the ramp's amber and the cap in its crimson, and the freshness lamp keeps the
-  glass's tones. The pace channel keeps a colour of its own: a magenta no zone uses, dotted while
-  it is headroom and solid, heavier the further the reading has overrun the clock.
+  the detail's band tag, and out in the view the lighthouse's lamp. The colour marks sit on the
+  ring's track, as on the glass and in Neumorphism: a mark at each served cut point and a lighter
+  one at each quarter point of the warning band, each in the colour the arc takes there, and only
+  the ones the reading has yet to reach. On the track's faint white they are drawn stronger than
+  the glass's, the served marks in full and the quarter marks a little lighter. The chart prints
+  the warning floor in the ramp's amber and the cap in its crimson, and the freshness lamp keeps
+  the glass's tones. The pace channel keeps a colour of its own: a magenta no zone uses, dotted
+  while it is headroom and solid, heavier the further the reading has overrun the clock.
 - **The view never hides a reading.** Each group of words stands on a dark pool, deeper the
   brighter the view behind it, which the scene measures twice a second, leaving lightning out so a
   flash does not make the page pulse; from the band's third quarter, where the strikes begin, each
@@ -696,8 +710,7 @@ Shape of the rule (values pending the probe):
 Colorblind safety: the bands must differ in **lightness** as well as hue, and the pace
 marker carries the same warning independent of color. Neumorphism's light clay reads the same
 ladder in darker inks whose lightness still falls with danger; its dark clay reads the ladder as it
-is (see *Neumorphism*). Weather reads the ladder as the glass does and prints it on the ring's
-casing too; see *Weather*.
+is (see *Neumorphism*). Weather reads the ladder as the glass does, its marks too; see *Weather*.
 
 ## Dormant limits
 
