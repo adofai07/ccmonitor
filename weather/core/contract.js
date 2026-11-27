@@ -662,6 +662,12 @@ WX.ASSETS = {
      base      [x, 0, z, 0] [r8] the stack's centre at the still sea's level, world m (the tower stands on it)
      box       [x0, y0, x1, y1] [r8] the lamp's draw in the bolt slot, S px with y up (the only pixels it marks), last
                world frame
+     pathBox   [x0, y0, x1, y1] [r8, stream W] the lamp's path on the water (the ocean's bpath draw, which marks its light
+               as the lamp does): its strip's box, S px with y up, written by the ocean slot each world frame; all 0 when
+               the path is not drawn (by day, the lamp off or off the view). Made by its writer on first use
+     pathGraded [r9] set to 1 by post when it grades the marked light inside pathBox too (its lamp box takes the union):
+               the path then keeps its mark over its whole strip (unset, its mark fades out above the lamp's own box's
+               foot, the only part graded, so no edge shows). Read by the path on the next frame
      rgb       the lamp's colour, linear Rec. 709 at unit luminance (uBeaconC.rgb); srgb the eased accent, 0..255
      I, Ib     the lantern's steady intensity and the beams' peak, rel m^2 before the exposure (uBeacon.w, uBeaconC.w)
      angle     beam 1's bearing rad, from +z toward +x (uBeaconB.x); sigma [h, v] rad (uBeaconB.yz)

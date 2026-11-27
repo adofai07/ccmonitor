@@ -191,6 +191,22 @@ WX.pass((function () {
     float cldHf = 0.;
     /* the march's pixel footprint at the sample, km: the crisp edges are never thinner than 1.5 pixels */
     float cldFoot = .01;
+    /* [r9] how much of round 9's cumulus look a column takes: a cumulus' (not a deck's) under a sky that is not closing over
+       (cover under .62, ~61 %) and not a storm's. Every round-9 change is weighted by it, so the 66-100 % decks and the storm
+       keep their look */
+    /* CLD_R8 1 (the trace's second program, drawn once cover >= .79 or storm >= .69, where this weight is 0 to < .5 %): the weight
+       is the constant 0, so every round-9 term folds into round 8's at compile time and the decks and the storm run round 8's
+       program (its Intel SIMD8 size and spills; the round-9 program's extra registers cost the 96 % storm +.04-.1 ms, r9/cost-c1) */
+    #ifndef CLD_R8
+    #define CLD_R8 0
+    #endif
+    float cldCu(vec4 w) {
+    #if CLD_R8
+      return 0.;
+    #else
+      return (1. - w.a) * (1. - smoothstep(.62, .8, uWx0.x)) * (1. - smoothstep(.3, .7, uWx2.w));
+    #endif
+    }
     float cldBase(vec3 q, float lod, out CldS s) {
       s.w = vec4(0.); s.sp = vec3(0.); s.z = 0.; s.top = 0.; s.f = -1.; s.hs = 0.; s.pw = 0.; s.lb = 0.; s.mt = 0.;
       float b0 = uWx0.z, thick = max(uWx0.w - b0, .2);
@@ -236,7 +252,9 @@ WX.pass((function () {
          about N(0, 1)): little on the flat base, most on the tops; a deck's underside gets lumps of its own */
       float lump = ((n.g * .25 + n.b * .45 + n.a * .3) - .714) * 9.;
       /* the base rounds up toward the rim: flat under the inner two thirds of a cumulus, closed at its edge */
-      float rim = 1. - top / max(pk, 1e-3), bot = .3 * pk * rim * rim * (1. - w.a);
+      /* [r9] a cumulus' base is flat out to its last fifth (rim^3, was rim^2: a lens under every cloud, the cotton look) */
+      /* (the rim's power by products, not pow(): cldBase runs at every step and cone tap, the storm's too) */
+      float rim = 1. - top / max(pk, 1e-3), r2 = rim * rim, bot = .3 * pk * mix(r2, r2 * rim, cldCu(w)) * (1. - w.a);
       float ampT = min(.3, .35 * pk) * (.25 + .75 * hn) * mix(1., .55, w.a) * uCS.x;
       /* a deck's base hangs in rounded lumps (the base volume's 1.75 and .87 km octaves, up to 300 m), shredded
          into scud by the inverted billows below it */
@@ -287,12 +305,20 @@ WX.pass((function () {
         dp += vec3(cu.x, 0., cu.y) * .16 * (1. - .7 * hn) * (1. - .5 * s.w.a);
       }
       vec3 dn = textureLod(uDetail, cldDetUV(dp), max(lod + 1., 0.)).rgb;
-      float hf = ((dn.r * .55 + dn.g * .3 + dn.b * .15) - .714) * 8.;
+      /* [r9] A SMALL CUMULUS IS A HEAP OF SMALL BILLOWS (the overhead ones, 300-600 m across, were one 440 m billow each: a smooth
+         blob at 1-2 km): under a peak of ~.7 km the billows lean on the 220 and 110 m octaves */
+      float cu = cldCu(s.w), smc = ${LK("sms", .7)} * cu * (1. - smoothstep(.25, .75, max(s.w.b, s.w.r) * max(uWx0.w - uWx0.z, .2)));
+      float hf = (dot(dn, mix(vec3(.55, .3, .15), vec3(.2, .4, .4), smc)) - .714) * 8.;
       /* a fourth octave at 4x (a 219 m tile) for the near clouds: their cauliflower down to tens of metres */
-      if (!light && lod < -1.5) hf = mix(hf, hf * .75 + (textureLod(uDetail, cldDetUV(dp) * 4., 0.).g - .714) * 8. * .3, wxSat(-1.5 - lod));
+      if (!light && lod < -1.5) {
+        /* [r9] stronger (.5, was .3), and a fifth at 16x (a 55 m tile) within ~1.5 km: a near cumulus at 1:1 read as smooth plastic */
+        hf = mix(hf, hf * .75 + (textureLod(uDetail, cldDetUV(dp) * 4., 0.).g - .714) * 8. * mix(.3, ${LK("o4w", .5)}, cu), wxSat(-1.5 - lod));
+        if (cu > 0. && lod < -3.) hf += (textureLod(uDetail, cldDetUV(dp) * 16., 0.).g - .714) * 8. * ${LK("o5w", .25)} * cu * wxSat(-3. - lod);
+      }
       /* billows on the tops, wisps toward the base (Nubis: the detail inverted low down) */
       hf = mix(-hf, hf, smoothstep(.04, .3, hn));
-      float amp = (.07 + .2 * hn) * min(1., s.top * 4.) * mix(1., .6, s.w.a) * uCS.y;
+      /* [r9] (a cumulus' base wisps at .7: they rounded its flat base off) */
+      float amp = (.07 * mix(1., ${LK("bws", .7)}, cu) + .2 * hn) * min(1., s.top * 4.) * mix(1., .6, s.w.a) * uCS.y;
       /* [round 3] a rain deck's base and its scud are torn: twice the billows' reach there (the base read airbrushed) */
       amp *= 1. + uA1.z * s.w.a * (1. - smoothstep(.05, .3, s.z));
       /* [round 5] where a deck thins toward a gap it frays (REVIEW-4 #3: a hard-edged blue hole at 66-70 %, its rim a smooth
@@ -309,7 +335,8 @@ WX.pass((function () {
          the rims of its pouches and gaps as thin bright veins (REVIEW-4 #3); a softer edge spreads the same light into a
          broad glow with wisps, as a sun behind nimbostratus shows (ref/sky/ns-hockenheim5). The storm keeps 100 m */
       float rk = smoothstep(.6, .72, uWx0.x) * (1. - smoothstep(.3, .7, uWx2.w));
-      float ramp = mix(mix(.1, .014, smoothstep(.12, .5, hn)), mix(.1, .22, rk * (1. - smoothstep(.1, .4, hn))) * (1. + rk), s.w.a);
+      /* [r9] a cumulus' base 60 m (100), its billowed tops 8 m (14: at 1-2 km a 14 m ramp is 10 px of airbrush) */
+      float ramp = mix(mix(mix(.1, ${LK("brp", .06)}, cu), mix(.014, ${LK("rpt", .008)}, cu), smoothstep(.12, .5, hn)), mix(.1, .22, rk * (1. - smoothstep(.1, .4, hn))) * (1. + rk), s.w.a);
       float d = wxSat(f2 / (max(ramp, cldFoot * 1.5) * uCS.z));
       /* [round 6] SMALL CUMULUS ARE OPTICALLY THICK (REVIEW-5 #1, cotton puffs): a humilis 100-400 m deep came out translucent
          (an optical depth of ~5-10 across it, cld.dbg=4), so a low sun behind it lit its whole body through the forward lobe
@@ -341,6 +368,8 @@ WX.pass((function () {
 
   const TRACE = FIELD + `
     const vec3 CLD_CONE[7] = vec3[7](vec3(0.), vec3(.5, -.3, .2), vec3(-.4, .4, -.3), vec3(.2, .3, -.6), vec3(-.6, -.2, .4), vec3(.3, -.5, -.3), vec3(0.));
+    /* [r9] the entry's taps (km): 80 m up, 250 m up, 80 m down, then +-80 m in x and z */
+    const vec3 CLD_AO[7] = vec3[7](vec3(0., .08, 0.), vec3(0., .25, 0.), vec3(0., -.08, 0.), vec3(.08, 0., 0.), vec3(-.08, 0., 0.), vec3(0., 0., .08), vec3(0., 0., -.08));
     uniform vec2 uBlock, uOff; uniform float uSteps, uLightTaps; uniform int uNLight, uNRain;
     /* tuning: x the ambient, y the twilight arch, z the deep-path energy, w the powder (1 = the design) */
     uniform vec4 uCK;
@@ -464,6 +493,20 @@ WX.pass((function () {
       vec3 Lc = vec3(0.); float Tc = 1.;
       int maxI = int(uSteps * 1.8);
       bool fine = false; int zeroRun = 0;
+      /* [r9f] after sunset (whole under -1 deg, none over 3.4 deg), and the most cumulus a sample of this ray had (for the air in
+         front of it) */
+      float kDk = smoothstep(.06, -.02, uSun.y), cuMax = 0.;
+      /* [r9] the sky's light at a cloud's surface, measured where the ray enters it (aoN): aoU from above, aoD from below */
+      float aoU = 1., aoD = 1.; bool aoN = true;
+      /* [r9] the surface's outward normal there and how much of it a face takes (nW) */
+      vec3 nS = vec3(0.); float nW = 0.;
+      float aoK = ${LK("ao", 1)} * (1. - smoothstep(.3, .7, uWx2.w));
+      /* [r9f] AFTER SUNSET A CUMULUS IS LIT BY THE AFTERGLOW, NOT BY THE SUN UNDER ITS HORIZON (REVIEW-9 A2: lilac puffs on a violet
+         sky): from a sun 1.5 deg under the horizon (the layer's tops leave its light) to 2.9 deg, the light cone turns from the sun
+         to the glow, ~15 deg up over the sun's azimuth, so a body between us and the glow is a long path from it (dark) and its
+         rims and tops a short one (lit). Cumulus only (the decks keep their light) */
+      /* (the weight and the direction are made where they are used: every value kept across the march costs the Intel compile
+         registers, and its spills cost every frame) */
       float dtF0 = clamp(tIn * .0068 * kS, .02 * kS, .6), dtE0 = max(dtF0 * 4., .12 * kS);   // [round 3] .0068 (was .006)
       float t = tIn + (far ? 3. : dtE0) * jit;
       for (int i = 0; i < 400; i++) {
@@ -484,7 +527,7 @@ WX.pass((function () {
           continue;
         }
         /* a coarse step that lands in cloud steps back and walks in fine steps from there */
-        if (!fine && !far) { fine = true; zeroRun = 0; t = max(t - dtE + dtF * jit, tIn); continue; }
+        if (!fine && !far) { fine = true; zeroRun = 0; aoN = true; t = max(t - dtE + dtF * jit, tIn); continue; }
         zeroRun = 0;
         float dt = far ? dtE : dtF;
         vec4 w = cs.w;
@@ -492,19 +535,64 @@ WX.pass((function () {
         cldHf = 0.;
         float d = far || Tc < .05 ? dc * (.55 + .45 * cs.pw) : cldFull(cs, q, Tc > .3 ? lodB : max(lodB, -1.), false);
         float hfS = cldHf;      // (the light cone's cldFull calls overwrite it)
+        /* [r9] and the depth below the surface (the cone's cldFull calls overwrote it too: dep was the depth of the cone's third
+           full tap, ~250 m toward the light, so a sunlit face took no multiple scattering and a shaded one all of it) */
+        float depS = far || Tc < .05 ? 1. : cldDepth;
         if (d > .003) {
           float sig = sigmaBase + 10. * max(smoothstep(.7, 1., uWx0.y), 1. - smoothstep(.1, .35, uWx0.y));
           float st = d * sig;
+          /* [r9] THE SKY LIGHTS A CLOUD'S SURFACE BY WHAT IS OPEN ABOVE AND BELOW IT, not by its column alone (the column's
+             diffuse transmission lit every point of a flat base alike: a flat grey offset under the key light, the cotton
+             look at every hour). Where the ray enters a cloud, the cloud within ~80 and ~250 m above it and ~80 m below it:
+             the top of a billow sees the sky, its underside and the crevice under the next one do not. Taken once a
+             crossing (the entry sample's surface lights the first tens of metres the eye sees), cumulus only */
+          if (aoN && aoK > 0. && !far && Tc > .2) {
+            aoN = false;
+            float aw = aoK * cldCu(w);
+            if (aw > 0.) {
+              /* the signed distance (km, > 0 inside) at each tap, not the density (14 m from air to cloud: the occlusion
+                 switched in steps and drew hard-edged patches): a tap h above a surface that faces up is h out (none), on a
+                 wall about at the surface (half), under an overhang inside (all) */
+              /* [r9] THE FACE'S OWN NORMAL: the column's field (the dome, the turrets and the lumps; not the billows, whose normal
+                 jumped from one entry to the next and drew blotches on a cloud lit by the sky alone), by central differences over
+                 160 m. A face takes the sky, the sea, the dusk's horizon and the twilight arch by the way it faces, and the key's
+                 multiple scattering by its facing near the surface: lit tops over grey undersides, lobes in the light.
+                 Seven taps in one loop (its bound a uniform's, so the compiler keeps it a loop: written out, the nine density calls
+                 grew the trace's Intel SIMD8 program from 4211 to 6688 instructions and its spills from 54 to 100, and the storm,
+                 which never runs them, paid +.04 ms): 80 m up (with the billows), 250 m up, 80 m down (with the billows), +-80 m
+                 across in x and z */
+              float oU = 0., oD = 0.; vec3 gr = vec3(0.); CldS as_;
+              for (int k = 0; k < uNRain; k++) {
+                if (k >= 7) break;
+                vec3 aq = q + CLD_AO[k];
+                cldBase(aq, lodB, as_); float fb = as_.f, ff = fb;
+                if ((k == 0 || k == 2) && fb > -.3) { cldFull(as_, aq, lodB, true); ff = cldDepth; }
+                if (k == 0) { oU += .6 * wxSat((ff + .08) / .16); gr.y += fb; }
+                else if (k == 1) oU += .4 * wxSat((fb + .25) / .5);
+                else if (k == 2) { oD = wxSat((ff + .08) / .16); gr.y -= fb; }
+                else if (k == 3) gr.x += fb; else if (k == 4) gr.x -= fb; else if (k == 5) gr.z += fb; else gr.z -= fb;
+              }
+              gr /= .16;
+              float gl = length(gr);
+              if (gl > 1e-3) { nS = -gr / gl; nW = ${LK("nrm", 1)} * aw * smoothstep(.05, .4, gl); }
+              aoU = 1. - ${LK("aos", .8)} * aw * oU;
+              aoD = 1. - ${LK("aos", .8)} * aw * oD;
+            }
+          }
           /* the light cone: 6 (or 7) taps, 40 m x 1.9^k, full detail on the first three */
           /* the cone's taps start at a jittered distance (the march's own offset, turned): fixed taps drew the
              optical depth's contours on the clouds as creases */
           float od = 0., sl = .04 * (.6 + .8 * fract(jit + float(i) * .754877)); vec3 lq = q; CldS ls;
+          float cuW = cldCu(w);
+          vec3 LkC = Lk; float cosA = cosT;
+          float dkW = sunKey ? ${LK("dkc", 1)} * smoothstep(-.026, -.05, uSun.y) * cuW : 0.;
+          if (dkW > 0.) { LkC = normalize(mix(Lk, normalize(vec3(azS.x, .27, azS.y)), dkW)); cosA = dot(rd, LkC); }
           int nl = far ? 3 : Tc > .4 ? uNLight : min(uNLight, 4);    // full cone only where it shows ([round 3] .4, was .25)
           /* deep under a thick deck the key light is spent (the deck's diffusion term below carries it): no cone */
           if (w.a > .8 && max(cs.top - cs.z, 0.) * sig / max(Lk.y, .1) > 400.) { nl = 0; od = 60.; }
           for (int k = 0; k < uNLight; k++) {
             if (k >= nl) break;
-            lq += normalize(Lk + CLD_CONE[k] * .1) * sl;
+            lq += normalize(LkC + CLD_CONE[k] * .1) * sl;
             float db = cldBase(lq, lodB, ls);
             /* the near taps see the billows round the sample (their shadows give the cauliflower its form);
                the far ones a thinned medium, for the light that diffuses through a deep cloud */
@@ -518,20 +606,27 @@ WX.pass((function () {
           float hnL = wxSat(cs.z / max(cs.top, .05));
           /* by depth below the surface (the billow's own scale, 300 m), not by the density, which is whole a few
              tens of metres in */
-          float dep = far || Tc < .05 ? 1. : wxSat(cldDepth / .3);
+          float dep = far || Tc < .05 ? 1. : wxSat(mix(cldDepth, depS, ${LK("dps", 1)} * cuW) / .3);
           /* [round 4] with a low sun the light comes in from the side, not down through the top: the base is no place
              apart, and its .2 drew a darker band along every cloud's bottom at sunset and dusk, an outline round a
              uniform puff (REVIEW-3 #8, clip d) */
-          float isp = (.05 + pow(dep, mix(.5, 2., smoothstep(.3, .85, hnL)))) * pow(wxSat(wxRemap(hnL, 0., .2, mix(.2, .75, 1. - smoothstep(.04, .2, Lk.y)), 1.)), .8);
+          /* [r9] (.05 + the depth's share: a cumulus' sunlit surface took almost none of its multiple scattering, the light that makes
+             a thick cloud white; .35 at its surface now) */
+          float isp = (mix(.05, ${LK("isf", .35)}, cuW) + pow(dep, mix(.5, 2., smoothstep(.3, .85, hnL)))) * pow(wxSat(wxRemap(hnL, 0., .2, mix(.2, .75, 1. - smoothstep(.04, .2, Lk.y)), 1.)), .8);
           float ms = exp(-od) * mix(phs[0], phD, w.a * rainD); a = .6; b = .4;
           /* [round 6] A CUMULUS BETWEEN US AND THE SUN IS A DARK BODY WITH BRIGHT RIMS (ss-atsea; REVIEW-5 #1): its multiple
              scattering loses more over the cone toward the light (the octaves' .4^k extinction let a thick body glow evenly);
              its thin edges keep the single-scattered rim. Decks keep theirs */
-          float odM = od * (1. + ${LK("bkl", 3)} * smoothstep(${LK("bkg", .5)}, .97, cosT) * (1. - w.a));
-          for (int k = 1; k < 4; k++) { ms += a * exp(-odM * b) * phs[k] * isp; a *= .6; b *= .4; }
+          /* [r9f] AND AT SUNSET STILL MORE (REVIEW-9 A2: rust bodies, salmon puffs): under a sun below ~2 deg the reddened light that
+             diffuses through a cumulus is a few per cent of what lights its rims, and the face turned to us shows the anti-sun sky's
+             blue-grey (ss-baltic's slate bodies, ss-atsea's dark ones); its rims keep the single-scattered light */
+          float odM = od * (1. + ${LK("bkl", 3)} * smoothstep(${LK("bkg", .5)}, .97, cosT) * (1. - w.a) * (1. + ${LK("bkx", 2)} * cuW * (1. - smoothstep(.04, .16, Lk.y))));
+          float nKf = nW > 0. ? mix(1., 1.3 * wxSat(.35 + .75 * dot(nS, Lk)), nW * (1. - wxSat(depS * 4.))) : 1.;
+          for (int k = 1; k < 4; k++) { ms += a * exp(-odM * b) * phs[k] * isp * nKf; a *= .6; b *= .4; }
           /* four octaves return about half of what a thick slab reflects (albedo ~.8 against ~.14 / pi
              per unit light at normal incidence); make up the deep part's energy, not the thin edges' */
-          ms *= 1. + .6 * uCK.z * (1. - exp(-.4 * od));
+          /* [r9] (a cumulus' at .3: the deep-path lift lit its shaded sides as much as its sunlit ones) */
+          ms *= 1. + mix(.6, ${LK("dpe", .3)}, cuW) * uCK.z * (1. - exp(-.4 * od));
           /* powder: in-scatter builds up only where there is depth behind the edge (Schneider 2015) */
           float powder = mix(1., .25 + .75 * (1. - exp(-dep * 4.)), (.55 * (.5 - .5 * cosT) + .15) * uCK.w);
           /* the light beyond the cone (2 km) is the shadow map's: a low sun under a deck no longer reaches a hanging
@@ -558,6 +653,12 @@ WX.pass((function () {
              see the sky, the flat bases mostly the sea and the light that crossed the cloud: grey, not putty */
           float above = max(cs.top - cs.z, 0.), below = max(cs.z, 0.);
           float TdA = 1. / (1. + .11 * above * sig * .7), TdB = 1. / (1. + .11 * below * sig * .7);
+          /* [r9f] after sunset a cumulus' wall sees its side of the sky over the cloud's own shoulder, not through the column above it
+             (TdA is the light that crosses the cloud to a point inside it): near the surface of a face turned sideways the sky's
+             light is the dome's half it faces (fA), not that times the column's diffuse transmission. Before, every wall turned
+             from the glow took next to nothing from the anti-sun sky, and the arch's light through the body was all of its colour */
+          cuMax = max(cuMax, cuW);
+          if (nW > 0. && kDk > 0.) TdA = mix(TdA, 1., ${LK("wsk", 1)} * kDk * nW * (1. - abs(nS.y)) * (1. - wxSat(depS * 4.)));
           /* after sunset the sky dome is the only light: the clouds take more of it from the sides, which the
              height grading leaves out (REVIEW-1: overhead clouds at .5-1x the zenith sky, not black cut-outs) */
           float dusk = smoothstep(.02, -.1, uSun.y);
@@ -567,7 +668,26 @@ WX.pass((function () {
              the starry sky, 49 against 41): it hides the airglow and the stars and sees the dark sea; the town's glow and the
              dome's side light on its base at .15 (cloud 37-38 against the sky's 41) */
           float nK = mix(1., ${LK("ntc", .15)}, 1. - smoothstep(-.2, -.1, uSun.y));
-          vec3 amb = (ambClear * TdA * .9 + (ambBelow * 1.3 + town * nK * (.3 + .7 / (1. + t * t / 36.))) * TdB + ambSky * (.12 + .3 * dusk * nK) * TdB) * uCK.x;
+          /* [r9] (aoU, aoD: the open sky above and below the entry; the sea's light under a cumulus at blw of the deck's) */
+          float blw = mix(1.3, ${LK("blw", .6)}, cuW);
+          /* [r9] a face takes the sky by the share of the dome it faces (a top all of it, a wall half, an underside none), the sea
+             by the rest, and after sunset the horizon's light by how much it faces sideways: the column alone lit a wall as a top,
+             and the base of a cloud at dusk as brightly as its sides */
+          float fA = 1., fB = 1., fS = 1.;
+          if (nW > 0.) { fA = mix(1., .5 + .5 * nS.y, nW); fB = mix(1., .5 - .5 * nS.y, nW); fS = mix(1., .3 + .9 * (1. - abs(nS.y)), nW); }
+          /* [r9f] THE DOME'S DIPOLE BY THE FACE'S OWN NORMAL (REVIEW-9 A2: body and rim one tone at sunset and dusk): round 5 took every
+             face we see as looking back at us, so the rims and the tops turned to the glow took the dim half of the sky too. A face takes
+             the dome's mean plus half the dipole by its horizontal facing toward the sun's azimuth (a top none of it, a wall turned away
+             the anti-sun half: blue-grey); and the horizon's side light by which side it faces. From a sun under 3.4 deg (whole under
+             -1 deg): by day the view's dipole stays (the golden hour's dark bodies under lit tops, round 9's best hour) */
+          vec3 aC = ambClear, aS = ambSky;
+          if (nW > 0. && uSun.y < .06) {
+            float kD = nW * ${LK("adn", 1)} * smoothstep(.06, -.02, uSun.y);
+            vec3 ambDome = texelFetch(sAmbient, ivec2(2, 0), 0).rgb;
+            aC = mix(ambClear, max(ambDome + arch * .5 * dot(nS.xz, azS), ambDome * .25), kD);
+            aS = mix(ambSky, max(ambSky + arch * .5 * dot(nS.xz, azS) / max(length(nS.xz), .2), ambSky * .25), kD);
+          }
+          vec3 amb = (aC * TdA * .9 * aoU * fA + (ambBelow * blw + town * nK * (.3 + .7 / (1. + t * t / 36.))) * TdB * aoD * fB + aS * (.12 * aoD * fB + mix(.3, ${LK("dsl", .3)}, cuW) * dusk * nK * fS) * TdB) * uCK.x;
           /* the twilight arch (AMBIENT texel 3): the sky's excess light from the sun's side, which still lights
              the clouds long after the sun has left them; it crosses them like the sun's own diffuse light */
           /* (the cone's od is only 2 km of the path: its transmission is steepened, so a thick cloud against the
@@ -575,9 +695,27 @@ WX.pass((function () {
           /* [round 4] steep only toward the light (a backlit cloud: dark body, glowing edges); away from it the arch light
              falls across the body (a gradient), where the steep falloff drew a lit outline round a flat puff at dusk
              (REVIEW-3 #8, x03) */
-          float TdS = 1. / (1. + mix(.05, .22, smoothstep(-.2, .6, cosT)) * (sunKey ? od : above * sig * .7));
-          vec3 archL = arch * TdS * (.75 + .35 * (.5 + .5 * cosT)) * (1. + 1.6 * dusk) * uCK.y;
+          float TdS = 1. / (1. + mix(.05, .22, smoothstep(-.2, .6, cosA)) * (sunKey ? od * mix(1., ${LK("ads", 2)} * (1. + ${LK("adk", 1.5)} * kDk), cuW) : above * sig * .7));
+          /* [r9] AND THROUGH A CLOUD'S THIN PARTS IT SCATTERS FORWARD (at dusk the thin edges of a cloud before the afterglow glow
+             as its silver lining did; the arch lit only the body, evenly, and a cloud against it was a flat cut-out) */
+          vec3 archL = arch * (TdS * (.75 + .35 * (.5 + .5 * cosA)) + ${LK("afw", 1)} * mix(1., ${LK("afd", 0)}, kDk) * exp(-.3 * od) * wxHG(cosA, .55) * 12.566 * cuW) * (1. + 1.6 * dusk) * uCK.y;
+          /* [r9] and by the side it faces (the arch is a broad glow 0-30 deg over the sun's azimuth, a wrapped cosine about ~15 deg up:
+             2x for the faces that see it, .35x for a base or a wall turned away (the glow's flanks), so before the afterglow a cloud
+             is a dark body lit at its tops and sunward edges; round 9's first try, 1 + .6 cos, lit every base: an overhead cloud at
+             dusk read two-tone; with none at all the dusk bodies fell to .12 of the sky, black cut-outs) */
+          if (nW > 0.) archL *= mix(1., ${LK("afl", .35)} + (2. - ${LK("afl", .35)}) * wxSat((dot(nS, normalize(vec3(azS.x, .27, azS.y))) + .3) / 1.3), nW);
           amb += archL;
+          /* [r9f] THE CAULIFLOWER'S FOLDS (REVIEW-9 A1: a near cloud at 1:1 a soft loaf): near a cumulus' surface the billows' own
+             displacement says whether a point sits in a bulge (hf > 0: the surface pushed out round it, open to the sky) or in a fold
+             between two (hf < 0: hemmed in); the sky's and the arch's light take it, so each bubble has a lit crown and a shaded crease.
+             It moves with the cloud's own fields (no screen-space or per-frame term) */
+          amb *= mix(1., ${LK("cvf", .4)} + (1. - ${LK("cvf", .4)}) * smoothstep(-1.4, 1.2, hfS), ${LK("cav", 1)} * cuW * (1. - wxSat(depS * 5.)));
+          /* [r9f] A CLOUD'S THIN EDGES GLOW WITH THE SKY BEHIND THEM (REVIEW-9 A2: the dusk bodies one tone, the rims dim and violet):
+             from sunset on, the light that reaches a thin edge from behind it, scattered forward, is the sky's own along the ray
+             (orange before the glow, violet higher), not the twilight arch's mean; an edge with little behind it matches the sky
+             there and fades into it, the thick body stays dark. The cone's depth toward the glow is the path behind the sample where
+             we look toward the glow, and the forward lobe (cosA) keeps it there */
+          if (kDk * cuW > 0.) amb += wxSky(rd) * (${LK("fsk", .5)} * kDk * cuW * exp(-1.5 * od) * smoothstep(.5, .95, cosA));
           /* [round 4] AT SUNSET (sun 0-3 deg) a cumulus is lit from below and the side by the reddened sun, and the sky dome
              fills its body evenly: the dome's share at .7 lets the sun's own gradient show (orange undersides, greyer
              bodies) where the flat fill made uniform salmon puffs (REVIEW-3 #8, d and x02) */
@@ -651,6 +789,14 @@ WX.pass((function () {
       }
       if (twt > 0.) dAvg = tw / twt;
       vec4 ap = wxAerial(rd, dAvg);
+      /* [r9f] AT SUNSET THE AIR IN FRONT OF A CUMULUS BANK IS IN ITS SHADOW (REVIEW-9 A2: rust bodies, salmon puffs, ss-atsea's and
+         ss-baltic's are dark slate): under a sun below ~3 deg the light that reaches the low haze between us and the clouds near its
+         azimuth has crossed the cloud layer over tens of km (crepuscular rays, not an even glow), which the sky-view's mean shadow and
+         the AP's coarse froxels leave lit. The in-scatter in front of a cumulus toward the sun is cut by up to aps; the clear sky round
+         it keeps its glow, so the bodies stand dark against it */
+      #if !CLD_R8
+      if (sunKey && Tc < .999) ap.rgb *= 1. - ${LK("aps", .8)} * cuMax * (1. - smoothstep(.02, .09, Lk.y)) * smoothstep(.3, .9, cosT) * (1. - Tc);
+      #endif
       /* in front of the cloud the sky's own in-scatter stays; the cloud hides what is behind it */
       vec3 Lout = Lc * ap.a + ap.rgb * (1. - Tc);
       L += T * Lout; T *= Tc;
@@ -746,6 +892,25 @@ WX.pass((function () {
           return 1. - min(-log(max(sm, 1e-6)) / K, 1.);
         }
         float fbm2(vec2 p, float f) { return pn2(p, f) * .5 + pn2(p, f * 2.) * .25 + pn2(p, f * 4.) * .15 + pn2(p, f * 8.) * .1; }
+        /* [r9f] a smooth periodic value noise (per cells to the tile), 0..1: cheap enough to read once per cloud */
+        float wmVn(vec2 p, float per) {
+          vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+          float a = wxHash12(mod(i, per) + 41.), b = wxHash12(mod(i + vec2(1, 0), per) + 41.);
+          float c = wxHash12(mod(i + vec2(0, 1), per) + 41.), d = wxHash12(mod(i + vec2(1, 1), per) + 41.);
+          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+        /* [r9f] THE FIELD IS ORGANISED (REVIEW-9 A1: polka dots, one scale spread evenly): fair-weather cumulus over the sea gather in
+           groups a few km across with clear lanes between them, and in places in streets along the wind aloft (rolls ~2-3 times the
+           boundary layer's depth apart: here 4.3 km, across the lattice direction (2, 3), which lies along the wind's cross direction
+           within 0.3 deg, so the waves stay periodic in the tile). Read once per cloud, at its centre (cen, tile uv): a cloud is
+           kept whole or left out, never cut by the pattern. 1 in a group or on a street, toward 0 in a lane */
+        float wmOrg(vec2 cen) {
+          float g = wmVn(cen * 8., 8.) * .6 + wmVn(cen * 16. + 3.7, 16.) * .4;
+          float ph = (wmVn(cen * 3. + 1.3, 3.) - .5) * 9.;
+          float st = .5 + .5 * cos(6.2831853 * dot(cen, vec2(8., 12.)) + ph);
+          float sw = smoothstep(.3, .7, wmVn(cen * 2. + 7.1, 2.)) * ${LK("str", .4)};
+          return smoothstep(.22, .72, mix(g, .35 * g + .65 * st, sw));
+        }
         void main() {
           vec2 uv = gl_FragCoord.xy / 512.;
           float cov = uCov;
@@ -765,34 +930,73 @@ WX.pass((function () {
           /* [round 3] where stratocumulus spreads (about 50-85 %) the cumulus stay flat (humilis, fractus): tall ones
              there read as heavy blobs next to the golden photographs' thin broken clouds */
           float scW0 = smoothstep(.42, .52, cov) * (1. - smoothstep(.84, .93, cov));
-          float tall = mix(.45, .9, smoothstep(.1, .65, cov)) * mix(1., .55, scW0);
-          for (int L = 0; L < 3; L++) {
+          /* [r9f] (fair weather's cumulus .8 of their height there, not .55: with the fix's flatter humilis and towering big ones the
+             flattening from 40 to 55 % took 8 points of the 5-12 deg band's cover away (cloudfrac.js: .57 -> .49), a cover that fell as
+             the reading rose; the decks keep .55) */
+          float tall = mix(.45, .9, smoothstep(.1, .65, cov)) * mix(1., mix(.55, ${LK("scf", .8)}, 1. - smoothstep(.62, .8, cov)), scW0);
+          /* [r9f] the clouds' new shapes and organisation (below) are fair weather's, as cldCu's light is: whole under cover .62 (~61 %),
+             gone by .8 (~75 %), so from there the map's cumulus are round 9's and the decks and the storm keep their look */
+          float fw = 1. - smoothstep(.62, .8, cov);
+          /* [r9f] the organisation (wmOrg) leaves clouds out of the lanes, and the share's lift puts them in the groups (the same cover
+             in all); both fade as the deck closes over them (the lanes fill as the lift goes: the cover keeps rising, cloudfrac.js) */
+          float orgW = ${LK("org", 1)} * fw, lift = 1. + ${LK("lift", .8)} * orgW;
+          /* [r9f] A FOOTPRINT IS NOT AN ELLIPSE (REVIEW-9 A1: from below, every base was a smooth oval): each cloud's frame is warped
+             by a noise about a quarter of its generation's cell, so its outline is lobed and irregular, the turrets with it */
+          float wrp = ${LK("wrp", .3)} * fw, pe = mix(.5, ${LK("pro", .47)}, fw);
+          for (int L = 0; L < 4; L++) {
+            /* [r9f] a fourth generation on 0.65 km cells: fractus and the smallest humilis, flat shreds 0.2-0.6 km across and tens of
+               metres thick that crowd low near the horizon and between the bigger clouds */
+            if (L == 3 && (${LK("frc", 1)} <= 0. || fw <= 0.)) break;
             float N = 12. * exp2(float(L)), cell = 62.6 / N;
-            float share = L == 0 ? (cov - .12) * 1.5 : L == 1 ? (cov - .03) * 1.4 : cov * 1.5;
-            share = wxSat(share * mix(.15, 2., clus) + .25 * smoothstep(.75, 1., cov));
-            if (share <= 0.) continue;
+            float share = L == 0 ? (cov - .12) * mix(1.5, ${LK("l0s", 1.3)}, fw) : L == 1 ? (cov - .03) * 1.4 : L == 2 ? cov * 1.5 : (cov + .05) * ${LK("frs", 1.1)} * fw;
+            share *= mix(.15, 2., clus) * lift;
+            float shF = .25 * smoothstep(.75, 1., cov) * (L == 3 ? fw : 1.);
+            if (share + shF <= 0.) continue;
             vec2 g = uv * N, gi = floor(g);
+            /* (4 features a cell, fewer on the finer generations: a feature stays over ~5 of the map's 122 m texels, no aliasing) */
+            float wf = L == 3 ? 1. : L == 2 ? 2. : ${LK("wrf", 4)};
+            /* (gradient noise, no steeper than ~.6 so the warp never folds a cloud into a star: a value noise's warp drew straight
+               creases, torn-paper outlines overhead; on the two big generations .6 of it, for a near cloud's outline is ~6 of the
+               map's texels a km of base: a stronger warp left straight sides and corners on the bilinear map, rocks at 1:1) */
+            vec2 wv = wrp > 0. ? vec2(cldPerlin(vec3(uv * N * wf, .31), N * wf), cldPerlin(vec3(uv * N * wf, .77), N * wf)) * (L <= 1 ? .84 : 1.4) * wrp : vec2(0.);
             for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
               vec2 c = gi + vec2(i, j), cm = mod(c, N);
               vec3 a = wxHash33(vec3(cm, 7. + float(L) * 13.)), b = wxHash33(vec3(cm, 61. + float(L) * 13.));
-              float grow = smoothstep(a.z, a.z + .2, share);
+              vec2 cc = c + .12 + .76 * a.xy, dv = g - cc;
+              /* [r9f] fewer, smaller big ones (a median radius of 1.15 km, was 1.46: the giant ovals overhead) */
+              float r1 = (L == 0 ? mix(.28, ${LK("l0r", .22)}, fw) : .28) * exp(.85 * (b.x + b.y - 1.)), asp = 1.1 + .5 * b.z;
+              /* (as far as it can reach, grown and warped: past it the cloud's organisation need not be read) */
+              if (dot(dv, dv) > r1 * r1 * asp * (1.3 + 1.42 * wrp) * (1.3 + 1.42 * wrp)) continue;
+              float grow = smoothstep(a.z, a.z + .2, wxSat(share * (orgW > 0. ? mix(1., wmOrg(cc / N), orgW) : 1.) + shF));
               if (grow <= 0.) continue;
-              vec2 dv = g - (c + .12 + .76 * a.xy);
-              float rC = .28 * exp(.85 * (b.x + b.y - 1.)) * mix(.35, 1., grow);    // radius in cells
-              float asp = 1.1 + .5 * b.z;
+              float rC = r1 * mix(.35, 1., grow);    // radius in cells
               /* into the cloud's own frame: along the wind stretched, across it narrowed, in radii */
-              vec2 e = vec2(dot(dv, uAxis) / sqrt(asp), dot(dv, vec2(-uAxis.y, uAxis.x)) * sqrt(asp)) / rC;
+              vec2 e = vec2(dot(dv, uAxis) / sqrt(asp), dot(dv, vec2(-uAxis.y, uAxis.x)) * sqrt(asp)) / rC + wv;
               float d2 = dot(e, e);
-              if (d2 >= 1.) continue;
+              if (d2 >= mix(1., 1.69, fw)) continue;
               /* [round 4] and rises from a flat wisp over the first third of its growth: at a third of its width and its
                  full height it popped into the sky and its shadow onto the cove in one rebuild of the map (REVIEW-3 f117) */
-              float pk = min(rC * cell * tall * (.6 + .8 * fract(a.z * 7.31 + b.x * 3.17)) / uThick, 1.) * wxSat(grow * 3.);
-              float tp = .62 * pk * sqrt(1. - d2);
-              for (int m = 0; m < 6; m++) {
+              /* [r9f] HUMILIS ARE FLAT, THE BIG ONES TOWER (REVIEW-9 A1: every cloud was the same shape at its own size): the height grows
+                 as the radius to the 1.5 (normalised at 0.45 km), so at 40 % a 0.36 km humilis is ~0.2 km tall, a 0.18 km fractus ~90 m,
+                 and the big ones reach the layer's top */
+              float rK = rC * cell;
+              float pk = min(rK * pow(rK / ${LK("asn", .45)}, ${LK("asx", .5)} * fw) * tall * (.6 + .8 * fract(a.z * 7.31 + b.x * 3.17)) / uThick, 1.) * wxSat(grow * 3.);
+              /* [r9f] a little steeper flanks (the dome (1 - d^2)^.47, was ^.5; at ^.38 its top was a plateau over cliffs: a mesa, a rock
+                 from below) */
+              float tp = d2 < 1. ? mix(.62, ${LK("mnd", .56)}, fw) * pk * pow(1. - d2, pe) : 0.;
+              /* (past the mound a turret fades out over the warp's reach, so no turret's edge is a wall in the map; with fw 0 it is
+                 cut at the mound's edge as before) */
+              float ow = d2 < 1. ? 1. : 1. - smoothstep(0., 1., (d2 - 1.) / (.69 * fw + 1e-4));
+              /* the turrets: six as before, and on the bigger clouds more, smaller, higher ones near the top (the cauliflower's
+                 next scale: a big cloud's top was six soft domes) */
+              int nT = fw <= 0. ? 6 : L == 0 ? 6 + int(${LK("tx", 5)}) : L == 1 ? 6 + int(${LK("tx", 5)}) / 2 : L == 2 ? 6 : 2;
+              for (int m = 0; m < 11; m++) {
+                if (m >= nT) break;
                 vec3 h = wxHash33(vec3(cm, 211. + float(L) * 13. + float(m) * 5.));
-                vec2 o = (h.xy * 2. - 1.) * .55;
-                float rs = .22 + .3 * h.z, ds2 = dot(e - o, e - o) / (rs * rs);
-                if (ds2 < 1.) tp = max(tp, pk * (.55 + .45 * fract(h.z * 3.7 + h.x)) * (1. - .45 * length(o)) * sqrt(1. - ds2));
+                bool sm = m >= 6;
+                vec2 o = (h.xy * 2. - 1.) * (sm ? .45 : .55);
+                float rs = sm ? .18 + .14 * h.z : .22 + .3 * h.z, ds2 = dot(e - o, e - o) / (rs * rs);
+                if (ds2 < 1.) tp = max(tp, ow * pk * (sm ? (.72 + .28 * fract(h.z * 3.7 + h.x)) * wxSat(fw * 3.) : .55 + .45 * fract(h.z * 3.7 + h.x)) * (1. - .45 * length(o)) * pow(1. - ds2, sm ? .45 : pe));
               }
               if (tp > cu) { cu = tp; cuPk = pk; }
             }
@@ -868,8 +1072,11 @@ WX.pass((function () {
           o = vec4(exp(-od * 55. * .6), 0., 0., 1.);
         }` });
       const nightAmb = (WX.libs.night || "").indexOf("wxNightAmbient") >= 0;
-      P.trace = R.program("clouds.trace", { libs: ["atmo", "clouds"].concat(nightAmb ? ["night"] : []),
-        fs: (nightAmb ? "vec3 cldNightAmb() { return wxNightAmbient(); }\n" : "vec3 cldNightAmb() { return vec3(0.); }\n") + TRACE });
+      const traceFS = (nightAmb ? "vec3 cldNightAmb() { return wxNightAmbient(); }\n" : "vec3 cldNightAmb() { return vec3(0.); }\n") + TRACE;
+      P.trace = R.program("clouds.trace", { libs: ["atmo", "clouds"].concat(nightAmb ? ["night"] : []), fs: traceFS });
+      /* [r9] the decks' and the storm's trace: round 8's program (the cumulus weight the constant 0), compiled beside the other and
+         used once it is ready (until then the other draws the same picture, slower) */
+      P.trace8 = R.program("clouds.trace8", { libs: ["atmo", "clouds"].concat(nightAmb ? ["night"] : []), fs: "#define CLD_R8 1\n" + traceFS });
       P.resolve = R.program("clouds.resolve", { libs: ["atmo", "clouds"], fs: `
         uniform sampler2D uNewL, uNewZ, uHistL, uHistZ; uniform float uExpR; uniform vec2 uBlock, uOff, uDisp;
         layout(location = 0) out vec4 oL; layout(location = 1) out vec4 oZ;
@@ -1107,8 +1314,10 @@ WX.pass((function () {
         lastDrift = [dw[0], dw[1], ds[0], ds[1]];
         const E = R.exposure.E, expR = lastE > 0 ? E / lastE : 1;
         lastE = E;
+        /* [r9] round 8's program where the cumulus weight is 0 (cover >= .79 or storm >= .69: the weight < .5 % at the switch) */
+        const tp = (F.W.cov >= 0.79 || F.W.storm >= 0.69) && P.trace8.ready() ? P.trace8 : P.trace;
         if (F.still || needFull) {
-          R.draw(P.trace, nxt.fb, Object.assign(common, { uBlock: [1, 1], uOff: [0, 0], uHistL: prev.L, uHistZ: prev.Z, uFullA: needFull ? 1 : 0.25 }));
+          R.draw(tp, nxt.fb, Object.assign(common, { uBlock: [1, 1], uOff: [0, 0], uHistL: prev.L, uHistZ: prev.Z, uFullA: needFull ? 1 : 0.25 }));
           needFull = false;
         } else {
           /* 1/16 of the pixels a world frame in 4x4 blocks, 1/8 in 4x2 (T4), 1/4 in 2x2 */
@@ -1119,7 +1328,7 @@ WX.pass((function () {
           const [bx, by] = BLOCK[n], sm = V.smallFor(n);
           const ph = ORDER[n][R.worldIndex % n];
           const off = [ph % bx, Math.floor(ph / bx)];
-          R.draw(P.trace, sm.fb, Object.assign(common, { uBlock: [bx, by], uOff: off, uHistL: prev.L, uHistZ: prev.Z, uFullA: 1 }));
+          R.draw(tp, sm.fb, Object.assign(common, { uBlock: [bx, by], uOff: off, uHistL: prev.L, uHistZ: prev.Z, uFullA: 1 }));
           R.draw(P.resolve, nxt.fb, { uNewL: sm.L, uNewZ: sm.Z, uHistL: prev.L, uHistZ: prev.Z, uBlock: [bx, by], uOff: off, uDisp: disp, uExpR: expR });
         }
         cur ^= 1;

@@ -24,7 +24,9 @@
      beams' shafts in the air: single scattering of the two beams along each view ray, integrated in the angle the ray
      subtends at the lamp (equiangular: the 1/r^2 is exact), only over the arc of the ray inside a beam and within its
      reach of the lamp. Never over the whole view: the shafts fade out within a third of the lamp's distance of it, so
-     they stay within about 15 deg of it. Their light, the core's and the glow's are marked in SCENE's alpha (-Y, the
+     they stay within about 15 deg of it ([r9] as a gaussian of that reach, from the lamp out: seen end on, as a beam
+     passes the window, round 8's full strength to .45 of it drew a plateau with an edge, an oval disc ~75 px across in
+     the night storm). Their light, the core's and the glow's are marked in SCENE's alpha (-Y, the
      lamp light's pre-exposed luminance; everything else writes 0..1), so post grades it as the cones see a lamp, past
      the rods' night shift (round 8: the night grade had turned the dim red glow mauve).
    The sea's path under the lamp is the ocean's (stream W: wxBeacon, R.beacon); the glare of a bright lamp through the
@@ -59,7 +61,7 @@ WX.pass((function () {
   WX.param("beacon.beam", 1, 0, 20, 0.05, "beacon");            // the beams' intensity x this (the flash and the shafts)
   WX.param("beacon.shaft", 1, 0, 20, 0.05, "beacon");           // the shafts alone x this
   WX.param("beacon.air", 0.15, 0, 3, 0.01, "beacon");           // km^-1: the least scattering the beams find in the air near the sea
-  WX.param("beacon.reach", 0.3, 0.05, 1, 0.01, "beacon");       // the shafts fade out by this share of the lamp's distance from it
+  WX.param("beacon.reach", 0.3, 0.05, 1, 0.01, "beacon");       // the shafts fade out by this share of the lamp's distance from it ([r9] a gaussian, e^-3 there)
   WX.param("beacon.rgb", -1, -1, 16777215, 1, "beacon");        // a forced accent 0xRRGGBB (-1: the page's, or the reading's)
   WX.param("beacon.hold", 0, 0, 1, 1, "beacon");                // 1: the beams hold, pointing 90 deg off the window (a still's pose)
   WX.param("beacon.face", -1, -1, 360, 1, "beacon");            // >= 0: beam 1 holds at this many deg past the window's bearing (0: the flash)
@@ -462,7 +464,8 @@ WX.pass((function () {
               float s = u.x * b2.y - u.z * b2.x, db = atan(abs(s), c), de = u.y / max(length(u.xz), 1e-4);
               float prof = exp(-.5 * (db * db / (sh * sh) + de * de / (sv * sv)));
               float ph = .8 * lmpHG(dot(u, -rd), uS.z) + .2 / (4. * PI);
-              sum += prof * ph * exp(-sigE * (max(t, 0.) + rr)) * (1. - smoothstep(.45 * reach, reach, rr));
+              /* [r9] a gaussian of the reach (no plateau, no edge: e^-3 at the reach), one exp with the air's */
+              sum += prof * ph * exp(-sigE * (max(t, 0.) + rr) - 3. * rr * rr / (reach * reach));
             }
             acc += sum * st;
           }

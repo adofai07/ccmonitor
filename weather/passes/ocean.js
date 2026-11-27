@@ -745,7 +745,10 @@ void main() {
     /* [r4] from a fresh breeze the short waves break on the long ones' crests (hydrodynamic modulation): their
        whitecaps gather in bands along the swell and the wind sea's crests instead of an even confetti of flecks
        (REVIEW-3 B3, x06 at 80 %); the mean over a wave is about kept */
-    cn *= mix(1., 2.6 * smoothstep(-.2, .45, vSwC.w), crW);
+    /* [r9] on the crests of the waves that are here: the height over the local waves' (vSw.w), not over the sea's Hs. Over
+       the sea's Hs a set's lull (the swell's envelope a fifth of its mean) left every short whitecap in its trough's .3 x
+       (REVIEW-8: "a lull at 85 % (a 16 m/s wind) shows almost no whitecaps"); the wind sea breaks between the sets too */
+    cn *= mix(1., 2.6 * smoothstep(-.2, .45, vSwC.w * (uSea.z + uSea.w) / max(vSw.w, .5)), crW);
     float farW = smoothstep(1.5, 6., foot / texel);
     if (g >= 0.) frO = max(frO, smoothstep(th + .05, th + .35, g) * dmp[i] * (1. - farW) * (i == 2 ? .35 : 1.));   // [r4] the short waves' whitecaps stay lace, not solid pebbles
     float frac = mix(uGth.w * (i == 1 ? .4 : .1), (i == 2 ? .05 : .12), surf);
@@ -1043,6 +1046,34 @@ void main() {
        and ridges near the window. Both folded into edgeS here, so nothing new stays alive past this branch (the sea's
        shader sits at the edge of Intel's SIMD8 registers: 0 spills in round 6) */
     edgeS = mix(edgeS, max(edgeS, .92), smoothstep(2., 3.6, uWx2.y) * (1. - smoothstep(.25, 1., foot)) * wxSat(shoreF * 1.6)) * mix(1., .8 + .36 * fd, nearW);
+    /* [r9] fresh white water (a bore's roller and the sheet just behind its crest; a breaking whitecap near the window only:
+       further out the whitecaps are a few px, and whiter they raised the far sea's toggling at the user's 240 Hz) under an
+       overcast by day */
+    float ovD = smoothstep(.1, .5, uWx1.y) * smoothstep(-.05, .1, uSun.y);
+    edgeS *= (1. + 1.2 * wxSat(max(fresh, frO * nearW) * 1.6) * ovD);
+    /* [r9b] HEAPED WHITE WATER (REVIEW-9 #2, W 1: "heap the thick white water ... bright tops and grey undersides"). The
+       clumps are the white water's height: their slope away from the window (the clumps .9 m further along the view: one
+       more lookup, two in fresh water at T3-T4, where its clumps are read in the swell's frame; the mips keep it smooth at
+       any range, far off only the big heaps are left) lights the faces turned to the bright low sky beyond the surf and
+       shades those turned to the window: each heap a lit top over a shaded underside, not a flat white shape (.4 m read
+       the small cells as scales). Thick or fresh white water (a thin lace lies flat), where a pixel is under ~2 m (to
+       ~170 m at 1080p). Every lookup here, so nothing new lives across the branch: the sea's SIMD8 compile on Intel is
+       4307 instructions, 0 spills (round 9 4247, 0). Two things tried and dropped: the lookup at the branch's top with
+       its result carried here (93 spills), and the waves' own form (a face of the long waves turned to the window greyer,
+       a back turned to the open sea whiter, from the swell's and cascade 0's slope along the view): one float more alive
+       through the cascades, read late from the varyings or carried, 89 spills and +.8-1.1 ms in the sea's slot at Intel
+       T1 (tests/ocean/r9f, simd1-2, ic1); the roller's own shading (rollS) greys a breaker's face */
+    float nearE = (1. - smoothstep(.8, 2., foot)) * ovD * wxSat(max(thickF, fresh) * 1.5);
+    if (nearE > 0.) {
+      vec2 xe = xz + normalize(xz) * .9;
+      float cO = textureGrad(uFoamTex, (xe - uDrift2.xy) / ${FOAM_TILE[1].toFixed(1)} + .37, dX / ${FOAM_TILE[1].toFixed(1)}, dY / ${FOAM_TILE[1].toFixed(1)}).b;
+      if (fresh > .02 && uSurfA.y > .5) {
+        vec2 sd = uSw[0].xy, sq = vec2(sd.y, -sd.x);
+        cO = mix(cO, textureGrad(uFoamTex, vec2(dot(xe, sd) / ${FOAM_TILE[1].toFixed(1)} - uSurfA.x, dot(xe, sq) / ${FOAM_TILE[1].toFixed(1)}) + .53,
+                                 vec2(dot(dX, sd), dot(dX, sq)) / ${FOAM_TILE[1].toFixed(1)}, vec2(dot(dY, sd), dot(dY, sq)) / ${FOAM_TILE[1].toFixed(1)}).b, fresh);
+      }
+      edgeS *= 1. + clamp((clump - cO) * 3.2, -1., 1.) * .32 * nearE;
+    }
     cov = mix(covNear, fsum * .8, farP);
     if (uFoamW.y > 0.) {
       float st = uFoamW.y;
@@ -1076,17 +1107,36 @@ void main() {
      on the RTX at 96 % by day: the near white water p99 107 -> 143, p99.5 112 -> 149 at a set's arrival; the cap 89 -> 129).
      The storm's exposure is the rest of the gap (notes/ocean.md, Round 8: ~2.2 stops under the photographs' sky) and
      stays as it is (the storm's dark mood) */
+  /* [r9] WHITE WATER THAT READS WHITE (REVIEW-8 #2: p99.5 129-152 / 255 at 96-100 % by day, nothing over 180, where the
+     references' surf is 224-254). AgX is nearly logarithmic there (~15 levels a stop near 150): 180 asks the white water for
+     2x its light, 200 for 3.2x, 220 for 5.7x, and the storm curve (post) lifts it fully only above its pivot, 2.5 stops over
+     the frame's mean, where it now reaches. By day under an overcast: thick white water x 1.2-2.8 the low sky (round 8
+     1.1-2.16), fresh water (a bore's roller and the sheet behind its crest, a breaking whitecap) up to 2.2 x more (edgeS),
+     the lips and the clumps' tops brighter; ~4-7 x the band, past a diffuse foam's ~.3-.8 x under our darker zenith: what
+     a photographer's exposure for the surf (or the eye's local adaptation) makes of a storm, the rest of the scene left as
+     it is. Measured (RTX 1080p, a set's arrival): 96 % p99.5 150 -> 194, the white water's p99 153 -> 196; the cap 135 ->
+     183; golden 156 -> 197; Intel T1 at the user's geometry 145 -> 194. Post's meter stops the frame down ~13 % for it.
+     The night keeps round 8's (it only darkened the frame there). notes/ocean.md, Round 9 */
   float ovc = smoothstep(.1, .5, uWx1.y);
-  if (ovc > 0. && cov > .004) {
+  if (ovc > 0. && (cov > .004 || bub > .004)) {
     vec3 Lh = textureLod(sRefl, clamp(wxUV0(vec3(0., .0698, .9976)), vec2(.02), vec2(.98)), 5.).rgb;
-    foamL = max(foamL, Lh * ovc * mix(1.1, 2.16, smoothstep(.45, .95, fsum)));
+    /* [r9] by day (from sun -3 deg; the night keeps round 8's), and the thick floor and the aerated water in the surf zone
+       (a bore breaking or the set's residue: the open water's whitecaps keep round 8's, a few px each past ~100 m, where
+       whiter they raised the far sea's toggling at the user's 240 Hz) */
+    float dk = smoothstep(-.05, .1, uSun.y), sk = dk * wxSat(max(vSwC.z, vMisc.w) * 2.5);
+    foamL = max(foamL, Lh * ovc * mix(mix(1.1, 1.2, dk), mix(2.16, 2.8, sk), smoothstep(.4, .95, fsum)));
+    /* [r9] the aerated water in the foam's holes and round it, lit through the foam by the same low sky. [r9b] Milkier (REVIEW-9
+       W 1: "lift the surf zone's water toward a mid-grey"): .32-.4 of the low sky (.2-.26), x 2.1 inside dense foam (x 2.6);
+       the near water at 96 % by day p25 / p50 35 / 57 -> 44 / 64 with the white water's heaps (above) taking as much light
+       off their shaded sides as the water adds: the meter moves -1 to -2 % */
+    bubC = max(bubC, Lh * (ovc * sk) * vec3(.32, .4, .4) * (1. + 1.1 * smoothstep(.6, .95, fsum)) * (1. - alpha));
   }
   /* [r2] thick white water is a tumbling mass: its clumps' tops catch the sky and the gaps between them are grey;
      on a bore's front the roller faces away from the bright zenith, darker down toward its toe */
   float thk = smoothstep(.55, .95, fsum);
-  float rollS = bN > .002 && age > .5 ? mix(.62, 1.04, smoothstep(.72, .99, age)) : 1.;
+  float rollS = bN > .002 && age > .5 ? mix(.62, 1.2, smoothstep(.72, .99, age)) : 1.;
   /* [r3] thick white water is white with small dark pits, not grey clouds: the clumps shade it less, the lace's holes pit it */
-  foamL *= mix(mix(mix(.78, 1.08, pat), mix(.62, 1.18, clump * clump * (3. - 2. * clump)) * mix(.82, 1.04, smoothstep(.15, .45, pat)), thk) * mix(1., rollS, bN) * edgeS, 1., farP);
+  foamL *= mix(mix(mix(.78, 1.08, pat), mix(.62, 1.35, clump * clump * (3. - 2. * clump)) * mix(.82, 1.04, smoothstep(.15, .45, pat)), thk) * mix(1., rollS, bN) * edgeS, 1., farP);
   vec3 c = cw + bubC * bub;
 /*@lab*/  if (dbg == 17) { o = vec4(wxLuma(foamL) / uExpo.x, wxLuma(c) / uExpo.x, cov, 0.); return; }   // lab: foam and water luma (rel), coverage (alpha 0: raw)/*@end*/
   if (film > .5) { c = vec3(0.); alpha = 1.; }                         // a dry shore under the swash's film: only foam
@@ -1154,6 +1204,10 @@ void main() {
      smaller (x .75, a set's at most 1.3 x the mean: a 1.8 x set burst on a reef stood ~58 m, 4 deg over the horizon) */
   float farK = smoothstep(350., 800., length(base.xz));
   float Hm = 32. * sp.w * sea * min(env, mix(1.8, 1.3, farK)) * mix(1., .75, farK) * mix(.6, 1., rnd.y);
+  /* [r9] the near shelf's rocks (the window's 60-130 m) only: a set's biggest crests throw their spray higher, and it is lit
+     whiter (below); the reef's boulder (~340 m), the reefs and the stack keep round 8's veils */
+  float nearK = 1. - smoothstep(150., 300., length(base.xz));
+  Hm *= 1. + .35 * smoothstep(1., 1.8, env) * nearK;
   float a = max(age, 0.);
   vec3 tb = normalize(base - eye), rt = normalize(vec3(tb.z, 0., -tb.x));
   vec3 wnd = vec3(uWindO.x, 0., uWindO.y) * uWindO.z;
@@ -1161,29 +1215,38 @@ void main() {
   vec3 c, ax; float len, wd0, wd1;
   if (mist) {
     /* the mist: a low veil the jets leave, blown downwind, gone by 3 s. [r8] By 4.5 s: a set's bursts leave spray hanging
-       over the rock between them (the jets themselves still fall back by 2.6 s) */
+       over the rock between them (the jets themselves still fall back by 2.6 s). [r9] By 5 s, standing higher (.3 x the
+       burst), a little narrower and fainter, streaming downwind: round 8's wide low veil read as a grey bank (REVIEW-8 s8) */
+    /* [r9b] the near shelf's rocks (REVIEW-9 W 1, "longer-hanging mist"): the spray a set's burst leaves hangs over the rock
+       and drifts downwind for ~8 s, rising and spreading as it thins (shore-acres), ending well before the next crest
+       (the swell's period ~11 s): .62 x the burst wide growing to x 1.6, .32 at most, from 3.5 s to 8.5 s */
     float e = 1. - exp(-a / .8);
-    c = base + vec3(0., .22 * Hm * (.5 + .5 * e), 0.) + wnd * .25 * a;
-    ax = vec3(0., 1., 0.); len = .22 * Hm * (.7 + .3 * e); wd0 = wd1 = .45 * Hm * (.7 + .4 * wxSat(a / 2.));
-    vA = on * smoothstep(.3, .9, age) * (1. - smoothstep(1.8, 4.5, a)) * .24;
+    c = base + vec3(0., mix(.3, .38, nearK) * Hm * (.5 + .5 * e) + nearK * .8 * a, 0.) + wnd * mix(.3, .42, nearK) * a;
+    ax = vec3(0., 1., 0.); len = mix(.3, .42, nearK) * Hm * (.7 + .3 * e);
+    wd0 = wd1 = mix(.42, .62, nearK) * Hm * (.7 + mix(.5, .95, nearK) * wxSat(a / mix(2.5, 5., nearK)));
+    vA = on * smoothstep(.3, .9, age) * (1. - smoothstep(mix(2., 3.5, nearK), mix(5., 8.5, nearK), a)) * mix(.2, .32, nearK);
     vSeed = vec3(rnd.yz, -1.);
   } else {
     /* a jet: tilted from the vertical within the fan across the view, and toward the shore (the eye's side) */
-    float th = (rnd.z - .5) * .7 + (rnd.y - .5) * .16;                 // +-22 deg at most
+    /* [r9b] +-22 deg at most; the near shelf's +-40: a set's crest bursts over a near rock as a wide fan, several times the
+       rock (shore-acres), not a slim fountain (REVIEW-9 s85) */
+    float th = (rnd.z - .5) * mix(.7, 1.3, nearK) + (rnd.y - .5) * .16;
     vec3 dir = normalize(vec3(0., cos(th), 0.) + rt * sin(th) - tb * (.15 + .2 * rnd.x));
     float td = 1.5, e = 1. - exp(-a / td);
     float hj = Hm * mix(.35, 1., rnd.x * rnd.x) * (1. - .9 * abs(th));   // the jets' own heights: the middle ones tallest, a ragged top
     float v0 = sqrt(2. * 9.81 * max(hj, .01)) * 1.22;                  // with the drag, the head peaks near its height about 1 s in
     float up = v0 * td * e * dir.y - 9.81 * td * (a - td * e);
-    vec3 head = base + vec3(dir.x, 0., dir.z) * v0 * td * e + vec3(0., max(up, -.5), 0.) + wnd * .06 * a;
+    vec3 head = base + vec3(dir.x, 0., dir.z) * v0 * td * e + vec3(0., max(up, -.5), 0.) + wnd * (.06 + .12 * smoothstep(.6, 2., a)) * a;
     /* the column stands on the rock while it rises, then its foot leaves it and it falls back as a mass */
     vec3 foot = base + (head - base) * (.75 * smoothstep(.6, 1.8, a));
     c = .5 * (head + foot); ax = head - foot; len = length(ax); ax = len > 1e-3 ? ax / len : vec3(0., 1., 0.);
-    float w = (.08 + .07 * rnd.y) * (Hm + hj) * (1. + .6 * wxSat(a / 1.2));
+    /* [r9b] the near shelf's jets 1.5 x wider and billowing out as they rise (to x 2.1 by 1.4 s: more body), their mass
+       holding a little longer (to 3.3 s) before it thins to the mist */
+    float w = (.08 + .07 * rnd.y) * (Hm + hj) * (1. + mix(.6, 1.1, nearK) * wxSat(a / mix(1.2, 1.4, nearK))) * mix(1., 1.5, nearK);
     wd0 = w * .5; wd1 = w;                                             // narrower at the foot: a fan
     len = .5 * len + .6 * w;                                           // half the column plus its rounded head
-    vA = on * smoothstep(0., .05, age) * (1. - smoothstep(1.9, 2.6, a)) * mix(1., .8, farK);
-    vSeed = vec3(rnd.xy, (1. - smoothstep(.8, 2.3, a)) * mix(1., .5, farK));
+    vA = on * smoothstep(0., .05, age) * (1. - smoothstep(mix(1.9, 2.4, nearK), mix(2.6, 3.3, nearK), a)) * mix(1., .8, farK);
+    vSeed = vec3(rnd.xy, (1. - smoothstep(.8, mix(2.3, 2.9, nearK), a)) * mix(1., .5, farK));
   }
   /* the quad along the jet on screen: up its axis, across it facing the eye */
   vec3 to = normalize(c - eye), side = cross(ax, to);
@@ -1208,7 +1271,7 @@ void main() {
      the left head took a gap in the deck that is not there (186-190 / 255 at 96 % by day, against 135 for the right one
      and ~105 for the surf: a white puff, REVIEW-7) */
   vec3 Lb = textureLod(sRefl, clamp(wxUV0(vec3(0., .0698, .9976)), vec2(.02), vec2(.98)), 5.).rgb;
-  vec3 L = wxSunLight(wxPlanet(c)) * wxCloudShadow(c) * wxSunShadow(c) * PI * ph + wxAmbient(1.) * .98 + Lb * 1.5
+  vec3 L = wxSunLight(wxPlanet(c)) * wxCloudShadow(c) * wxSunShadow(c) * PI * ph + wxAmbient(1.) * .98 + Lb * (1.5 + 1.5 * smoothstep(.1, .5, uWx1.y) * smoothstep(-.05, .1, uSun.y) * nearK)
          + wxFlashE(c, vec3(0.)) * .25;                                // [1.2] lightning: the contract's one light, facing it
   vL = L * ap.a; vAp = ap.rgb;                                        // the jet's own light is shaded along it, the air's is not
   gl_Position = uViewProj * vec4(p, 1.);
@@ -1256,7 +1319,7 @@ void main() {
     float rr = abs(x) + rag + (sk - .5) * .55 * smoothstep(.2, .8, t);
     /* the core: a third of the jet across at its foot, narrowing and thinning toward the head, where the column breaks up
        (round 7's first form kept half the jet opaque to its head: far bursts still read as white puffs) */
-    float coreW = mix(.1, .34, d) * (1. - .5 * t) + .08 * sm;            // [r8] .08 (round 6: .2): unresolved jets widened to a puff
+    float coreW = mix(.1, .4, d) * (1. - .5 * t) + .08 * sm;             // [r8] .08 (round 6: .2): unresolved jets widened to a puff; [r9b] .4 (.34): more body
     float thr = .95 - 1.2 * d;
     float core = (1. - smoothstep(coreW - .08, coreW + .12, rr)) * cap * foot * mix(1., .55, smoothstep(.45, .95, t));
     core *= smoothstep(thr - .1 - .2 * sm, thr + .1 + .2 * sm, n + .35 * (1. - abs(x)) + .25);
@@ -1266,17 +1329,18 @@ void main() {
               * mix(1., smoothstep(.32, .68, sk), smoothstep(.35, .85, t));
     float spray = env * (.2 + .55 * smoothstep(.25, .75, thr2) + .2 * smoothstep(.4, .9, nf)) * mix(.5, .9, d);
     spray *= 1. - .35 * sm;                                             // unresolved: the mean of a grain, not its peaks
-    float drops = texture(uFoamTex, vQ * vec2(.9, 1.7) + vSeed.yx * 3.).a * (1. - smoothstep(.6, 1.15, rr)) * smoothstep(.12, .55, t) * (2.4 - 1.2 * d);
+    float drops = texture(uFoamTex, vQ * vec2(.9, 1.7) + vSeed.yx * 3.).a * (1. - smoothstep(.6, 1.15, rr)) * smoothstep(.12, .55, t) * (2.4 - 1.2 * d)
+                * (1. - smoothstep(.78, .98, abs(x)));                    // [r9] never to the quad's side: a jet the wind leans showed it as a ruled edge
     /* [r8] THE BODY HAS STRUCTURE (REVIEW-7: the near bursts' bodies a flat opaque white): opaque where its clumps are
        dense, translucent between them, so the rock and the sea show faintly through the mass; and each clump lit on its top
        and shaded underneath (the coarse noise falling or rising along the jet: one more fetch), so the body reads as
        tumbling water, not a white shape */
-    float n1u = texture(uFoamTex, q + vec2(0., .045)).b, top = smoothstep(-.07, .07, n1 - n1u);
-    a = wxSat(max(core * mix(.66, .97, smoothstep(.3, .75, n)), spray) + drops) * vA;
+    float n1u = texture(uFoamTex, q + vec2(0., .045)).b, top = smoothstep(-.16, .16, n1 - n1u);   // [r9b] +-.16 (.07): a soft turn from lit to shaded, no camouflage edges
+    a = wxSat(max(core * mix(.86, .97, smoothstep(.3, .75, n)), spray) + drops) * vA;   // [r9] .78 (.66): lit whiter, the clumps' gaps read as blotches; [r9b] .86: the bigger body's gaps read as patches at .78
     /* the light along the jet: the thick water at its foot darker and a little green, the clumps' tops whiter; the thin
        spray a little greyer than the core (its drops are fewer than the foam's bubbles) */
     sh = mix(vec3(.66, .75, .73), vec3(1.06), smoothstep(.0, .5, t)) * (.86 + .26 * smoothstep(.3, .8, nf)) * mix(.84, 1., wxSat(core * 1.3));
-    sh *= mix(1., mix(.72, 1.1, top), wxSat(core * 1.5) * (1. - sm));
+    sh *= mix(1., mix(.74, 1.1, top), wxSat(core * 1.5 + spray * .6) * (1. - sm));   // [r9b] .74-1.1 (.8-1.08), and the spray's lumps: tops lit, undersides grey
   }
   if (a < .004) discard;
   o = vec4(wxGuard(((vL * sh + vAp) * vCl.a + vCl.rgb) * a), a);
@@ -1350,7 +1414,7 @@ void main() {
   /* [r8] under an overcast the spray off a crest stands against the bright low sky that lights all the white water (the
      sea's foam and the bursts take it: REFL 4 deg up over the open sea, lod 5), not the deck's mean alone (a grey veil) */
   vec3 Ls = textureLod(sRefl, vec2(.5, .8), 8.).rgb * .95;
-  Ls = max(Ls, textureLod(sRefl, clamp(wxUV0(vec3(0., .0698, .9976)), vec2(.02), vec2(.98)), 5.).rgb * .9 * smoothstep(.1, .5, uWx1.y));
+  Ls = max(Ls, textureLod(sRefl, clamp(wxUV0(vec3(0., .0698, .9976)), vec2(.02), vec2(.98)), 5.).rgb * mix(.9, 1.6, smoothstep(-.05, .1, uSun.y) * (1. - smoothstep(90., 180., r))) * smoothstep(.1, .5, uWx1.y));   // [r9] x 1.6 by day near the window
   vec3 L = wxSunLight(wxPlanet(c)) * wxCloudShadow(c) * PI * ph + Ls + wxFlashE(c, vec3(0.)) * .25;
   vL = L * ap.a + ap.rgb;
   gl_Position = uViewProj * vec4(p, 1.);
@@ -1459,11 +1523,25 @@ void main() {
      distance in to 15 %); the lantern's steady part, and the far path under the lamp, keep all of theirs */
   float r2b = max(dot(uBeacon.xyz - p, uBeacon.xyz - p), 1.);
   float stB = uBeacon.w * exp(-3.912e-3 * sqrt(r2b) / max(uWx1.w, .2)) * uExpo.x / r2b;
-  float bw = stB + max(bl.w - stB, 0.) * mix(.25, 1., smoothstep(.15, .8, t / max(length(uBeacon.xz), 1.)));
+  /* [r9] THE PATH'S TOP EDGE (REVIEW-8, D's path-base-x6: a hard bright band along the stack's waterline). wxBeacon's steady
+     glow is isotropic and 1 / r^2, so the water at the stack's foot, 70 m under the lamp, took ~300x the light of the path's
+     middle and the glint there needs only ~12 deg slopes: a band as wide as the strip that ended at the lamp's distance
+     within a pixel row. A lighthouse's lens sends its light out near the horizontal (a few degrees of vertical divergence;
+     the beams' part already has its own, uBeaconB.z): the steady part here falls off with the lamp's depression toward the
+     water (sigma 5 deg, 3 % stray light past it), so the path fades in over the last few hundred metres before the stack */
+  float dpL = (uBeacon.y - p.y) / max(length(uBeacon.xz - p.xz), 1.);
+  float bw = stB * mix(.03, 1., exp(-.5 * dpL * dpL / .0076)) + max(bl.w - stB, 0.) * mix(.25, 1., smoothstep(.15, .8, t / max(length(uBeacon.xz), 1.)));
   vec3 Lc = uBeaconC.rgb * bw * g;
   vec2 fw = abs(dx) + abs(dy);
-  float sp = textureLod(uFoamTex, p.xz / (512. * max(fw.x, .02)) + vec2(1., 2.) * uStreak.w, 0.).a;
-  Lc *= mix(1., sp / .075, .9);
+  /* [r9, L's ask] near the window the sparkle field drifts fast (glints come and go), its cells a few px; toward the stack's
+     foot a pixel holds thousands of facets (at 1.5 km 50-130 m of sea): there the glitter is a steady band that twinkles
+     slowly. The far field drifts at the streaks' slow rate ((2, 1) tiles per 102.4 s: whole tiles, no seam) and sparkles
+     less; REVIEW-8 2.5: at dusk the fast field re-formed every frame at the stack's foot (rows ~200 px wide flicking) */
+  float Fw = max(fw.x, .02), fa = smoothstep(1.5, 12., Fw);
+  vec2 sq = p.xz / (512. * Fw);
+  float sp = textureLod(uFoamTex, sq + vec2(1., 2.) * uStreak.w, 0.).a;
+  if (fa > 0.) sp = mix(sp, textureLod(uFoamTex, sq.yx + vec2(2., 1.) * uStreak.z, 0.).a, fa);
+  Lc *= mix(1., sp / .075, mix(.9, .45, fa));
   float lum = wxLuma(Lc);
   Lc *= lum > 1e-9 ? 1.4 * (1. - exp(-lum / 1.4)) / lum : 0.;
   Lc *= wxAerial(d, t * 1e-3).a * uBpK * (1. - smoothstep(.7, 1., ax));

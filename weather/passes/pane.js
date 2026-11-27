@@ -23,9 +23,9 @@
      spherical cap of contact angle 60 deg ([r3]; [r8] flatter as it dries) and every running drop as a head and a tail: the head a cap a
      little wider than long, its dome leaning forward; behind it a narrow rounded rivulet that thins and
      flattens over 0.8-3.4 r.
-   FILM  R16F at C/2: each frame times exp(-dt / 12 s), then the running drops' tracks, a rounded ridge
-     of height 1 (MAX). The view reads it as a water ridge of uFilmPx.z CSS px: a wet track refracts,
-     so it shows as a thin line that bends the view, and fades as it dries.
+   FILM  R16F at C/2: each frame times exp(-dt / pane.filmTau) ([r9f] 3 s, round 9 12 s), then the running drops' tracks,
+     a rivulet's section (MAX). The view reads it as a water ridge of uFilmPx.z CSS px: a wet track refracts,
+     so it shows as a thin line that bends the view, and drains within seconds unless runners keep feeding it.
    MIST  RG16F at C/4, ping-pong, on the inside of the glass: r eases toward
      F* = smooth(thr(x) - .25, thr(x) + .05, mist) x nucleation(x) (the edges first) with tau 6 s in
      and 4 s out, under the walked uWx3.x; g is the clear track of an inside run (1 at the run, decays
@@ -44,6 +44,16 @@ uniform vec4 uOn;               // x drops on the glass, y the film, z the mist,
 uniform float uLev, uSheet, uSheetLean;     // [r3] the sheet's slant with the wind along the glass (dx / dy)
 uniform vec4 uGlass;            // [r4] xy the glass in its own px (the CSS size / pane.glass scale: a small view shows the same
                                 // window, so its drops are smaller on screen), z glass px per CSS px
+uniform vec4 uLampP;            // [L r9] the lighthouse's lamp: xy its uv (y up), w 1 while post grades its light (night)
+/* [L r9] (stream L's part of this file: the lamp's glare on the glass) the local contrast in heavy rain (uTone.w) divides by
+   the 16 px-scale mean, and round the lighthouse's lamp that mean is the lamp's own core (1e4-1e5 pre-exposed px^2 at
+   night): the ratio sat at its .3 floor over every texel the lamp reaches, a square ~70 px across 30 % darker round the
+   lamp in every night storm, and a dark ring round its flash. Within .035-.06 of the view's height of the lamp the
+   contrast fades out: there it is the lamp's halo, not the storm's murk. 1 by day and with no lighthouse */
+float paneLampClear(vec2 uv) {
+  if (uLampP.w < .5) return 1.;
+  return smoothstep(.035, .06, length((uv - uLampP.xy) * vec2(uRes.x / uRes.y, 1.)));
+}
 /* the height map holds exp(h) */
 float paneH(vec2 uv) { return log(max(texture(uH, uv).r, 1.)); }
 float paneMist(vec2 uv) { if (uOn.z < .5) return 0.; vec2 m = texture(uMist, uv).rg; return clamp(m.r * (1. - m.g), 0., 1.); }
@@ -77,7 +87,9 @@ vec3 paneView(vec2 uv, float fixLod, out float cover, out float mistF) {
     /* where it flows: fixed paths on the glass. The noise is the rain's 64 x 64 texture read with a smooth
        (C1) single tap; the streaming moves whole periods of it per 240 s (1 and 2 periods of 64 cells) */
     float m = paneSn(vec2(shuv.x * a.x * 3.3 + 1.7, shuv.y * 1.2 + 9.));
-    sheet = uSheet * smoothstep(.25, .7, m);
+    /* [r9] more of it lower down: the water of the whole pane above runs over the lower glass (uv.y is up), where the runs
+       have merged into sheets; the upper glass holds beads */
+    sheet = uSheet * smoothstep(.25, .7, m + .12 - .3 * smoothstep(.15, .85, uv.y));
     if (sheet > .001) {
       vec2 sp = shp / vec2(14., 110.);
       float y1 = sp.y + uTime.y * 64. / 240., y2 = sp.y * 1.7 + uTime.y * 128. / 240., e1 = .05;
@@ -136,7 +148,7 @@ vec3 paneView(vec2 uv, float fixLod, out float cover, out float mistF) {
      16 px-scale relief is given back, as a photographer's clarity, so the storm is not featureless murk */
   if (uTone.w > 0.) {
     float Yo = wxLuma(outside), Yl = wxLuma(textureLod(uDown, uv + warp, min(3., uLev)).rgb);
-    outside *= pow(clamp((Yo + 1e-5) / (Yl + 1e-5), .3, 3.), uTone.w);
+    outside *= pow(clamp((Yo + 1e-5) / (Yl + 1e-5), .3, 3.), uTone.w * paneLampClear(uv));   // [L r9] not round the lamp
   }
   /* [r3] the flash limit on the scene (the area light), then the channels on top of it, sharp */
   if (uOn.w > .5) outside *= texture(uLimK, uv + warp).r;
@@ -177,13 +189,18 @@ vec3 paneView(vec2 uv, float fixLod, out float cover, out float mistF) {
        drop has against a bright sky (render.md 11.3) */
     /* [r3] firmer: real beads show an outline about a fifth of their radius wide (steeper contact lines on
        dirty glass and the eye's own blur); a 1-2 px bead read as nothing with the thin physical ring */
-    thru = mix(thru, dark * 2., smoothstep(.55, .75, sa) * .45);
-    thru = mix(thru, dark * 1.4, smoothstep(.95, 1.02, st));
+    /* [r9] a bead's (its contact line, 60 deg); a rivulet's 40 deg edges bend the view without going dark (a wet track alone:
+       hb = 0 exactly) */
+    /* [r9] darker and wider, as win-gondola's beads at 1:1 (a black outline over a third of a bead, its bright refracted sky
+       below): the room the rim's total internal reflection shows is a tenth of the day outside, not a third (round 8's rims
+       were 12 % and 40 % darker than the view: at 1-3 px a bead read as a faint grey dot, REVIEW-8 #5) */
+    thru = mix(thru, dark * .9, smoothstep(.43, .7, sa) * .72 * smoothstep(0., .02, hb));
+    thru = mix(thru, dark * .4, smoothstep(.95, 1.02, st));
     c = mix(outside, thru, smoothstep(0., .06, h));
     /*@lab*/ if (uC0.y > .5) return uC0.y < 1.5 ? vec3(uvr, 0.) : uC0.y < 2.5 ? vec3(g * .5 + .5, 0.) : vec3(lod / uLev); /*@end*/
   }
   /* the film darkens a little, the sheet a little more and catches the sky */
-  c *= 1. - .03 * film - .02 * sheet - .05 * sheetEdge - .2 * edge;
+  c *= 1. - .03 * film - .02 * sheet - .05 * sheetEdge - .06 * edge;
   /* the mist, inside: the scene blurred and lifted, the drops behind it blurred away */
   mistF = paneMist(uv);
   if (mistF > .002) {
@@ -211,6 +228,12 @@ WX.pass((function () {
   WX.param("pane.sheet", 1, 0, 2, 0.05, "pane");        // the storm's streaming sheet
   WX.param("pane.microFine", 3, 0, 5, 1, "pane");       // [r3] the lowest tier that draws the finest micro-bead layer
   WX.param("pane.glass", 0.6, 0.3, 1, 0.05, "pane");    // [r4] the drops' smallest scale on a small view (a phone); 1 = CSS px everywhere
+  WX.param("pane.filmTau", 3, 0.5, 20, 0.25, "pane");   // [r9f] in a storm the wet tracks' water drains with this tau, s (round 9: 12)
+  WX.param("pane.filmTauCalm", 12, 0.5, 20, 0.25, "pane");   // [r9f] and in rain without a storm (round 9's)
+  WX.param("pane.l2", 1, 0, 1.25, 0.05, "pane");        // [r9f] the 8 px micro layer's share of the density (round 9: .8)
+  WX.param("pane.pathAge", 1, 0, 3, 0.25, "pane");      // [r9f] how fast a path in use for over 8 s stops drawing the runs (0: round 9)
+  WX.param("pane.rimFix", 1, 0, 1, 1, "pane");          // [r9f] a small drop's height restored to its rim's slope at the map's texel
+  WX.param("pane.lampKeep", 4, 0, 12, 0.5, "pane");     // [r9f] no micro-drop's edge within this many glass px of the lighthouse's lamp (0: off)
   const Cg = [1280, 820], glassU = new Float32Array([1280, 820, 1, 0]);
   /*@lab*/ WX.param("pane.debug", 0, 0, 3, 1, "pane"); /*@end*/   // lab: 1 the refracted uv, 2 the slope, 3 the lod
 
@@ -229,7 +252,7 @@ WX.pass((function () {
      NOTHING BLINKS OUT ([r8], the user: "the drops suddenly disappear instead of dropping down"). A drop leaves the glass only
      by running (the same drop, as big, starting slowly, speeding up as it takes in what lies in its path, shedding a trail of
      small ones), by being swept up by a runner, by merging, off the bottom edge, or by drying: after the rain it flattens in
-     place (its lens and rim fade) and then its contact line recedes, over 12 + 7a s (a in px). Round 7 had a runner that came
+     place (its lens and rim fade) and then its contact line recedes, over 16 + 7a s (a in px; [r9] 12 + 7a). Round 7 had a runner that came
      to rest vanish whenever the bead store was full (in rain it always was): 1.3-5 of the pane's biggest drops a second. */
   function makeSim(seed) {
     const NB = 6600, NS = 330, NT = 4096;
@@ -243,6 +266,7 @@ WX.pass((function () {
     const svx = new Float32Array(NS), sdir = new Float32Array(NS * 2), sshed = new Float32Array(NS), sgap = new Float32Array(NS);
     const srest = new Float32Array(NS), sph = new Float32Array(NS), spx = new Float32Array(NS), spy = new Float32Array(NS);
     const swet = new Float32Array(NS), tw = new Float32Array(NT);      // [r3] how wet the path ahead was; a track's weight
+    const smp = new Float32Array(NS);                                 // [r9] the meander's phase: the way run over its wavelength
     const next = new Int32Array(NB);
     let head = new Int32Array(1), gw = 1, gh = 1, nb = 0, ns = 0, W = 1280, H = 820, t = 0, nextArr = 0, acc = 0;
     const CELL = 16;
@@ -262,17 +286,24 @@ WX.pass((function () {
        path pins less and draws the next drops in), so the runs gather into a few long rivulets that merge and
        branch. Read as exp(-age / 30 s), so nothing has to decay per step */
     const WC = 4, WTAU = 30;
-    let ww = 1, wh = 1, wetT = new Float32Array(1).fill(-1e9);
+    /* [r9f] A PATH TIRES. wet0: when the cell's present wet spell began (a crossing after WGAP s dry starts a new one). A path
+       in use for longer than WHOLD s draws less (its pull falls with tau WFT): in a gale the flow re-routes as the gusts and
+       the arriving drops move it, and no channel is fed in one place for half a minute (REVIEW-9 2.3: one lay over the
+       lighthouse's lamp for a whole clip). env.age 0 is round 9's (a path draws for as long as it is wet) */
+    const WGAP = 6, WHOLD = 8, WFT = 3;
+    let ww = 1, wh = 1, wetT = new Float32Array(1).fill(-1e9), wet0 = new Float32Array(1).fill(-1e9);
     function wetAt(x, y) {
       const ix = Math.floor(x / WC), iy = Math.floor(y / WC);
       if (ix < 0 || iy < 0 || ix >= ww || iy >= wh) return 0;
-      const a = t - wetT[iy * ww + ix];
-      return a <= 0 ? 1 : a > 150 ? 0 : Math.exp(-a / WTAU);
+      const k = iy * ww + ix, a = t - wetT[k];
+      const w = a <= 0 ? 1 : a > 150 ? 0 : Math.exp(-a / WTAU);
+      const u = t - wet0[k] - WHOLD;
+      return u > 0 && env.age > 0 ? w * Math.exp(-u * env.age / WFT) : w;
     }
     function wetMark(x, y, r) {
       const x0 = Math.max(0, Math.floor((x - r) / WC)), x1 = Math.min(ww - 1, Math.floor((x + r) / WC));
       const y0 = Math.max(0, Math.floor((y - r) / WC)), y1 = Math.min(wh - 1, Math.floor((y + r) / WC));
-      for (let iy = y0; iy <= y1; iy++) for (let ix = x0; ix <= x1; ix++) wetT[iy * ww + ix] = t;
+      for (let iy = y0; iy <= y1; iy++) for (let ix = x0; ix <= x1; ix++) { const k = iy * ww + ix; if (t - wetT[k] > WGAP) wet0[k] = t; wetT[k] = t; }
     }
     /* tracks for the film: (x0, y0, x1, y1, width, value) */
     const tracks = new Float32Array(NT * 6); let nt = 0;
@@ -311,7 +342,7 @@ WX.pass((function () {
       }
       W = w; H = h;
       gw = Math.ceil(W / CELL) + 2; gh = Math.ceil(H / CELL) + 2;
-      if (ww !== Math.ceil(W / WC) || wh !== Math.ceil(H / WC)) { ww = Math.ceil(W / WC); wh = Math.ceil(H / WC); wetT = new Float32Array(ww * wh).fill(-1e9); }
+      if (ww !== Math.ceil(W / WC) || wh !== Math.ceil(H / WC)) { ww = Math.ceil(W / WC); wh = Math.ceil(H / WC); wetT = new Float32Array(ww * wh).fill(-1e9); wet0 = new Float32Array(ww * wh).fill(-1e9); }
       if (head.length < gw * gh) head = new Int32Array(gw * gh);
       rebuild();
     }
@@ -352,7 +383,7 @@ WX.pass((function () {
     function addSlider(x, y, r) {
       if (ns >= NS) return false;
       sx[ns] = x; sy[ns] = y; sr[ns] = r; sv[ns] = 0; svx[ns] = 0; sdir[ns * 2] = 0; sdir[ns * 2 + 1] = 1;
-      sshed[ns] = 0; sgap[ns] = 2 + 4 * rnd(); srest[ns] = 0; sph[ns] = rnd() * 100; spx[ns] = x; spy[ns] = y; swet[ns] = 0;
+      sshed[ns] = 0; sgap[ns] = 2 + 4 * rnd(); srest[ns] = 0; sph[ns] = rnd() * 100; spx[ns] = x; spy[ns] = y; swet[ns] = 0; smp[ns] = 0;
       ns++;
       return true;
     }
@@ -361,7 +392,7 @@ WX.pass((function () {
       if (i !== ns) {
         sx[i] = sx[ns]; sy[i] = sy[ns]; sr[i] = sr[ns]; sv[i] = sv[ns]; svx[i] = svx[ns]; swet[i] = swet[ns];
         sdir[i * 2] = sdir[ns * 2]; sdir[i * 2 + 1] = sdir[ns * 2 + 1]; sshed[i] = sshed[ns]; sgap[i] = sgap[ns];
-        srest[i] = srest[ns]; sph[i] = sph[ns]; spx[i] = spx[ns]; spy[i] = spy[ns];
+        srest[i] = srest[ns]; sph[i] = sph[ns]; spx[i] = spx[ns]; spy[i] = spy[ns]; smp[i] = smp[ns];
       }
     }
     /* [r8] a runner at rest is a bead again, the same drop where it stopped (it moves < 2 px/s, so where fill() drew it last),
@@ -431,7 +462,7 @@ WX.pass((function () {
       }
       return false;
     }
-    const env = { precip: 0, wind: 1, lean: 0, spread: 0, stag: 0.35, dry: 0, capB: 3000, capS: 150, rate: 400, rc: 5.6, rmax: 7.3, rcK: 1, rmed: 2.0, sig: 0.55, amax: 5, slick: 1 };
+    const env = { precip: 0, wind: 1, lean: 0, spread: 0, stag: 0.35, dry: 0, capB: 3000, capS: 150, rate: 400, rc: 5.6, rmax: 7.3, rcK: 1, rmed: 2.0, sig: 0.55, amax: 5, slick: 1, storm: 0, filmTau: 3, age: 1 };
     function arrive() {
       let r = Math.exp(Math.log(env.rmed) + env.sig * gauss());
       if (r < 0.9) return;                           // [r3] the finest spray is the micro-drops' (GPU) layer
@@ -481,21 +512,33 @@ WX.pass((function () {
         const target = Math.min(VMAX, Math.max(0, kv * (r * r * r - rm * rm * rm) / (rm * rm)));
         sv[i] += (target - sv[i]) * Math.min(1, h / 0.2);
         const sp = sv[i];
-        /* the path: a smooth meander of the slider's own, the pinning field's slope, a lean with the wind */
-        const g = (pin(x + 3, y) - pin(x - 3, y)) / 6;
-        const mea = 0.28 * (vnoise(y / 45 + sph[i], sph[i] * 3.1) - 0.5) * 2 + 0.3 * (vnoise(y / 11 + sph[i] * 1.7, sph[i]) - 0.5) * 2;
+        /* the path: a smooth meander of the slider's own, the pinning field's slope, a lean with the wind.
+           [r9] A RIVULET MEANDERS MORE AS IT CARRIES MORE WATER, NOT LESS (Le Grand-Piteira, Daerr & Limat 2006: a rivulet down a
+           partially wetting plate runs straight at small flow rates and meanders past a critical one, over a few cm): the
+           meander grows with the flow (its slope +-.25 for a creeping drop to +-.55 at 110 px/s, win-gondola's rain rivulets
+           wander a few px, a storm's more) and its wavelength with it (45 -> ~110 px, 2-4.5 cm at 100 px/s), while the glass's
+           local pull (the pinning slope, a wet path beside it) still eases with speed. Round 8 divided all of it by (1 + v / 80),
+           so a storm's runners (75-120 px/s) ran as straight rules, every one at the wind's slant (REVIEW-8 #3) */
+        const g = (pin(x + 3, y) - pin(x - 3, y)) / 6, lam = 1 + sp / 70, ma = 0.25 + 0.3 * WX.util.smooth(30, 110, sp);
+        const mea = ma * (vnoise(smp[i] + sph[i], sph[i] * 3.1) - 0.5) * 2 + 0.25 * (vnoise(smp[i] * 3.75 + sph[i] * 1.7, sph[i]) - 0.5) * 2;
         /* [r3] drawn toward the wet path just ahead (the next drops follow the first), and pushed along the glass
            by the wind: its cross part and the outflow from the stagnation point.
            [r8] The glass's pull (meander, pinning slope, a wet path beside it) bends it at most 0.8 sideways a px down, and less
-           as it speeds up (a fast rivulet runs straight); eased over 0.12 s: round 7's 3.6 x the wet path's pull snapped the
-           runners sideways at up to 75 deg, and with many of them the tracks zigzagged like wire */
-        const ay = y + r + 3, dw = 3 + 0.25 * r;
-        const steer = 1.5 * (wetAt(x + dw, ay) - wetAt(x - dw, ay));
-        const bend = Math.max(-0.8, Math.min(0.8, mea - 14 * g + steer)) / (1 + sp / 80);
-        const vxT = sp * (bend + env.lean + env.spread * 2 * (x / W - env.stag));
+           as it speeds up; eased over 0.12 s: round 7's 3.6 x the wet path's pull snapped the runners sideways at up to 75 deg,
+           and with many of them the tracks zigzagged like wire.
+           [r9] On a wet path it follows the channel (its own meander fades: the channel already has the first run's); the wind
+           pushes a drop by its area against its weight, so a small runner leans more than a heavy one (wk ~ 1 / r), and the
+           wind at the glass is turbulent (a second's flutter of +-35 % in a storm, each runner its own): no two tracks are
+           parallel rules */
+        const ay = y + r + 3, dw = 3 + 0.25 * r, fol = swet[i];
+        /* [r9] and a channel within ~2.5 widths draws it in (a second, wider probe): runs gather into the streams already there */
+        const steer = 1.5 * (wetAt(x + dw, ay) - wetAt(x - dw, ay)) + 1.2 * (wetAt(x + 2.5 * dw, ay + dw) - wetAt(x - 2.5 * dw, ay + dw));
+        const bend = Math.max(-0.9, Math.min(0.9, mea * (1 - 0.7 * fol) + (steer - 14 * g) / (1 + sp / 80 * (1 - fol))));
+        const wk = Math.max(0.6, Math.min(1.6, 4.5 / r)) * (1 + 0.35 * env.storm * (vnoise(t / 1.7 + sph[i] * 5, sph[i] * 2.3 + 40) - 0.5) * 2);
+        const vxT = sp * (bend + wk * (env.lean + env.spread * 2 * (x / W - env.stag)));
         svx[i] += (vxT - svx[i]) * Math.min(1, h / 0.12);
         const dx = svx[i] * h, dy = sp * h, dl = Math.sqrt(dx * dx + dy * dy);
-        sx[i] = x + dx; sy[i] = y + dy;
+        sx[i] = x + dx; sy[i] = y + dy; smp[i] += dl / (45 * lam);   // [r9] the phase runs with the way (not with y: a speed change would sweep it)
         if (dl > 0.05) wetMark(sx[i], sy[i] - r * 0.3, Math.max(1.5, r * 0.3));
         if (dl > 1e-4) { sdir[i * 2] += (dx / dl - sdir[i * 2]) * 0.3; sdir[i * 2 + 1] += (dy / dl - sdir[i * 2 + 1]) * 0.3; }
         const dn = Math.hypot(sdir[i * 2], sdir[i * 2 + 1]) || 1; sdir[i * 2] /= dn; sdir[i * 2 + 1] /= dn;
@@ -543,6 +586,28 @@ WX.pass((function () {
         if (sy[i] - sr[i] > H + 2 || sx[i] < -30 || sx[i] > W + 30) { /*@lab*/ ex("ranOff", sr[i]); /*@end*/ killSlider(i); continue; }
         if (srest[i] > 0.25) toBead(i);                // [r8] the same drop, a bead again (never dropped: round 7's blink)
       }
+      /* [r9] Two running drops whose heads touch are one rivulet: the smaller joins the larger (volume adds, it runs on at the
+         faster speed), so a channel carries the water of the runs that found it and a storm's streams merge into fewer, wider
+         ones down the glass. Absorbed runners are marked, then removed (their water is in the other: it never vanishes) */
+      let mergedAny = false;
+      for (let i = 0; i < ns; i++) {
+        if (sr[i] <= 0) continue;
+        const wi = Math.min(sr[i], RW), ki = Math.min(2.5, Math.pow(sr[i] / wi, 3));
+        for (let j = i + 1; j < ns; j++) {
+          if (sr[j] <= 0) continue;
+          const wj = Math.min(sr[j], RW), kj = Math.min(2.5, Math.pow(sr[j] / wj, 3));
+          const qx = sx[j] - sx[i], qy = sy[j] - sy[i], hx = sdir[i * 2], hy = sdir[i * 2 + 1];
+          const al = qx * hx + qy * hy, ac = qx * hy - qy * hx, La = 0.9 * (ki * wi + kj * wj), Lc = 0.8 * (wi + wj);
+          if (al * al / (La * La) + ac * ac / (Lc * Lc) >= 1) continue;
+          const a = sr[i] >= sr[j] ? i : j, b = a === i ? j : i, Va = sr[a] * sr[a] * sr[a], Vb = sr[b] * sr[b] * sr[b], kb = Vb / (Va + Vb);
+          sx[a] += (sx[b] - sx[a]) * kb; sy[a] += (sy[b] - sy[a]) * kb;      // at their volumes' centre: a lurch of a few px at most
+          sr[a] = Math.cbrt(Va + Vb); sv[a] = Math.max(sv[a], sv[b]); swet[a] = Math.max(swet[a], swet[b]);
+          /*@lab*/ ex("runMerged", sr[b]); /*@end*/
+          sr[b] = -1; mergedAny = true;
+          if (b === i) break;
+        }
+      }
+      if (mergedAny) for (let i = ns - 1; i >= 0; i--) if (sr[i] < 0) killSlider(i);
     }
     /* [r8] Evaporation. In rain the air is near saturation and a drop loses volume as diffusion lets it, in proportion to its
        contact radius: dr/dt = -KW / r, so the spray's tiny drops (1 px) go in about a minute (flattening under 0.8 px), and the
@@ -554,15 +619,16 @@ WX.pass((function () {
        and its dark rim fade), then the line recedes (40 %), in about 12 + 7a s (a in px: 1 mm ~ 30 s, 3 mm ~ 63 s), so the
        pane is dry within 90 s of the rain's end and no drop blinks out: fill() draws a bead under 0.8 px ever flatter, and it
        is gone at 0.4 px with nothing left to see. Round 7 shrank the radius alone (tau 15 s) and dropped a bead at .4 px; a
-       runner under .6 px vanished */
-    const KW = 0.007, TW = 120;
+       runner under .6 px vanished. [r9] 16 + 7a s (TD0): the fine ones too take tens of seconds (REVIEW-8 #5), as the
+       micro-drops' (15 + 9r) s */
+    const KW = 0.007, TW = 120, TD0 = 16;
     function shrink(dt) {
       const dry = env.dry, wet = 1 - dry, ke = Math.exp(-dt / 12);
       for (let i = 0; i < nb; i++) if (br[i] > 0) {
         let r = br[i], f = bf[i];
         if (wet > 0) r -= wet * dt * (KW / r + r / TW);
         if (dry > 0) {
-          const T = 12 + 7 * r;
+          const T = TD0 + 7 * r;
           if (f > FR) f = Math.max(FR, f - dry * dt * (1 - FR) / (0.6 * T));
           else r -= dry * dt * (r + 0.6) / (0.4 * T);
         }
@@ -570,7 +636,7 @@ WX.pass((function () {
         else { br[i] = r; bf[i] = f; be[i] = 0.08 + (be[i] - 0.08) * ke; }   // a merged bead slowly rounds
       }
       /* a runner loses water the same way; one that has lost its run comes to rest and is a bead (sliders()) */
-      for (let i = ns - 1; i >= 0; i--) sr[i] = Math.max(0.5, sr[i] - wet * dt * (KW / sr[i] + sr[i] / TW) - dry * dt * (sr[i] + 0.6) / (12 + 7 * sr[i]));
+      for (let i = ns - 1; i >= 0; i--) sr[i] = Math.max(0.5, sr[i] - wet * dt * (KW / sr[i] + sr[i] / TW) - dry * dt * (sr[i] + 0.6) / (TD0 + 7 * sr[i]));
     }
     function record(force) {
       for (let i = 0; i < ns; i++) {
@@ -581,8 +647,14 @@ WX.pass((function () {
           tracks[o] = spx[i]; tracks[o + 1] = spy[i]; tracks[o + 2] = sx[i]; tracks[o + 3] = sy[i];
           /* [r3] a first run leaves a faint wet line; a channel that keeps carrying water reads as a rivulet. [r8] .25 for a
              first run (.4): now that drops over their size all run, a storm's glass held ~10 fresh tracks in a 640 x 400 crop,
-             each a pair of dark lines; a single run's film is thin and dries, the channels stay */
-          tracks[o + 4] = Math.max(1.3, sr[i] * 0.5); tw[nt] = 0.25 + 0.75 * swet[i]; tracks[o + 5] = recording ? t : tw[nt];
+             each a pair of dark lines; a single run's film is thin and dries, the channels stay.
+             [r9] A first run .22 in rain, .12 in a storm (on a storm's sheeted glass one run's trail joins the water already
+             there; on beaded glass it stands out, as win-gondola's); a path that keeps carrying water, up to 1, and wider (a
+             rivulet: .45 -> .85 of the runner's radius): of a storm's ~100 tracks on the pane the channels read as the streams
+             (REVIEW-8 #3: "many long parallel dark lines"). The film holds water heights (pane.seg).
+             [r9f] .2 in a storm too: with the film draining in seconds (pane.filmTau) a storm's streams are its runners and
+             their trails, no longer half a minute of old channels, and .12 left them a faint line for under 2 s */
+          tracks[o + 4] = Math.max(1.3, sr[i] * (0.45 + 0.4 * swet[i])); tw[nt] = 0.22 - 0.02 * env.storm + (0.78 + 0.02 * env.storm) * swet[i] * Math.sqrt(swet[i]); tracks[o + 5] = recording ? t : tw[nt];
           nt++;
         }
         spx[i] = sx[i]; spy[i] = sy[i];
@@ -628,7 +700,7 @@ WX.pass((function () {
           if (k * h > sec - 30) { recording = true; if (k % 4 === 0) record(false); }
         }
         recording = false;
-        for (let k = 0; k < nt; k++) tracks[k * 6 + 5] = Math.exp(-(t - tracks[k * 6 + 5]) / 12) * tw[k];   // age -> film value
+        for (let k = 0; k < nt; k++) tracks[k * 6 + 5] = Math.exp(-(t - tracks[k * 6 + 5]) / env.filmTau) * tw[k];   // age -> film value
         for (let i = 0; i < ns; i++) { spx[i] = sx[i]; spy[i] = sy[i]; }
         rebuild();
       },
@@ -693,11 +765,11 @@ WX.pass((function () {
   let runSeed = 0x2f6b1d3;
   const rr = () => { runSeed = (runSeed + 0x6d2b79f5) >>> 0; let t = runSeed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const runs = { over: false, x: new Float32Array(4), y: new Float32Array(4), r: new Float32Array(4), v: new Float32Array(4), px: new Float32Array(4), py: new Float32Array(4), ph: new Float32Array(4), n: 0, next: 30, mistE: 0, t: 0 };
-  let microN = 0, mvao = null, microE = 0, lastN = 0, filmT = 1e9, fineE = 0;
+  let microN = 0, mvao = null, microE = 0, lastN = 0, filmT = 1e9, fineE = 0, microD = 0;
   /*@lab*/ const heapLog = new Float64Array(256), simMs = new Float32Array(240); let simN = 0; /*@end*/
   const U = {
-    cap: { uMap: new Float32Array(4) },
-    micro: { uFilm: null, uGrid: new Float32Array(4), uFirst: new Float32Array(2), uGlass: null },
+    cap: { uMap: new Float32Array(4), uRimFix: 1 },
+    micro: { uFilm: null, uGrid: new Float32Array(4), uFirst: new Float32Array(2), uGlass: null, uDry: 0, uMs: new Float32Array(3), uLampG: new Float32Array(4) },
     decay: { uK: 1 },
     seg: { uMap: new Float32Array(4) },
     mseg: { uMap: new Float32Array(4) },
@@ -712,6 +784,16 @@ WX.pass((function () {
        window in its bottom */
     const float RS = 1.1547, RSC = 0.57735;
     float capH(float rho) { return rho < 1. ? sqrt(RS * RS - rho * rho) - RSC : 0.; }`;
+  /* [r9f] A DROP A FEW TEXELS ACROSS IS UNDER-SAMPLED: the view takes its slope as one texel's forward difference of the height
+     map, so a cap of radius rm map texels never shows the slope its rim has, and the rim's darkening (the view's outer ring and
+     total internal reflection) went with it. Through the view's own sampling (tests/pane/r9f/rimsamp.py: the cap rasterised at the
+     texels, read bilinearly at the user's view px, the rim's weights summed against the same drop's analytic slopes) a 5-texel
+     drop kept .69 of its rim, a 2.6-texel one .34, a 2-texel one .24, a 1.2-texel one .03: the 85 % glass's 1-2 mm field (most
+     of its ~125 drops per 100 x 100 CSS px) read as faint grey dots (REVIEW-9 2.5: 6-7x fewer blobs than win-gondola). The
+     height is restored by rimK (its footprint unchanged: no drop is wider), which brings a 1.2-3 texel drop to ~.6-.9 of its
+     analytic rim; a sub-texel droplet stays a speck */
+  const RIMK = `
+    float rimK(float rm) { return 2. - .3 * smoothstep(2.4, 3.6, rm) - .7 * smoothstep(.9, 1.6, rm); }`;   // 2 under .9 texels, 1 over 3.6
   /* cap and segment programs share one vertex layout: a unit quad (attr 0) and 6 floats per instance ([r8] the caps 8: attr 2
      is a vec4 there) */
   function vaoFor(gl, buf, stride, n2) {
@@ -732,20 +814,27 @@ WX.pass((function () {
   }
   /* the simulation's environment from the weather and the wind (Node's tests call it too) */
   function envOf(e, W, wn, knobs, p, area) {
-    e.precip = W.precip;
+    e.precip = W.precip; e.storm = W.storm;
     const onshore = Math.max(0.15, -wn.wind.dir[1]), u = Math.min(1, wn.wind.U10 / 24);
     e.wind = Math.min(1.35, Math.max(0.35, 0.3 + 0.75 * wn.wind.U10 * onshore / 12));
     /* [r3] the wind along the glass: its cross part, and the outflow from the stagnation point; both grow with
        the square of the speed, so a storm runs the drops diagonally and a breeze barely bends them */
     e.lean = Math.max(-0.9, Math.min(0.9, wn.wind.dir[0] * 1.3 * u * u));
-    e.spread = onshore * 0.8 * u * u * WX.util.smooth(0.3, 0.9, W.storm + 0.3 * W.precip);
+    /* [r9] .55 (.8): at 96 % the outflow slanted every run in the right third 40-50 deg, a fan of parallel rules (REVIEW-8 #3);
+       the runs there now lean ~35 deg and each its own way (sliders(): wk, the flutter, the meander) */
+    e.spread = onshore * 0.55 * u * u * WX.util.smooth(0.3, 0.9, W.storm + 0.3 * W.precip);
     e.dry = 1 - WX.util.smooth(0.03, 0.12, W.precip);
     e.capB = Math.min(knobs.beads, 6000);
     /* [r3] a few long rivulets, not a pane of runners: about 14 per Mpx at the cap (a storm), fewer in rain.
        [r8] The tier's cap (40-300): how many run is the physics' (a drop over its critical size runs, always); with the sizes
        real, a storm keeps ~60-120 running on the user's 2.2 Mpx (tests/pane/r8) */
     e.capS = knobs.sliders;
-    e.rate = p("pane.rate"); e.rc = p("pane.rc"); e.rmax = p("pane.rmax");
+    e.rate = p("pane.rate"); e.rc = p("pane.rc"); e.rmax = p("pane.rmax"); /* [r9f] the storm re-routes the flow: the short drain and the tiring path come in with it (0 up to 88 %, 1 from 92.5 %, where
+       the storm and its lightning begin),
+       so rain without a storm keeps round 9's fed rivulets that stay where they run (REVIEW-9 2.5: "a thin wandering rivulet with
+       its trail as gondola's") */
+    const sg = WX.util.smooth(0.05, 0.5, W.storm);
+    e.filmTau = p("pane.filmTauCalm") + (p("pane.filmTau") - p("pane.filmTauCalm")) * sg; e.age = p("pane.pathAge") * sg;
     e.rcK = 1 - 0.2 * W.storm * WX.util.smooth(0.5, 1, W.precip);      // streaming glass pins drops less
     e.slick = 1 + 0.8 * W.storm * WX.util.smooth(0.5, 1, W.precip);   // [r8] and runs them faster (sliders())
     /* [r4] a storm's spray is finer (wind-shattered drops): arrivals median 2.2 px in rain, 1.7 at the cap (x12 against
@@ -782,7 +871,7 @@ WX.pass((function () {
     u.uSheet = WX.util.smooth(0.6, 0.97, W.precip) * (0.35 + 0.65 * W.storm) * R.p("pane.sheet");
     u.uSheetLean = Math.max(-0.9, Math.min(0.9, sim.env.lean + sim.env.spread * 2 * (0.5 - sim.env.stag)));
     on[0] = lastN > 0 || microE > 0.002 ? 1 : 0;
-    on[1] = filmT < 120 ? 1 : 0;                         // the film decays with tau 12 s: e^-10 after 120 s
+    on[1] = filmT < 10 * sim.env.filmTau ? 1 : 0;       // the film decays with tau env.filmTau: e^-10 after ten of them
     on[2] = runs.mistE > 0.001 || (W.mist || 0) > 0.001 ? 1 : 0;
     on[3] = lim && lim.on ? 1 : 0;
     filmPx[2] = R.p("pane.track");
@@ -794,9 +883,10 @@ WX.pass((function () {
     *build(R) {
       hmap = hfb = film = ffb = null; mist = [null, null]; mfb = [null, null]; fresh = true;
       const gl = R.gl;
-      P.cap = R.program("pane.cap", { vs: `
+      P.cap = R.program("pane.cap", { vs: RIMK + `
         layout(location = 0) in vec2 aPos; layout(location = 1) in vec4 aI0; layout(location = 2) in vec4 aDir;
         uniform vec4 uMap;   // xy map px per CSS px, zw 1 / map size
+        uniform float uRimFix;   // [r9f] 1: a small bead's height restored to its rim's slope (rimK)
         out vec2 vQ; flat out float vR, vS, vSeed, vF, vK; flat out vec2 vDown;
         void main() {
           float s = aI0.w, Lt = max(s - 1.02, 0.), kh = max(aDir.w, 1.);
@@ -809,7 +899,7 @@ WX.pass((function () {
           vec2 st = s < 1.01 ? vec2(sqrt(k), 1. / sqrt(k)) : vec2(1.);
           vec2 p = aI0.xy + (dir * q.x * st.x + nrm * q.y * st.y) * aI0.z;
           vQ = q; vR = aI0.z; vS = s; vSeed = fract(sin(dot(floor(aI0.xy * 4.), vec2(12.9898, 78.233))) * 43758.5453);
-          vF = aDir.z; vK = kh;
+          vF = aDir.z * (s < 1.01 && uRimFix > .5 ? rimK(aI0.z * uMap.x) : 1.); vK = kh;
           vDown = vec2(dir.y, nrm.y);                // the glass's down (CSS +y) in the drop's own frame
           vec2 m = p * uMap.xy * uMap.zw;
           gl_Position = vec4(m.x * 2. - 1., 1. - m.y * 2., 0., 1.);
@@ -852,11 +942,14 @@ WX.pass((function () {
          (a band a fifth of it wide): a falling density dries drops flat over seconds, a runner's fresh track flattens the ones
          it sweeps, and every drop flattens to nothing over the last fifth of its life. uFirst.y: the fine layer's height, eased
          over a tier change (it was there or not in one frame) */
-      P.micro = R.program("pane.micro", { vs: `
+      P.micro = R.program("pane.micro", { vs: RIMK + `
         layout(location = 0) in vec2 aPos;
         uniform sampler2D uFilm; uniform vec4 uGrid;    // x layer-1 cells, y layer-1 columns, z layer-2 columns, w density
         uniform vec4 uGlass;
         uniform vec2 uFirst;                            // [r3] x the first instance drawn (uGrid.x: the second layer only)
+        uniform float uDry;                             // [r9] s since the rain ended (0 while it rains; at most 90)
+        uniform vec3 uMs;                               // [r9f] x map px per glass px, y the 8 px layer's share, z the rim fix (0/1)
+        uniform vec4 uLampG;                            // [r9f] the lighthouse's lamp: xy glass px (y up), z the keep-out px, w its weight
         out vec2 vQ; flat out float vR, vF;
         void main() {
           float id = float(gl_InstanceID) + uFirst.x;
@@ -865,24 +958,39 @@ WX.pass((function () {
           vec2 c = vec2(mod(k, cols), floor(k / cols));
           vec3 h = wxHash33(vec3(c, salt)), g = fract(h.yzx * 7.919 + h.zxy * 3.137);
           const float DUTY = .8;                                         // the share of its cycle a drop lives
-          float a = uGrid.w * (l2 ? .6 : 1.) / DUTY;                     // the share of cells that hold one
+          float a = uGrid.w * (l2 ? uMs.y : 1.) / DUTY;                  // the share of cells that hold one ([r9] l2 .6 -> .8: win-gondola's 1-3 mm field; [r9f] 1)
           float per = 240. / (1. + floor(h.z * 3.));                     // [r3] 240, 120 or 80 s: a bead persists
           float ph = fract(h.x * 7.31 + uTime.y / per);
-          /* [r3] the cheap tests first: most cells are empty, and they skip the film's fetch */
-          if (h.y >= a || ph >= DUTY) { gl_Position = vec4(2., 2., 2., 1.); return; }
+          /* [r3] the cheap tests first: most cells are empty, and they skip the film's fetch. [r9] And no drop lands once the rain
+             has ended: a life that began less than uDry s ago is not drawn (the ones that were there dry, below) */
+          if (h.y >= a || ph >= DUTY || ph * per < uDry) { gl_Position = vec4(2., 2., 2., 1.); return; }
           float r = l2 ? .9 * pow(rmax / .9, g.x) : mix(.45, rmax, g.x * g.x);   // [r3] the second layer log-uniform .9-3.4 px
           vec2 ctr = c * cell - (l2 ? 2.5 : 0.) + vec2(r) + g.yz * (cell - 2. * r);   // CSS px, y up
           /* [r8] down to the film's faint edge (its bilinear texels reach ~2 px past the track's ridge): a runner took them up
              across most of its head (.15-.5 left all but those under the ridge to show through after it); they come back
-             as the track dries (30-45 s) */
+             as the track dries ([r9f] the film's drain, 3 s: a first run's ~5 s, a fed channel's ~12 s after its last feed) */
           float wipe = smoothstep(.02, .06, textureLod(uFilm, ctr / uGlass.xy, 0.).r);
           /* the band where a drop is flatter: a fifth of the density's line, at least .02 (a fixed .2 left every drop of a light
              rain's sparse layer, a under .2, at a third of its height: round 8's a3 at 75 % read as faint ghosts); the last
              fifth of its life (13-38 s) to flatten away */
           float f = clamp((a * (1. - wipe) - h.y) / max(.2 * a, .02), 0., 1.) * (1. - smoothstep(.8 * DUTY, DUTY, ph)) * (l2 ? 1. : uFirst.y);
+          /* [r9] AFTER THE RAIN EACH DROP DRIES WHERE IT IS, as the simulation's beads do: its contact line stays while it flattens
+             to the receding angle's height (.35, the first 60 % of its time), then the line recedes and it goes, over
+             (15 + 9 r) s +-25 % (r px: a .5 px droplet ~20 s, a 3 px bead ~42 s; all gone by 57 s). Round 8 let the falling
+             density take them, ~2 s each (REVIEW-8 #5: "the fine droplets fade in about 2 s") */
+          float ud = uDry / ((15. + 9. * r) * (.75 + .5 * fract(h.x * 13.7 + h.y * 5.3)));
+          f *= mix(1., .35, smoothstep(0., .6, ud)) * (1. - smoothstep(.6, 1., ud));
+          /* [r9f] NO MICRO-DROP PARKS ON THE LIGHTHOUSE'S LAMP. With their rims shown (rimK) a 1-2 mm drop over the lamp holds only
+             its minified image (dim by day: physical), and this layer has no turnover of its own (a drop lives 64-192 s), where in
+             a storm a real drop there is merged, swept or run off within seconds: at the cap a micro-drop sat on the lamp for
+             whole clips (out/P/r9f/g1/cap100-lamp-x3.jpg: its peak 171-186 -> 85-89). So none is drawn whose edge comes within
+             the keep-out of the lamp's centre (the simulation's beads and runners still cross it); a static choice, nothing
+             appears or goes */
+          f *= 1. - uLampG.w * (1. - smoothstep(r + .5 * uLampG.z, r + uLampG.z, length(ctr - uLampG.xy)));
           if (f < .002) { gl_Position = vec4(2., 2., 2., 1.); return; }
+          r *= 1. - .45 * smoothstep(.6, 1., ud);
           vec2 p = ctr + aPos * (r + .75);
-          vQ = aPos * (r + .75) / r; vR = r; vF = f;
+          vQ = aPos * (r + .75) / r; vR = r; vF = f * (uMs.z > .5 ? rimK(r * uMs.x) : 1.);   // [r9f] the rim restored (RIMK)
           gl_Position = vec4(p / uGlass.xy * 2. - 1., 0., 1.);
         }`, fs: CAP + `
         in vec2 vQ; flat in float vR, vF; out vec4 o;
@@ -906,9 +1014,13 @@ WX.pass((function () {
         void main() {
           vec2 a = vSeg.xy, b = vSeg.zw, pa = vP - a, ba = b - a;
           float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0., 1.);
-          float x = length(pa - ba * h) / (vW.x * .5 + .6);
+          float hw = vW.x * .5 + .6, x = length(pa - ba * h) / hw;
           if (x >= 1.) discard;
-          o = vec4(vW.y * sqrt(1. - x * x), 0., 0., 1.);
+          /* [r9] a rivulet's section: a circular arc meeting the glass at 40 deg (water on window glass), so its height is
+             hw tan 20 deg and its edges are as steep as the water's contact angle, no steeper: round 8's ellipse of height 1 px
+             stood vertical at its edges, past total internal reflection, and every track was a pair of dark lines. The film now
+             holds the water's height in CSS px (the view's uFilmPx.z = 1) */
+          o = vec4(vW.y * hw * (sqrt(2.4203 - x * x) - 1.1918), 0., 0., 1.);
         }` });
       P.mist = R.program("pane.mist", { fs: `
         uniform sampler2D uPrev; uniform vec2 uK; uniform float uDecay; in vec2 vUV; out vec4 o;
@@ -1032,18 +1144,33 @@ WX.pass((function () {
         /* micro-drop density eases toward the rain (tau 8 s); the film decays (tau 12 s) */
         /* [r3] the static beads carry the density: denser as the rain closes to a storm.
            [r8] It falls more slowly (by (E - target) / 20 a second, at least .012: from a storm's .8 to nothing in ~45 s), so
-           as the rain eases or ends each micro-drop flattens over 4-13 s; the fine layer's height eases over a tier change */
+           as the rain eases or ends each micro-drop flattens over 4-13 s; the fine layer's height eases over a tier change.
+           [r9] As the rain eases each drop at the density's line flattens over 12 s or more (the fall is at most a twelfth of the
+           band a second): round 8's floor of .012 a second against a band of .02 near the end took ~2 s a drop. Once the rain
+           has ended the density holds and the dryness clock (microD: s since the rain ended) dries every drop where it is over
+           its own (15 + 9 r) s (the micro VS); when they have all gone (60 s) the layer goes with them, unseen. The clock runs
+           back at 10 s a second when it rains again, and is 0 at once if nothing is left to re-wet */
         const microT = Math.pow(WX.util.smooth(0.05, 0.9, F.W.precip), 0.8) * R.p("pane.micro") * (0.5 + 0.3 * WX.util.smooth(0.55, 1, F.W.precip));
+        if (sim.env.dry > 0.5) microD = Math.min(90, microD + dt);
+        else microD = microE < 0.003 ? 0 : Math.max(0, microD - 10 * dt);
         if (microT >= microE) microE += (microT - microE) * (1 - Math.exp(-dt / 8));
-        else microE = Math.max(microT, microE - dt * Math.max(0.012, (microE - microT) / 20));
+        else if (microD <= 0) microE = Math.max(microT, microE - dt * Math.min(Math.max(0.2 * microE, 0.02) / 12, Math.max(0.004, (microE - microT) / 30)));
+        else if (microD >= 60) microE = microT;
         const fineT = R.tier >= R.p("pane.microFine") ? 1 : 0;
         fineE += (fineT - fineE) * (1 - Math.exp(-dt / 1.5));
-        if (ahead) { microE = microT; fineE = fineT; }
-        /* the film */
+        if (ahead) { microE = microT; fineE = fineT; microD = sim.env.dry > 0.5 ? 90 : 0; }
+        /* the film. [r9f] Its water drains with tau pane.filmTau (3 s; round 9 12 s): a rivulet no runner feeds runs down and
+           dewets within seconds (its beads and droplets are the shed beads and the micro-drops, which come back as it goes); a
+           channel the runners keep feeding stays, until its path tires (makeSim's wet0). With 12 s every channel was re-fed
+           (every 4.6 s at the median at 96 %) long before it faded, so a channel held its place for half a minute: over the
+           lighthouse's lamp for a whole clip (REVIEW-9 2.3, s3 and s7), and at the cap a pane of parallel streams
+           (tests/pane/r9f/chan.cjs, 300 points of the right half over 40 s: the longest spell under a channel 29 / 27 s at 96 /
+           100 % -> 9.9 / 9.7 s, none over 10 s; the film over .04 px 4.3 / 5.4 % of the pane -> 1.6 / 2.2 %) */
+        const tauF = sim.env.filmTau;
         if (fresh) { R.bind(ffb); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); }
         filmT += dt;
-        if (dt > 0 && filmT < 120) {
-          U.decay.uK = Math.exp(-dt / 12);
+        if (dt > 0 && filmT < 10 * tauF) {
+          U.decay.uK = Math.exp(-dt / tauF);
           R.bind(ffb);
           gl.enable(gl.BLEND); gl.blendFunc(gl.ZERO, gl.SRC_ALPHA);
           P.decay.use(); R.gpu.uniforms(P.decay, U.decay); R.gpu.fullscreen();
@@ -1057,7 +1184,11 @@ WX.pass((function () {
         if (microE > 0.002) {
           /* [r3] below pane.microFine's tier the 5 px layer (radii .45-1.6 px, mostly under a pixel's worth of
              image) is skipped: its 40k instances a megapixel cost the iGPU more than they show */
-          U.micro.uFilm = film; U.micro.uGrid[3] = microE; U.micro.uGlass = glassU;
+          U.micro.uFilm = film; U.micro.uGrid[3] = microE; U.micro.uGlass = glassU; U.micro.uDry = microD;
+          U.micro.uMs[0] = mapScale; U.micro.uMs[1] = R.p("pane.l2"); U.micro.uMs[2] = R.p("pane.rimFix");
+          /* [r9f] the lighthouse's lamp in glass px (R.beacon.uv, contract section 10: unjittered, y up), for the micro VS's keep-out */
+          const B = R.beacon, lg = U.micro.uLampG, lon = B && B.uv && B.uv[0] > -0.5 ? Math.min(1, Math.max(0, B.on || 0)) : 0;
+          lg[0] = lon ? B.uv[0] * C[0] : -1e4; lg[1] = lon ? B.uv[1] * C[1] : -1e4; lg[2] = R.p("pane.lampKeep"); lg[3] = lg[2] > 0 ? lon : 0;
           U.micro.uFirst[0] = fineE > 0.002 ? 0 : U.micro.uGrid[0]; U.micro.uFirst[1] = fineE;
           P.micro.use(); R.gpu.uniforms(P.micro, U.micro);
           gl.bindVertexArray(mvao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, microN - U.micro.uFirst[0]); gl.bindVertexArray(null);
@@ -1073,6 +1204,7 @@ WX.pass((function () {
         if (ni) {
           gl.bindBuffer(gl.ARRAY_BUFFER, ibuf);
           gl.bufferSubData(gl.ARRAY_BUFFER, 0, inst, 0, ni * IROW);
+          U.cap.uRimFix = R.p("pane.rimFix");
           P.cap.use(); R.gpu.uniforms(P.cap, U.cap);
           gl.bindVertexArray(ivao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, ni); gl.bindVertexArray(null);
         }

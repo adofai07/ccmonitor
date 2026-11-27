@@ -382,8 +382,13 @@ WX.pass((function () {
   const scotOf = (R) => (!(R.exposure.lavS > 0) ? (R.exposure.Lavg === undefined || R.exposure.Lavg < 400 ? 1 : 0) : 1 - WX.util.smooth(300, 500, R.exposure.lavS));
   /* [L r8] the box (uv, y up) round the lighthouse's lamp where the view grades its light past the rods: its draw
      (R.beacon.box, S px) grown by its bloom's reach (.09 of the view's height); empty with no lighthouse or while the rods
-     are off (by day), so no other pixel pays for it */
+     are off (by day), so no other pixel pays for it.
+     [L r9] and the lamp's path on the water (stream W's ocean.bpath, R.beacon.pathBox: its strip's box, S px, empty when
+     it is not drawn), which marks its light the same way: the whole path is the lamp's colour (REVIEW-8 #1: below the
+     lamp's own box its glints went through the rods, grey). R.beacon.pathGraded tells the path (from the next frame on)
+     that its whole strip is graded, so it keeps its mark from the lamp's base to the window */
   const lampBoxV = new Float32Array(4);
+  const lampPV = new Float32Array(4);                                // [L r9] uLampP (pane.js's paneLampClear): the lamp's uv, on
   /*@lab*/ WX.param("post.lamp", 1, 0, 1, 1, "post"); /*@end*/   // [L r8] lab: 0 the lamp's light graded with the rest (round 7)
   function lampBox(R, scot) {
     const B = R.beacon, o = lampBoxV;
@@ -394,7 +399,96 @@ WX.pass((function () {
     const S = R.size.S, a = S[0] / S[1], r = 0.09;
     o[0] = Math.min(B.box[0] / S[0], B.uv[0] - r / a); o[1] = Math.min(B.box[1] / S[1], B.uv[1] - r);
     o[2] = Math.max(B.box[2] / S[0], B.uv[0] + r / a); o[3] = Math.max(B.box[3] / S[1], B.uv[1] + r);
+    const P = B.pathBox;                                                 // [L r9] W's three lines (notes/beacon.md, W 23:05)
+    B.pathGraded = 1;
+    if (P && P[2] > P[0] && P[3] > P[1]) { o[0] = Math.min(o[0], P[0] / S[0]); o[1] = Math.min(o[1], P[1] / S[1]); o[2] = Math.max(o[2], P[2] / S[0]); o[3] = Math.max(o[3], P[3] / S[1]); }
     return o;
+  }
+  /* [L r9f] THE LAMP'S HUE THROUGH THE GRADE. AgX turns a saturated colour's hue as it climbs toward its shoulder, and
+     the hue-preserving shoulder (agxHP) freezes the chroma it has at uHP.y: a crimson lamp's glow and its brightest
+     glints on the water showed pink, an amber one's yellow (REVIEW-9 5: the crimson path -17 deg in CIELAB; the cap's
+     pink glow in s6b); a storm's highlight balance (uWB2, its cool lean) turns them further. The lamp's graded light
+     (gradeGL's lamp: inside its box, while the rods are on) is tinted so that it shows the accent's own hue: per-channel
+     gains at unit luminance, found by turning the accent's chroma in Oklab until AgX (a copy of the grade's agx() above,
+     with the balance) shows the accent's Oklab hue at the shoulder's level (uHP.y): uLampK, its w that level's log2.
+     Under a dim level (.25 pre-exposed) the grade barely turns the hue and the lamp keeps the scene's grade; the view
+     blends from no tint there to the gains at the shoulder by the lamp's own level. Only where the shoulder is on (uHP.x:
+     a low sun, dusk, the night; a day storm's lamp, under the rods by day, keeps round 9's grade, whose hue the frozen
+     level's gains do not describe) and for saturated accents (HSV saturation .3 -> .5: the no-reading grey-blue, .23, is
+     a near-neutral tint and keeps its light as it is). Recomputed when the accent, the balance, the level or the shoulder
+     change (an eased reading: every frame of the ease, ~30 us) */
+  const AGX_M = [0.842479062253094, 0.0423282422610123, 0.0423756549057051, 0.0784335999999992, 0.878468636469772, 0.0784336, 0.0792237451477643, 0.0791661274605434, 0.879142973793104];
+  const AGX_MI = [1.19687900512017, -0.0528968517574562, -0.0529716355144438, -0.0980208811401368, 1.15190312990417, -0.0980434501171241, -0.0990297440797205, -0.0989611768448433, 1.15107367264116];
+  const OK1 = [0.4122214708, 0.5363325363, 0.0514459929, 0.2119034982, 0.6806995451, 0.1073969566, 0.0883024619, 0.2817188376, 0.6299787005];
+  const OK2 = [0.2104542553, 0.793617785, -0.0040720468, 1.9779984951, -2.428592205, 0.4505937099, 0.0259040371, 0.7827717662, -0.808675766];
+  const OK2I = [1, 0.3963377774, 0.2158037573, 1, -0.1055613458, -0.0638541728, 1, -0.0894841775, -1.291485548];
+  const OK1I = [4.0767416621, -3.3077115913, 0.2309699292, -1.2684380046, 2.6097574011, -0.3413193965, -0.0041960863, -0.7034186147, 1.707614701];
+  const mul3 = (m, v, o) => { const a = v[0], b = v[1], c = v[2]; o[0] = m[0] * a + m[1] * b + m[2] * c; o[1] = m[3] * a + m[4] * b + m[5] * c; o[2] = m[6] * a + m[7] * b + m[8] * c; return o; };
+  /* agx() of the grade's library (scene-referred linear, pre-exposed -> display-encoded); GLSL's mat3 is column-major */
+  function agxJS(v, o) {
+    const lo = -12.47393, hi = 4.026069, v0 = v[0], v1 = v[1], v2 = v[2];
+    for (let i = 0; i < 3; i++) {
+      let x = AGX_M[i] * v0 + AGX_M[3 + i] * v1 + AGX_M[6 + i] * v2;
+      x = (Math.min(Math.max(Math.log2(Math.max(x, 1e-10)), lo), hi) - lo) / (hi - lo);
+      const x2 = x * x, x4 = x2 * x2;
+      o[i] = Math.min(Math.max(15.5 * x4 * x2 - 40.14 * x4 * x + 31.96 * x4 - 6.868 * x2 * x + 0.4298 * x2 + 0.1191 * x - 0.00232, 0), 1);
+    }
+    const l = 0.2126 * o[0] + 0.7152 * o[1] + 0.0722 * o[2], t0 = l + 1.1 * (Math.pow(o[0], 1.1) - l), t1 = l + 1.1 * (Math.pow(o[1], 1.1) - l), t2 = l + 1.1 * (Math.pow(o[2], 1.1) - l);
+    for (let i = 0; i < 3; i++) o[i] = AGX_MI[i] * t0 + AGX_MI[3 + i] * t1 + AGX_MI[6 + i] * t2;
+    return o;
+  }
+  const tw = { lab: [0, 0, 0], k: [0, 0, 0], x: [0, 0, 0], d: [0, 0, 0], key: new Float64Array(8).fill(-1), nw: new Float64Array(8) };
+  const lampK = new Float32Array([1, 1, 1, 0.678]);
+  const okHue = (c) => { mul3(OK1, c, tw.x); for (let i = 0; i < 3; i++) tw.x[i] = Math.cbrt(Math.max(tw.x[i], 0)); mul3(OK2, tw.x, tw.lab); return Math.atan2(tw.lab[2], tw.lab[1]); };
+  /* the accent's chroma turned by th in Oklab, back to linear, unit luminance (into tw.k) */
+  function turned(L0, th, out) {
+    const c = Math.cos(th), s = Math.sin(th);
+    tw.lab[0] = L0[0]; tw.lab[1] = L0[1] * c - L0[2] * s; tw.lab[2] = L0[1] * s + L0[2] * c;
+    mul3(OK2I, tw.lab, tw.x); for (let i = 0; i < 3; i++) tw.x[i] = tw.x[i] * tw.x[i] * tw.x[i];
+    mul3(OK1I, tw.x, out);
+    for (let i = 0; i < 3; i++) out[i] = Math.max(out[i], 1e-6);
+    const Y = 0.2126 * out[0] + 0.7152 * out[1] + 0.0722 * out[2];
+    for (let i = 0; i < 3; i++) out[i] /= Y;
+    return out;
+  }
+  /* the hue (rad) AgX shows for the linear colour k under the balance wb, its brightest channel at level */
+  function shownHue(k, wb, level) {
+    let m = 0;
+    for (let i = 0; i < 3; i++) { tw.x[i] = k[i] * wb[i]; m = Math.max(m, tw.x[i]); }
+    for (let i = 0; i < 3; i++) tw.d[i] = (tw.x[i] * level) / m;
+    agxJS(tw.d, tw.d);
+    for (let i = 0; i < 3; i++) { const e = Math.min(Math.max(tw.d[i], 0), 1); tw.d[i] = e <= 0.04045 ? e / 12.92 : Math.pow((e + 0.055) / 1.055, 2.4); }
+    return okHue(tw.d);
+  }
+  const wrapPi = (a) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+  /* the gains (into o.xyz) that make the lamp's light show the accent's hue at level */
+  function tintAt(u, wb, level, w, o) {
+    const L0 = [0, 0, 0];
+    const h0 = okHue(u); L0[0] = tw.lab[0]; L0[1] = tw.lab[1]; L0[2] = tw.lab[2];
+    const f = (th) => wrapPi(shownHue(turned(L0, th, tw.k), wb, level) - h0);
+    let a = 0, fa = f(a), b = -fa, fb = f(b);
+    for (let it = 0; it < 6 && Math.abs(fb) > 1e-4 && Math.abs(fb - fa) > 1e-9; it++) { const c = b - (fb * (b - a)) / (fb - fa); a = b; fa = fb; b = Math.max(-0.6, Math.min(0.6, c)); fb = f(b); }
+    turned(L0, Math.abs(fb) < Math.abs(fa) ? b : a, tw.k);
+    for (let i = 0; i < 3; i++) o[i] = 1 + (tw.k[i] / Math.max(u[i], 1e-6) - 1) * w;
+    const Y = 0.2126 * u[0] * o[0] + 0.7152 * u[1] * o[1] + 0.0722 * u[2] * o[2];
+    for (let i = 0; i < 3; i++) o[i] /= Y;
+  }
+  const wbOne = [1, 1, 1];
+  /*@lab*/ WX.param("post.lampTint", 1, 0, 1, 1, "post"); /*@end*/   // [L r9f] lab: 0 the lamp's light graded as round 9 (no tint)
+  function lampTint(R, on) {
+    const B = R.beacon;
+    /*@lab*/ if (!R.p("post.lampTint")) on = false; /*@end*/
+    if (!on || !B || !B.rgb) { lampK[0] = lampK[1] = lampK[2] = 1; tw.key[0] = -1; return; }
+    const s = B.srgb, mx = Math.max(s[0], s[1], s[2]), w = hpV[0] * WX.util.smooth(0.3, 0.5, mx > 0 ? 1 - Math.min(s[0], s[1], s[2]) / mx : 0);
+    const wb = toneV[0] > 0 ? wbU2 : wbOne, lv = R.p("post.hpLevel"), K = tw.key, nw = tw.nw;
+    nw[0] = B.rgb[0]; nw[1] = B.rgb[1]; nw[2] = B.rgb[2]; nw[3] = wb[0]; nw[4] = wb[1]; nw[5] = wb[2]; nw[6] = lv; nw[7] = w;
+    let same = true;
+    for (let i = 0; i < 8 && same; i++) same = Math.abs(nw[i] - K[i]) <= 1e-4 * Math.max(1, Math.abs(K[i]));   // the balance's ease settles below this
+    if (same) return;
+    for (let i = 0; i < 8; i++) K[i] = nw[i];
+    if (w > 0) { tintAt(B.rgb, wb, lv, w, lampK); lampK[3] = Math.log2(lv); }
+    else lampK[0] = lampK[1] = lampK[2] = 1;
+    /*@lab*/ R.priv.lampTint = { k: Array.from(lampK, (x) => +x.toFixed(4)), wb: Array.from(wb, (x) => +x.toFixed(4)), w: +w.toFixed(3) }; /*@end*/
   }
   function toneFill(u) { u.uTone = toneV; u.uWB = wbU; u.uWB2 = wbU2; u.uWB3 = wbU3; u.uHP = hpV; }
   /* the "boltlit" library's uniforms (the bolt pass's; off when it is not live) */
@@ -646,6 +740,7 @@ WX.pass((function () {
         in vec2 vUV; out vec4 o;
         /*@lab*/ uniform float uDbg; /*@end*/
         uniform vec4 uLampBox;      // [L r8] uv (y up) of the box round the lighthouse's lamp where its light can be: its draw and its bloom (empty: none, or the rods off)
+        uniform vec4 uLampK;        // [L r9f] the lamp's light tinted to show the accent's hue through the grade: rgb the gains at the shoulder's level, w its log2
         void main() {
           float cov, mf;
           vec3 c = mix(paneView(vUV, -1., cov, mf), textureLod(uBloom, vUV, 0.).rgb, uBloomK);
@@ -657,7 +752,7 @@ WX.pass((function () {
              pixel holds out of the bloom, is graded past the rods. Not where a drop or the mist shows something else */
           /* only inside the lamp's box (uLampBox: its draw and its bloom's reach), and only while the rods are on (the box
              is empty by day): every other pixel pays nothing */
-          vec3 lamp = vec3(0.);
+          vec3 lamp = vec3(0.), lampG = vec3(0.), aL = vec3(0.);
           if (all(greaterThan(vUV, uLampBox.xy)) && all(lessThan(vUV, uLampBox.zw))) {
             float lm = texelFetch(sScene, ivec2(vUV * vec2(textureSize(sScene, 0))), 0).a;
             vec3 bl = uBloomK * textureLod(uBloom, vUV, 0.).rgb, c0 = c - bl;
@@ -670,9 +765,17 @@ WX.pass((function () {
                core); within ~.09 of the view's height of the lamp */
             vec2 dv = (vUV - wxUV0(normalize(uBeacon.xyz - vec3(0., wxEye, 0.)))) * vec2(uRes.x * uRes.w, 1.);
             float wnd = 1. - smoothstep(.04, .09, length(dv));
-            if (wnd > 0.) { vec3 qb = bl / max(uBeaconC.rgb, vec3(1e-9)); lamp += wnd * min(qb.r, min(qb.g, qb.b)) * uBeaconC.rgb; }
+            if (wnd > 0.) {
+              vec3 qb = bl / max(uBeaconC.rgb, vec3(1e-9)); lamp += wnd * min(qb.r, min(qb.g, qb.b)) * uBeaconC.rgb;
+              /* [L r9f] and the glare there (post's, of the brightest sources: round the lamp, the lamp's) */
+              vec3 qa = a / max(uBeaconC.rgb, vec3(1e-9)); aL = wnd * min(qa.r, min(qa.g, qa.b)) * uBeaconC.rgb;
+            }
+            /* [L r9f] tinted to show the accent's hue through AgX and the balance, by its own level (the curve's boost in) */
+            vec3 lt = lamp + aL;
+            float lv = log2(max(max(lt.r, max(lt.g, lt.b)) * max(uTone.x, 1.), 1e-9));
+            lampG = lt * mix(vec3(1.), uLampK.rgb, smoothstep(-2., uLampK.w, lv));
           }
-          vec3 d = gradeGL(c - lamp, lamp, a, uScot, gradeGround(vUV));
+          vec3 d = gradeGL(c - lamp, lampG, a - aL, uScot, gradeGround(vUV));
           /* TPDF dither per channel, independent, +-1.75 LSB (at +-1 a flat row of sky keeps runs of 60 codes) */
           vec3 p3 = vec3(gl_FragCoord.xy, uFrame.x);
           vec3 n = wxHash33(p3) + wxHash33(p3 + vec3(71., 113., 37.)) - 1.;
@@ -940,6 +1043,10 @@ WX.pass((function () {
         boltFill(v, F, R); toneFill(v);
         v.uBloom = up; v.uBloomK = k; v.uScot = scot;
         v.uLampBox = lampBox(R, scot);                                   // [L r8]
+        lampTint(R, v.uLampBox[2] > v.uLampBox[0]); v.uLampK = lampK;     // [L r9f]
+        /* [L r9] the lamp for the pane (paneLampClear: no storm's local contrast round it), while the lamp's box is on */
+        { const B = R.beacon, on = v.uLampBox[2] > v.uLampBox[0] && B && B.uv[0] > -0.5;
+          lampPV[0] = on ? B.uv[0] : -1; lampPV[1] = on ? B.uv[1] : -1; lampPV[2] = 0; lampPV[3] = on ? 1 : 0; v.uLampP = lampPV; }
         const Hh = R.priv.boltHalo;
         v.uGlare = hUp; v.uGlareK = Hh && Hh.glare ? glareV[2] : 0; v.uGlareTop = Math.max(nH - 1, 0);
         /*@lab*/ v.uDbg = R.p("post.dbg"); /*@end*/

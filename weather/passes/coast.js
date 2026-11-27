@@ -213,8 +213,11 @@ WX.COVE = (function () {
   for (const k of [Math.round(pn * 0.38), Math.round(pn * 0.74)])
     item("pier-frame-" + k, "modular_wooden_pier", "pier", pAt(k * PIER.pitch), pyaw, 1, [2, 2, 2, 1, 1], "1k", "a gallows frame over the deck, twice along the pier",
       { part: "modular_wooden_pier_section_05", center: true });
-  const headPos = pAt(pn * PIER.pitch + 2.35);
-  item("lantern", "wooden_lantern_01", "lamp", [headPos[0] + 0.9, PIER.y + 2.62, headPos[2]], 0, 2.0, FAR, "512", "a lantern on the pier head, lit at night");
+  /* [L r9] the lantern stands on the deck 4.5 m shoreward of the gallows nearest the head, ~5 deg right of the lighthouse
+     (28.9 deg, 165 m): on the head it stood on the lamp's bearing (24.2 deg against 24.0), and at night its white column on
+     the water ran right under the lamp and read as the lamp's own path (REVIEW-8 #1) */
+  const lanPos = pAt(Math.round(pn * 0.74) * PIER.pitch - 4.5);
+  item("lantern", "wooden_lantern_01", "lamp", [lanPos[0] + 0.9, PIER.y + 2.62, lanPos[2]], 0, 2.0, FAR, "512", "a lantern on the pier's deck near its head, lit at night");
   /* the ship at anchor and the channel buoy */
   item("ship", "dutch_ship_large_01", "ship", [-112, 0, 402], 62, 1.0, HERO, "512", "an old ship at anchor left of centre, clear of the sun's usual path; it swings and rides, never sails",
        { probes: 0 });
@@ -1555,8 +1558,9 @@ WX.pass((function () {
     { p: [-13.2, 11.0, 0], size: 0.35, rgb: [1, 0.62, 0.28], i: 3e-4, fl: 1, core: 1 },
     { p: [-13.25, 8.1, -1.1], size: 0.45, rgb: [1, 0.55, 0.22], i: 0.4e-4, fl: 0.5, core: 1 },
     { p: [-13.25, 8.1, 1.1], size: 0.45, rgb: [1, 0.55, 0.22], i: 0.4e-4, fl: 0.5, core: 1 },
-    { world: true, size: 0.12, rgb: [1, 0.6, 0.27], i: 2.5e-4, fl: 1, core: 1 },           // [r3] the pier lantern's flame
+    { world: true, size: 0.12, rgb: [1, 0.6, 0.27], i: 1.25e-4, fl: 1, core: 1 },          // [r3] the pier lantern's flame ([L r9] 32 -> 16 cd: an oil lantern's)
   ];
+  const LANTERN_GALE = 0.6;                                                                    // [L r9f] the lantern's loss in a full gale
   const lampC = SHIPLAMPS.map(() => new Float32Array(4)), lampK = SHIPLAMPS.map(() => new Float32Array(4));
   const lampS = new Float32Array(SHIPLAMPS.length), lampM = new Float32Array(SHIPLAMPS.length), lampG = new Float32Array(SHIPLAMPS.length);
   let maxPoint = 64;
@@ -2311,8 +2315,13 @@ WX.pass((function () {
       const li = c.lights * c.up, E = R.exposure.E, a = pose.yaw * D, fx = Math.sin(a), fz = Math.cos(a);
       const ax = pose.x + fx * SHIP.light[0], az = pose.z + fz * SHIP.light[0];
       const fl = 1 + 0.05 * Math.sin((2 * Math.PI * F.t.rain) / 1.875) * Math.sin((2 * Math.PI * F.t.rain) / 0.46875 + 1.3);
+      /* [L r9f] the pier lantern's oil flame burns low in a gale (its chimney's draught, the gusts pressing it down): from 18
+         m/s (~89 %) to two fifths of its light at the cap's 26 m/s, where its warm-white column on the near water had been the
+         brightest light there, over the lighthouse's own path through 1.5 km of rain (REVIEW-9 9 L4). The walker's wind: steady
+         at a steady reading */
+      const gale = 1 - LANTERN_GALE * sm(18, 26, F.W.U10 || 0);
       c.lamps[0] = ax; c.lamps[1] = SHIP.light[1]; c.lamps[2] = az; c.lamps[3] = SHIPI ? 3e-4 * li : 0;
-      if (LAMPI) { c.lamps[4] = LAMPI.pos[0]; c.lamps[5] = LAMPI.pos[1] + 0.75; c.lamps[6] = LAMPI.pos[2]; c.lamps[7] = 2.5e-4 * li * fl; }
+      if (LAMPI) { c.lamps[4] = LAMPI.pos[0]; c.lamps[5] = LAMPI.pos[1] + 0.75; c.lamps[6] = LAMPI.pos[2]; c.lamps[7] = 1.25e-4 * li * fl * gale; }   // [L r9] 16 cd ([L r9f] low in a gale)
       set("uF0", ax, SHIP.light[1], az, SHIPI ? 1.2e-4 * li * E : 0);
       /* [r3] each point's flux on the image: I / d^2 x E over the solid angle of a pixel (ppr: px per radian at
          the centre); the core's sigma from its size (at least 0.55 px: under a pixel it is the image's own
@@ -2326,7 +2335,7 @@ WX.pass((function () {
         if (L.world) { if (!LAMPI) { lampC[k][3] = 0; continue; } x = LAMPI.pos[0]; y = LAMPI.pos[1] + 0.75; z = LAMPI.pos[2]; }
         else { x = pose.x + fx * L.p[0] + fz * L.p[2]; y = L.p[1]; z = pose.z + fz * L.p[0] - fx * L.p[2]; }
         const d = Math.max(Math.hypot(x, y - WX.EYE_M, z), 20), Te = Math.exp((-3.912 * d) / (1000 * vis));
-        const v = (L.world ? LAMPI : SHIPI) ? (L.i * li * E * f * ppr * ppr) / (d * d) : 0;
+        const v = (L.world ? LAMPI : SHIPI) ? (L.i * (L.world ? gale : 1) * li * E * f * ppr * ppr) / (d * d) : 0;   // [L r9f] the lantern low in a gale
         lampC[k][0] = L.rgb[0] * v; lampC[k][1] = L.rgb[1] * v; lampC[k][2] = L.rgb[2] * v; lampC[k][3] = v > 0 ? 1 : 0;
         const lam = ppr * D * (0.1 + 0.15 * (1 - Te)), sc = ppr / 879;
         lampK[k][0] = Math.max(0.55, (0.4 * L.size * ppr) / d); lampK[k][1] = lam; lampK[k][2] = 0.04; lampK[k][3] = L.core;
@@ -2340,7 +2349,7 @@ WX.pass((function () {
         }
       }
       if (!SHIPI) c.lamps[11] = c.lamps[15] = 0;
-      set("uF1", c.lamps[4], c.lamps[5], c.lamps[6], 1.6e-4 * li * fl * E);
+      set("uF1", c.lamps[4], c.lamps[5], c.lamps[6], 0.8e-4 * li * fl * gale * E);      // [L r9] the lantern halved (16 cd); [L r9f] low in a gale
       /* the key light's shadow: redrawn when the light moved by more than 0.05 deg, the tier changed, or the
          arrived set changed (at most every 2 s); faded below the horizon, under a closed deck and across the
          sun-to-moon switch at -6 deg (over -5 .. -7) */

@@ -479,12 +479,14 @@ the year. An old ship lies at anchor left of the middle, a red buoy marks the ch
 pier runs out from the near right, and a reef right of the middle breaks the swell. The ship swings
 a few degrees on its moorings and rides the waves, and the buoy rocks; neither ever leaves its
 place. The swell breaks white over the reef and round the rocks, more as the wind rises, and in the
-storm the spray goes up the cliffs' feet. Rain darkens the rock and the wood and leaves water
-standing on the flat tops; it dries within two minutes of the rain stopping, and while a reading
-holds in the rain the cove stays as wet as that rain makes it. The plants on the tops bend with the
-wind. The low sun throws the cliffs' shadows across the water, the cove is mirrored in a calm sea
-and broken up in a rough one, and at night the ship shows its anchor light and a lantern burns at
-the pier's end.
+storm the spray goes up the cliffs' feet: by day the storm's surf runs white to the window, and
+the rocks nearest it throw spray up in wide fans that the wind tears downwind, leaving a mist that
+hangs for several seconds. Rain darkens the rock and the wood and leaves water standing on the flat
+tops; it dries within two minutes of the rain stopping, and while a reading holds in the rain the
+cove stays as wet as that rain makes it. The plants on the tops bend with the wind. The low sun
+throws the cliffs' shadows across the water, the cove is mirrored in a calm sea and broken up in a
+rough one, and at night the ship shows its anchor light and an oil lantern burns near the pier's
+end, low in a gale, its glitter on the water beside the lighthouse's path, not under it.
 
 **A lighthouse at the end of the right-hand headland shows the ring's colour.** On a stack of
 rock just off the headland's seaward tip, a kilometre and a half out near the horizon, stands a
@@ -497,9 +499,10 @@ burns toward white, as in a photograph. By day it is a small coloured light. Its
 once every 16 seconds: from dusk, as the sky grows dark against them, a flash comes every 8
 seconds as a beam passes the window, and faint shafts show in the air round the tower, stronger as
 night comes and in rain or haze, never sweeping the whole view; after sunset its light lies on the
-water as a broken path. A new colour comes in as the weather does, over about a minute, never at
-once, and the flash is soft and brief, inside the same limits as the lightning. Only the lamp
-wears the colour: the weather itself shows the band.
+water as a broken path in the lamp's colour, all the way to the window. A new colour comes in as
+the weather does, over about a minute, never at once, and the flash is soft and brief, inside the
+same limits as the lightning. Only the lamp and its light wear the colour: the weather itself
+shows the band.
 
 **The weather turns on the served cut points**, so it lands on the marks the ring prints:
 
@@ -522,17 +525,20 @@ swell at 0, through force 5 and a swell of a metre and a half at the floor, to a
 four-metre swell at the cap, where the bay heaves and the breakers burst into spray on the rocks.
 The swell comes in sets, as a real one does: about every hundred seconds a few bigger waves roll
 in, breaking further out and harder, bursting higher on the rocks and running further up them, and
-a lull follows; the ship and the buoy ride them. The sets keep the sea's height on average, so the
-cap is as rough as before and a low reading as calm. The cloud, the rain and the lightning keep
-the onsets the table gives them.
+a lull follows, where a strong wind still breaks whitecaps on the smaller waves; the ship and the
+buoy ride them. The sets keep the sea's height on average, so the cap is as rough as before and a
+low reading as calm. The cloud, the rain and the lightning keep the onsets the table gives them.
 
-The hour never changes the weather. Night only darkens it: the moon and the stars show only
-through gaps in the cloud, a town's glow out of sight lights the undersides of a low deck, and
-lightning lights the cloud from inside. A reading past the cap is the cap. Critical counts only
-where it stands more than 1.5 points clear of the cap, as the ring draws it; on the tiers where it
-does not, the storm builds from the third quarter point straight to the cap. Only the percent sets
-the weather: over pace the ring shakes as on the glass, and the sky says nothing of it, since a
-fast burn at 9% is the ring's to say and not a storm.
+The hour never changes the weather, only its light. The cumulus are lit face by face, as real ones
+are: by day their tops and sunward sides stand bright over flat grey bases; as the sun gets low
+they turn to dark bodies with bright rims, and after sunset they stand dark against the afterglow.
+Night only darkens the weather: the moon and the stars show only through gaps in the cloud, a
+town's glow out of sight lights the undersides of a low deck, and lightning lights the cloud from
+inside. A reading past the cap is the cap. Critical counts only where it stands more than 1.5
+points clear of the cap, as the ring draws it; on the tiers where it does not, the storm builds
+from the third quarter point straight to the cap. Only the percent sets the weather: over pace the
+ring shakes as on the glass, and the sky says nothing of it, since a fast burn at 9% is the ring's
+to say and not a storm.
 
 **No change happens at once.** Nothing in the view follows a reading directly. The scene keeps its
 own reading, which eases after the real one: it gathers way, then settles, half of any step in
@@ -563,22 +569,28 @@ lays them; the sea is never swapped for another.
   do.
 - **The drops on the glass are the size real ones are, and none vanishes.** A drop beads only
   until it is heavy enough to run, a few millimetres across, as water does on an upright pane; then
-  it runs down, taking up the drops in its path and leaving a trail of small ones. Every drop leaves
-  in a way the eye can follow: it runs down, a runner sweeps it up, it slides off the bottom edge,
-  or, once the rain stops, it dries where it is, a bead over fifteen seconds or more and the finest
-  droplets over a second or two, so the pane is dry in about a minute.
+  it runs down, taking up the drops in its path and leaving a trail of small ones. A runner wanders
+  as it goes, more as it gathers water and speed, keeps to the wet path an earlier one left, and
+  joins any runner it touches, so a heavy rain streams down the glass in a few winding rivulets,
+  more of them low on the pane, between crowded beads that each bend the view inside a dark rim. In
+  a storm a wet path lasts only seconds, so the streams are runners with short trails and none
+  holds one place on the pane for long. Every drop leaves in a way the eye can follow: it runs down,
+  a runner sweeps it up, it slides off the bottom edge, or, once the rain stops, it dries where it
+  is, flattening and then shrinking over ten to twenty seconds, the finest droplets as well as the
+  beads, so the pane is dry in a minute or so.
 - **What reads the reading wears the accent; every word is white.** The words, the rules and the
   buttons are white at every reading. The arc reads the ladder the glass reads, the accent ramp:
   teal below the warning floor, amber deepening to crimson across the band, the grey-blue with no
   reading; so do the chart's fitted run, its projection and the shade under it, the outline of
-  the detail's band tag, and out in the view the lighthouse's lamp. The colour marks sit on the
-  ring's track, as on the glass and in Neumorphism: a mark at each served cut point and a lighter
-  one at each quarter point of the warning band, each in the colour the arc takes there, and only
-  the ones the reading has yet to reach. On the track's faint white they are drawn stronger than
-  the glass's, the served marks in full and the quarter marks a little lighter. The chart prints
-  the warning floor in the ramp's amber and the cap in its crimson, and the freshness lamp keeps
-  the glass's tones. The pace channel keeps a colour of its own: a magenta no zone uses, dotted
-  while it is headroom and solid, heavier the further the reading has overrun the clock.
+  the detail's band tag, and out in the view the lighthouse's lamp and its light on the water. The
+  colour marks sit on the ring's track, as on the glass and in Neumorphism: a mark at each served
+  cut point and a lighter one at each quarter point of the warning band, each in the colour the arc
+  takes there, and only the ones the reading has yet to reach. On the track's faint white they are
+  drawn stronger than the glass's, the served marks in full and the quarter marks a little lighter.
+  The chart prints the warning floor in the ramp's amber and the cap in its crimson, and the
+  freshness lamp keeps the glass's tones. The pace channel keeps a colour of its own: a magenta no
+  zone uses, dotted while it is headroom and solid, heavier the further the reading has overrun the
+  clock.
 - **The view never hides a reading.** Each group of words stands on a dark pool, deeper the
   brighter the view behind it, which the scene measures twice a second, leaving lightning out so a
   flash does not make the page pulse; from the band's third quarter, where the strikes begin, each
